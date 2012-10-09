@@ -54,7 +54,12 @@ host = socket.gethostname()
 if host == "rickroll":
     host = "www.reelab.net"
 else:
-    host = "localhost:8000"
+    try:
+        host = conf.get("hosting", "hostdomain")
+    except:
+        host = "localhost:8000"
+            
+
 from gluon.contrib.login_methods.rpx_account import RPXAccount
 auth.settings.actions_disabled=['register','change_password','request_reset_password']
 auth.settings.login_form = RPXAccount(
