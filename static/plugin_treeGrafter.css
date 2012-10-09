@@ -1,0 +1,91 @@
+.grafterLegend {
+    position: absolute;
+    z-index: 50;
+    border-top: 1px solid black;
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+}
+
+.grafterLegendHeaderContainer {
+    width: 100%;
+}
+
+.grafterLegendHeader {
+    text-align: center;
+    padding: 5px;
+}
+
+.legendItem {
+    width: 100%;
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+}
+
+.legendItem:hover {
+    background-color: #FFA500;
+    cursor: pointer;
+}
+
+
+.legendItemInfo {
+    position: absolute;
+    white-space: nowrap;  
+    border: 1px solid black;
+}
+
+.legendItemInfoRow {
+    padding: 5px;
+} 
+
+.legendItemInfoAction {
+    padding: 5px;
+    text-align: center;
+    border-top: 1px dashed black;
+    color: blue;
+}
+
+.legendItemInfoAction:hover {
+    background-color: #FFA500;
+}
+
+.postGraftActionRow {
+    font-size: large;
+    padding-top: 10px;
+}
+
+.animateGraftContainer {
+    position: absolute;
+}
+
+.slider {
+    float: left;
+}
+
+.graftHistoryLabel {
+    float: left;
+    padding: 2px 5px;
+    font-weight: bold;
+    color: gray;
+}
+
+.graftHistoryValue {
+    float: left;
+    padding: 2px 5px;
+}
+
+.graftHistoryAction {
+    float: left;
+    color: steelBlue;
+    padding: 2px 5px;
+}
+
+.graftHistoryAction:hover {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.treeEditStatus {
+    font-size: 200%;
+    padding: 20px;
+    text-align: center;
+}

@@ -1,0 +1,4 @@
+if(  BioSync.TreeViewer == null ) {
+    BioSync.Common.loadScript( { name: 'plugin_treeViewer' } );
+    BioSync.Common.loadCSS( { name: 'plugin_treeViewer' } );
+}

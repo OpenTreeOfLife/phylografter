@@ -1,0 +1,4 @@
+if(  BioSync.TreeGrafter == null ) {
+    BioSync.Common.loadScript( { name: 'plugin_treeGrafter' } );
+    BioSync.Common.loadCSS( { name: 'plugin_treeGrafter' } );
+}

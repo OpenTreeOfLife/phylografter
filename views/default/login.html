@@ -1,0 +1,6 @@
+{{extend 'layout.html'}}
+
+<h1>Log in (or {{=A('register', _title="Register a new account", _href=URL(r=request, f='register', vars=request.vars))}}):</h1>
+<h3>You must be logged in to upload, edit, and delete content</h3>
+<p>
+{{=form}}

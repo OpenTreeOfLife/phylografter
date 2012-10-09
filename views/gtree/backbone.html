@@ -1,0 +1,12 @@
+{{extend 'layout.html'}}
+
+{{=plugin_treeGrafter(
+    dict( treeId = request.args(0),
+          auxPlugins = [ dict( name = 'clipboard', use = 'viewAndGraft' ),
+                         dict( name = 'clipboard', use = 'addToClipboard' ) ],
+          treeType = request.vars.treeType or 'source',
+          menuInfo = dict( options =
+            [ dict( name = 'branchLength' ), dict( name = 'search' ), dict( name = 'treeSize' ) ] ),
+          eventInfo = dict( nodeRightClick = dict( type = 'contextMenu', options = [ dict( text = 'Collapse Clade', handler = 'collapseClade' ),
+                                                                                     dict( text = 'Prune Clade', handler = 'pruneClade' ) ] ) ),
+          viewInfo = dict( mode = 'navigate' ) ) ) }}

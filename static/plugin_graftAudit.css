@@ -1,0 +1,50 @@
+.colorIndicator {
+    position: absolute;
+    width: 10px;
+}
+
+.graftAuditContainer {
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+}
+
+.infoContainer:hover {
+    //box-shadow: inset 0 0 4px 4px white;
+    //-webkit-box-shadow: inset 0 0 4px 4px white;
+    //-moz-box-shadow: inset 0 0 4px 4px white;
+    cursor: pointer;
+}
+
+.graftAuditOptions {
+    margin: 2px 2px 2px 5px;
+    float: right;
+}
+
+.infoContainer, .rootContainer {
+    text-align: center;
+    color: white;
+}
+
+.textInfo {
+    padding: 2px 5px;
+}
+
+.auditAction {
+    margin: auto;
+    color: blue;
+    padding: 5px;
+}
+
+.auditAction:hover {
+    cursor: pointer;
+}
+
+.selectedItem {
+    box-shadow: inset 0 0 4px 4px white;
+    -webkit-box-shadow: inset 0 0 4px 4px white;
+    -moz-box-shadow: inset 0 0 4px 4px white;
+}
+
+.disabledItem {
+    background-color: lightGray !important;
+}

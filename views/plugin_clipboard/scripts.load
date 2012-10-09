@@ -1,0 +1,4 @@
+if( BioSync.Clipboard == null ) {
+    BioSync.Common.loadScript( { name: 'plugin_clipboard' } );
+    BioSync.Common.loadCSS( { name: 'plugin_clipboard' } );
+}

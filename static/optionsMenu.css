@@ -1,0 +1,41 @@
+.contextMenu {
+    background-color: #DADADA;
+    font-size: 0.75em;
+    text-align: center;
+    z-index: 5000;
+    position: absolute;
+    -moz-border-radius: 10px;
+    border-radius: 10px;
+    padding: 5px;
+}
+
+.contextMenuList {
+    margin: 2px;
+    padding: 2px;
+    background-color: white;
+}
+
+#contextMenu { width: auto; }
+.contextMenuList { width: auto; }
+
+.contextMenuItem {
+    border-bottom: 1px dotted #E1E1E1;
+    padding: 5px;
+}
+
+ul, ul li {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+
+.highlight { background-color: #FFA500; cursor: pointer; }
+
+.menuLabel {
+    color: blue;
+    cursor: pointer;
+    padding: 5px;
+    vertical-align: middle;
+    display: block;
+}

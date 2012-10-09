@@ -1,0 +1,7 @@
+<script type="text/javascript">
+
+    {{include 'plugin_treeViewer/scripts.load'}}
+    
+    {{include 'plugin_treeViewer/instantiate.load'}}
+    
+</script>

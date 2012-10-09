@@ -1,0 +1,35 @@
+.editOTUContainer {
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -ms-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    height: 100%;
+}
+
+.editOTUHeader {
+    text-align: center;
+    font-size: large;
+}
+
+.editOTUTableWrapper {
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -ms-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    height: 100%;
+    width: 100%;
+}
+
+.editOTUTable {
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -ms-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+}
+
+.editOTUTableColumn {
+
+    float: left;
+    text-align: center;
+    padding: 3em;
+}

@@ -1,0 +1,6 @@
+<table>
+<tr>
+<td>{{=form}}</td>
+<td>{{=trees}}</td>
+</tr>
+</table>

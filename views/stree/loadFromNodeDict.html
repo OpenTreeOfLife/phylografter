@@ -1,0 +1,14 @@
+{{extend 'layout.html'}}
+
+
+<script type="text/javascript">
+
+$('#content').height( $(window).height()
+             - $('#header').outerHeight( { margin: true } )
+             - $('#statusbar').outerHeight( { margin: true } )
+             - 65 - 25 );
+</script>
+
+<div class="blackBorder fullWidth fullHeight">
+    {{=plugin_treeViewer( dict( tree = tree, coords = coords, viewInfo = dict( mode = 'browse' ) ) ) }}
+</div>

@@ -1,0 +1,14 @@
+{{extend 'layout.html'}}
+
+{{n = len(trees)}}
+{{s = ('tree' if n==1 else 'trees')}}
+<h3>Nexml for TreeBASE study {{=rec.treebase_id}} has {{=n}} {{=s}}</h3>
+
+<table>
+{{for d in trees:}}
+<tr><td style="vertical-align:middle;">{{=d.attrib.id}}: {{=d.attrib.label}}</td><td>{{=d.importform}}</td></tr>
+{{pass}}
+</table>
+
+<div id="tree_preview" style="width:100%"></div>
+        

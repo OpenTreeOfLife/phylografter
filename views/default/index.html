@@ -1,0 +1,36 @@
+{{extend 'layout.html'}}
+
+Please edit my content and style...
+
+<h2>
+Source trees for phylogenetic synthesis
+</h2>
+
+<div style="width:40em">
+<p>Molecular systematic studies continue to yield new knowledge about
+the tree of life. How do we synthesize these results and
+produce <b>maximally comprehensive and accurate trees</b>?
+Phylografter is a content management system for gathering and
+organizing the necessary information, and making it pubically
+available.</p>
+
+<p>Phylografter provides a database for archiving <b>source trees</b>,
+i.e., trees derived from published studies, stored node-by-node, with
+associated data (publication info, aligned sequences, Genbank ids,
+gene and genome info, support values, age estimates, etc.). Nodes
+(both OTUs and internal clades) are cross-referenced across trees
+by <b>taxon</b>.</li>
+
+{{nstudies = db(db.study.id>0).count()}}
+{{nstrees = db(db.stree.id>0).count()}}
+{{notus = db(db.otu.id>0).count()}}
+{{ntaxa = len(db(db.otu.taxon!=None).select(db.otu.taxon, distinct=True))}}
+
+<p>The database currently contains {{=nstudies}}
+<a href="{{=URL(c='study',f='index')}}">studies</a> and
+{{=nstrees}} <a href="{{=URL(c='stree',f='index')}}">source trees</a>,
+representing {{=notus}} OTUs and {{=ntaxa}} distinct terminal taxa.
+Hey, it's a start.</p>
+</div>
+
+<h4>Phylografter is a component of the <a href="http://www.opentreeoflife.org">Open Tree of Life</a> project.</h4>

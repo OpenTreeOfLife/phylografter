@@ -1,0 +1,107 @@
+
+<!-- <div class="zBoxOverlay"></div>
+<div id="zBoxContent">
+    <div id="zBoxTitle"></div>
+    <div id="zBoxForm" class="zBoxForm"></div>
+    <div class="zBoxFormActions">
+        <div class="fLeft width50">
+            <a href="javascript:void(0)" id="zBoxSubmit">Submit</a>
+        </div>
+        <div class="fRight width50">
+            <a href="javascript:void(0)" id="zBoxCancel">Cancel</a>
+        </div>
+        <div class="clear"></div>
+    </div>
+</div> -->
+
+<script type="text/javascript">
+
+    $('#zBoxCancel').click( closeZBox );
+    $('#zBoxContainer').bind('keydown', shadowboxKeyPress );
+
+    
+    function closeZBox() {
+        $('#zBoxTitle').text();   
+        $('#zBoxForm').empty();
+        $('#zBoxContainer').hide();
+    }
+
+
+    function shadowboxKeyPress( e ) {
+        var isZBoxVisible = $('#zBoxContainer').is(':visible');
+        if(e.keyCode==27 && isZBoxVisible ) { closeZBox(); }
+        if(e.keyCode==13 && isZBoxVisible ) { $('#zBoxSubmit').click(); }
+    }
+
+    function showZBox() {
+
+        $('#zBoxContainer').show('slow');
+
+        var contentContainer = $('#zBoxContent');
+        var contentHeight = contentContainer.height();
+        var contentWidth = contentContainer.width();
+        var myDocument = $(document);
+
+        contentContainer.offset( { top: ( ( myDocument.height() - contentHeight ) / 2 ),
+                                   left: ( ( myDocument.width() - contentWidth ) / 2 ) } );
+
+        $( $('#zBoxContainer input')[0] ).focus();
+    }
+
+    function showZBox2( response ) {
+
+        var responseObj = eval( "(" + response + ")" );
+
+        $('#zBoxForm').append( responseObj.form );
+        $('#zBoxTitle').text( responseObj.title );
+        $('#zBoxSubmit').unbind('click').bind('click', { url: responseObj.request, jsSuccess: responseObj.jsSuccess }, handleZBoxSubmit )
+                                        .bind('click', closeZBox );
+        $('#zBoxContainer').show('slow');
+
+        var contentContainer = $('#zBoxContent');
+        var contentHeight = contentContainer.height();
+        var contentWidth = contentContainer.width();
+        var myDocument = $(document);
+
+        contentContainer.offset( { top: ( ( myDocument.height() - contentHeight ) / 2 ),
+                                   left: ( ( myDocument.width() - contentWidth ) / 2 ) } );
+
+        $( $('#zBoxForm input')[0] ).focus();
+    }
+
+    function handleZBoxSubmit( p ) {
+
+        var data = gatherZBoxFormData();
+
+        $.ajax( { url: p.data.url,
+                  type: "POST",
+                  data: data,
+                  success: window[p.data.jsSuccess] } );
+    }
+
+    function gatherZBoxFormData() {
+
+        var data = { };
+
+        var inputs = $('#zBoxForm input');
+
+        for( var i = 0, ii = inputs.length; i < ii; i++ ) {
+            var el = $(inputs[i]);
+            data[ el.attr('id') ] = el.val();
+        }
+
+        return data;
+    }
+
+    function editAttribute( p ) {
+
+        var data = p.request.args;
+        data.jsResponse = p.response.js;
+
+        $.ajax( { url: p.request.url,
+                  type: "POST",
+                  data: data,
+                  success: showZBox } );
+    }
+    
+</script>

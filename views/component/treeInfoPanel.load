@@ -1,0 +1,43 @@
+
+<div class="treeInfoHeader">Trees</div>
+<div id="treeInfoContainer"></div>
+
+<script type="text/javascript">
+
+    function createTreeInfoItem( p ) {
+
+        $('#treeInfoContainer').append(
+            makeEl('div').attr( { 'class': 'treeInfoContainer', treeId: p.id } )
+                         .bind( 'click', { treeId: p.id }, getTree ).append(
+                makeEl('div').attr( { 'class': 'fLeft' } ).text( p.name ),
+                makeEl('div').attr( { 'class': 'fRight' } ).text( p.creationDate ),
+                makeEl('div').attr( { 'class': 'clear' } ) ) );
+    }
+
+    function getTree( p ) {
+
+        $.ajax( { url: makeUrl( { argList: [ 'getTree' ] } ),
+              type: "POST",
+              data: { treeId: p.data.treeId },
+              success: getTreeOnSuccess } );
+    }
+
+    function getTreeOnSuccess( response ) {
+        $('#treeInfoPanel').trigger( 'receivedTree', response );
+    }
+
+    function addTreeInfoToPanel( event, response ) {
+
+        var responseObj = eval( "(" + response + ")" );
+
+        createTreeInfoItem( responseObj );
+    }
+
+    {{for treeInfo in treeInfoList:}}
+
+        createTreeInfoItem( { id: "{{=treeInfo['id']}}",
+                              name: "{{=treeInfo['name']}}",
+                              creationDate: "{{=treeInfo['creationDate']}}" } );
+
+    {{pass}}
+</script>

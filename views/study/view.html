@@ -1,0 +1,58 @@
+{{extend 'layout_right_sidebar.html'}}
+
+<div style="padding:0.25em; background-color:lightgray;">
+Data set: {{=label}}
+</div>
+<div id="study_form" style="padding-bottom:0.5em">{{=form}}</div>
+
+<div style="padding:0.25em; background-color:lightgray">
+Data files:
+</div>
+<div id="study_files" style="padding-bottom:0.5em">
+{{=files}}
+{{u=URL(c='study',f='addfile',args=[request.args(0)])}}
+<a href={{=u}}>Add file</a>
+</div>
+
+<div style="padding:0.25em; background-color:lightgray">
+Trees derived from this data set:
+</div>
+<div id="study_trees" style="padding-bottom:0.5em">
+<table>
+{{for t in trees:}}
+<tr>
+<td>{{=t.type}}</td>
+<td><a href="{{=URL(c='stree',f='v',args=[t.id])}}">view/annotate</a></td>
+<td><a href="{{=URL(c='stree',f='edit',args=[t.id])}}">edit</a></td>
+<td><a href="{{=URL(c='stree',f='svgView',args=[t.id])}}">svgView/annotate</a></td>
+<td><a href="{{=URL(c='stree',f='modalTreeObj',args=[t.id])}}">load pyTree</a></td>
+    {{if auth.is_logged_in():}}
+        <td><a href="{{=URL(c='gtree',f='backbone',args=[t.id])}}">use as backbone</a></td>
+    {{pass}}
+    {{if auth.is_logged_in() and ' '.join( [ auth.user.first_name, auth.user.last_name ] ) == t.contributor:}}
+        <td><a href="{{=URL(c='stree',f='editOTUs',args=[t.id])}}">update OTUs</a></td>
+    {{pass}}
+</tr>
+{{pass}}
+<tr>
+<td>
+{{u=URL(c='stree',f='create',args=[request.args(0)])}}
+<a href={{=u}}>New tree</a>
+</td>
+</td>
+</table>
+</div>
+
+{{block right_sidebar}} 
+{{=A('Edit OTUs', _href=URL('otu','study',args=rec.id))}}
+{{if rec.treebase_id:}}
+{{
+    a = A("Import from TreeBASE",
+          _href=URL('study','tbimport',args=rec.treebase_id))
+    b = A("Download from TreeBASE",
+          _href=URL('study','fetch_treebase_nexml',args=rec.treebase_id))
+}}
+{{=DIV(a)}}
+{{=DIV(b)}}
+{{pass}}
+{{end}} 

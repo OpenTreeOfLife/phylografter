@@ -1,0 +1,69 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="{{=T.accepted_language or 'en'}}">
+
+    <head>
+        <title>Tree Component Home</title>
+
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+        {{include 'web2py_ajax.html'}}
+
+        <script type="text/javascript" src="{{=URL(request.application,'static','raphael.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','jquery.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','jquery-ui-1.8.5.custom.min.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','jquery.corners.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','utility.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','globals.js')}}"></script>
+
+        <script type="text/javascript" src="{{=URL(request.application,'static','widgetUtil.js')}}"></script>
+
+        <link rel="stylesheet" media="screen,projection" type="text/css" href="{{=URL(request.application,'static','jquery-ui-1.8.5.custom.css')}}" />
+        <link rel="stylesheet" media="screen,projection" type="text/css" href="{{=URL(request.application,'static','custom.css')}}" />
+    </head>
+
+    <body>
+
+        {{#=LOAD('default','addTreeComponent.load', ajax=True, target='addTreeContainer')}}
+
+        {{#=LOAD('default', 'zBox.load', target='zBoxContainer')}}
+       
+        {{#=LOAD('default','treeInfoPanel.load', target='treeInfoPanel')}}
+        
+        {{#=LOAD('default','treeVisual.load', target='treeVisual')}}
+        
+        {{#=LOAD('widget','tree.load', target='tree', args=[1])}}
+
+        <div id="modalBoxContainer">
+            {{=LOAD(c='widget', f='modalBox', extension='load', ajax=True, target='modalBoxContainer')}}
+        </div>
+
+
+        <div id="treeContainer" class=" blackBorder width95 height95">        
+            {{=LOAD(c='widget', f='treeVisual', extension='load', vars=dict(treeId=4), ajax=True, target='treeContainer')}}
+        </div>
+
+
+        <script type="text/javascript" charset="utf-8">
+
+            globals.applicationName = '{{=request.application}}';
+
+            //$('#addTreeContainer').addClass('component').corner().draggable();
+            //$('#treeInfoPanel').addClass('component').corner().draggable();
+            ///$('#treeVisual').addClass('component').corner().draggable().width( '25%' ).height( '25%' ).resizable();
+            //$('#tree').addClass('component').corner().draggable().width( '25%' ).height( '25%' ).resizable();
+
+              $('#addTreeContainer').bind( 'addTreeSuccess', function() { $('#zBoxContainer').hide('slow'); } );
+           
+              //$('#addTreeContainer').bind( 'addTreeSuccess', addTreeInfoToPanel );
+
+            //$('#treeInfoPanel').bind( 'receivedTree', renderTree );
+
+        </script>
+
+    </body>
+
+</html>
+
+              

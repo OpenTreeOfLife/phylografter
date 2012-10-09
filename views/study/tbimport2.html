@@ -1,0 +1,16 @@
+{{extend 'layout.html'}}
+
+{{if diffs:}}
+<div class="error">
+<div>You've uploaded a Nexml file that conflicts with an existing record:</div>
+{{for k, v in diffs:}}
+<span class="label">{{=k}}:</span> {{=INPUT(value=v, _id=k+"_uploaded")}}
+<input value="Copy to record" type="button" onclick="$('#study_{{=k}}').val('{{=v}}');" />
+{{pass}}
+{{pass}}
+</div>
+
+{{=form}}
+
+{{next = A('Upload/edit OTUs',_href=URL('study','tbimport_otus'))}}
+<h3>Next: {{=next}}</h3>

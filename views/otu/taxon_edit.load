@@ -1,0 +1,13 @@
+{{if form:}}
+{{=form.custom.begin}}
+<table><tr>
+<td>{{=form.custom.widget.taxon}}</td>
+<td>{{=form.custom.submit}}</td>
+<td>{{=cancel}}</td>
+</tr></table>
+{{=form.custom.end}}
+{{pass}}
+
+{{if a:}}
+{{=a}}
+{{pass}}

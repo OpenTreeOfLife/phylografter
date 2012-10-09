@@ -1,0 +1,185 @@
+html { height: 96%; }
+body { min-height: 100%; height: 100%; font-family: georgia, serif }
+
+.clear { clear: both; }
+.clearRight { clear: right; }
+
+.fLeft { float: left; }
+.fRight { float: right; }
+
+.centerText { text-align: center; }
+.leftText { text-align: left; }
+
+.normalText { font-size: .65em; }
+.largeText { font-size: 1.75em; }
+
+.absolute { position: absolute; }
+.relative { position: relative; }
+
+.front { z-index: 500; }
+
+.bold { font-weight: bold; }
+
+.nowrap { white-space: nowrap; }
+
+.transparentBackground { background-color: transparent; }
+
+.dashedBorderBottom { border-bottom: 1px dashed black; }
+
+.autoMargin { margin: auto; }
+
+.padding10 { padding: 10px; }
+
+.width30 { width: 30%; }
+.width23 { width: 23%; }
+.width33 { width: 33%; }
+.width68 { width: 68%; }
+.width75 { width: 75%; }
+.fullWidth { width: 100%; }
+
+.fullHeight { height: 100%; }
+.height5 { height: 5%; }
+.height8 { height: 8%; }
+.height93 { height: 93%; }
+.height94 { height: 94%; }
+
+.blackBorder { border: 1px solid black; }
+.bottomBorder { border-bottom: 1px solid black; }
+
+.dragHighlight {
+    box-shadow: 0 0 5px rgba(0, 0, 255, 1);
+    -webkit-box-shadow: 0 0 5px rgba(0, 0, 255, 1); 
+    -moz-box-shadow: 0 0 5px rgba(0, 0, 255, 1);
+    border: 1px solid rgba(0,0,255, 0.8); 
+}
+
+.scrollable { overflow: auto; }
+
+.pointer:hover { cursor: pointer; }
+.defaultCursor:hover { cursor: default; }
+
+.notifyBox {
+    font-size: 0.75em;
+    margin: 2px;
+    padding: 2px;
+    background-color: white;
+    position: absolute;
+    z-index: 5005;
+    padding: 5px;
+    -moz-border-radius: 10px;
+    border-radius: 10px;
+    -moz-box-shadow: 0 0 5px 5px #888;
+    -webkit-box-shadow: 0 0 5px 5px #888;
+    box-shadow: 0 0 5px 5px #888;
+}
+
+.notifyContent {
+    margin: 2px;
+    padding: 5px;
+    background-color: white;
+}
+
+.menu {
+    border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    text-align: center;
+    z-index: 1000;
+    position: absolute;
+    white-space: nowrap;
+    //padding: 4px;
+    background-color: white;
+    -moz-box-shadow: 0 0 5px 5px #888;
+    -webkit-box-shadow: 0 0 5px 5px #888;
+    box-shadow: 0 0 5px 5px #888;
+}
+
+.optionWrapper {
+    color: #607890; 
+    background-color: #DADADA;
+    border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    text-align: center;
+    z-index: 1000;
+}
+
+.menuItemWrapper:hover {
+    cursor: pointer;
+}
+
+.menuOptionItem {
+    background-color: white;
+}
+
+.menuOptionItem:hover {
+    background-color: lightGrey;
+    cursor: pointer;
+}
+
+.menuItemWrapper {
+    color: #607890; 
+    background-color: #DADADA;
+    border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    text-align: center;
+}
+
+.optionsWrapper:hover {
+    cursor: default;
+}
+
+.optionMenu {
+    background-color: white;
+}
+
+.subMenu {
+    position: absolute;
+}
+
+.disabledButton {
+    color: lightgray;
+}
+
+.disabledText {
+    color: lightgray;
+}
+
+.closeButtonUI {
+    background: url(/phylografter/static/images/closeUI.png) no-repeat;
+    background-position: center;
+}
+
+.closeButtonUI:hover {
+    background: url(/phylografter/static/images/closeUIWhite.png) no-repeat;
+    background-position: center;
+}
+
+.hoverUnderline:hover { text-decoration: underline; cursor: pointer;  }
+
+.hoverPointer:hover { cursor: pointer; }
+
+.draggable:hover {
+    cursor: move;
+    background-color: #D3D3D3;
+    box-shadow: 0 0 5px rgba(255, 140, 0, 1);
+    -webkit-box-shadow: 0 0 5px rgba(255, 140, 0, 1); 
+    -moz-box-shadow: 0 0 5px rgba(255, 140, 0, 1);
+    border-top: 1px solid rgba(255, 140, 0, 0.8);
+    border-bottom: 1px solid rgba(255, 140, 0, 0.8);
+}
+
+.hoverCloseIcon {
+    position: absolute;
+}
+
+.dotContainer {
+    position: absolute;
+    z-index: 5000;
+}
+
+.initialLabelInput {
+    color: grey;
+    text-align: center;
+}

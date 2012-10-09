@@ -1,0 +1,96 @@
+.modalBoxOverlay {
+    background-color: rgb(0, 0, 0);
+    opacity: 0.5;
+    height:100%;
+    position: relative;
+    width:100%;
+}
+
+#modalBoxTitle {
+    color: white;
+    text-align: center;
+    font-size: x-large;
+}
+
+#modalBoxContainer {
+    position: fixed;
+    left: 0;
+    top: 0;
+    margin: 0;
+    padding: 0;
+    display: none;
+    height: 100%;
+    width: 100%;
+    z-index: 5002;
+}
+
+#modalBoxContent {
+    position: absolute;
+    
+}
+
+#modalBoxForm {
+    padding: 20px;
+    margin-top: 10px;
+    background-color: white;
+    -moz-border-radius: 15px;
+    border-radius: 15px;
+    box-shadow: 0 0 5px rgba(0, 255, 0, 1);
+    -webkit-box-shadow: 0 0 5px rgba(0, 255, 0, 1); 
+    -moz-box-shadow: 0 0 5px rgba(0, 255, 0, 1);
+}
+
+.dialogueLabel {
+    padding: 5px;
+    //width: 25%;
+    text-align: right;
+    float: left;
+    white-space: nowrap;
+}
+
+.dialogueTextInput {
+    //width: 100%;
+    float: left;
+}
+
+.dialogueButton {
+   cursor: pointer; 
+   color: blue;
+   float: left;
+}
+
+#modalBoxForm input {
+    padding: 5px;
+    margin-left: 5px;
+    width: 200px;
+}
+
+.formRow {
+    padding: 5px;
+    //width: 100%;
+}
+
+.twoOpt {
+    width: 50%;
+    text-align: center;
+}
+
+.actionRow {
+    padding-top: 10px;
+    width: 100%;
+}
+
+.modalText {
+    padding: 10px;
+    text-align: center;
+    color: green;
+}
+
+.dialogueTextInput textarea {
+    resize: none;
+}
+
+.radioContainer {
+    padding: 0px 10px 0px 10px;
+    margin: auto;
+}

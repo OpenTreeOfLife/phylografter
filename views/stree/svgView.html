@@ -1,0 +1,13 @@
+{{extend 'layout.html'}}
+
+<div id="sourceTreeInfo">Source tree {{=rec.id}}: {{=rec.type}} from {{=A(_study_rep(rec.study), _href=URL('study','view',args=rec.study.id))}}</div>
+
+{{=plugin_treeViewer(
+    dict( treeId = request.args(0),
+          menuInfo = dict( options = [ dict( name = 'branchLength' ), dict( name = 'search' ), dict( name = 'treeSize' ) ] ),
+          eventInfo = dict( labelClick = 'showEditTaxonDialogue',
+                            nodeRightClick = dict( handler = 'showNodeContextMenu',
+                                                   options = [ dict( handler = 'handleCollapseCladeOptionClick', text = 'Collapse Clade' ),
+                                                               dict( handler = 'handleEditNodeOptionClick', text = 'Edit Node' ),
+                                                               dict( handler = 'handleAddToClipboardOptionClick', text = 'Add to Clipboard' ) ] ) ), 
+          viewInfo = dict( type = 'phylogram', mode = 'navigate' ) ) ) }}

@@ -1,0 +1,13 @@
+circle {
+    stroke-width: 1.5px;
+}
+
+line {
+    stroke: #999;
+}
+
+.rootLabel {
+    stroke: none;
+    fill: white;
+    font-size: 11px;
+}

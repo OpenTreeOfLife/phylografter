@@ -1,0 +1,31 @@
+{{extend 'layout.html'}}
+
+<div id="sourceTreeInfo">Source tree {{=rec.id}}: {{=rec.type}} from {{=A(_study_rep(rec.study), _href=URL('study','view',args=rec.study.id))}}</div>
+
+<script type="text/javascript">
+    $( window ).load(
+        function() {
+            $('#content').height( $(window).height() -
+              $('#header').outerHeight( { margin: true } ) -
+              $('#statusbar').outerHeight( { margin: true } ) -
+              $('#footer').outerHeight( { margin: true } ) - 15 );
+
+            $('#treeViewerWrapper').height( $('#content').outerHeight( true ) - $('#sourceTreeInfo').outerHeight( true ) );
+        } );
+</script>
+        
+<div id="treeViewerWrapper" class="blackBorder fullWidth">
+    {{=plugin_treeViewer(
+        dict( treeId = request.args(0),
+              auxPlugins = [ dict( name = 'clipboard', use = 'addToClipboard' ) ],
+              eventInfo = dict( labelClick = dict( type = 'getUrlForm', url = str( URL( c='modal', f='editSnodeTaxon' ) ) ),
+                                nodeDoubleClick =
+                                    dict( type = 'ringMenu',
+                                          options = [ dict( type = 'depends', test = dict( handler = 'navType',
+                                                                                           expand = dict( handler = 'expandClade', text = 'View Clade Only' ),
+                                                                                           collapse = dict( handler = 'collapseClade', text = 'Collapse' ) ) ),
+                                                      dict( text = 'Edit', handler = 'getUrlForm', external = 'True',
+                                                            url = str( URL( c = 'snode', f = 'update_snode.load' ) ),
+                                                            urlArgs = [ 'nodeId' ] ) ] ) ),
+              viewInfo = dict( renderType = 'd3', mode = 'forceDirected', leafArrangement = 'default' ) ) ) }}
+</div>

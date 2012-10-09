@@ -1,0 +1,58 @@
+{{extend 'layout.html'}}
+
+{{=table}}
+
+<script type="text/javascript" charset="utf-8">
+    var asInitVals = new Array();
+
+    var oSettings = null;
+
+    $(document).ready(function() {
+	var oTable = $('#{{=tid}}').dataTable( {
+	    "bProcessing": true,
+	    "bServerSide": true,
+	    "bStateSave": true,
+	    "bFilter": true,
+	    "sDom": '<"H"lrp>t<"F"ip>',
+	    "bJQueryUI": true,
+	    "sAjaxSource": "{{=URL(request.controller, 'dtrecords.json')}}",
+	    "aoColumnDefs": [
+	    	{"sType": "html", "bSortable": false, "aTargets": []},
+	    	{"asSorting": ["desc", "asc"], "aTargets": [5]},
+	    ]
+	} );
+
+	oSettings = oTable.fnSettings();
+
+	$("tfoot input").keyup( function () {
+            /* Filter on the column (the index) of this element */
+            oTable.fnFilter( this.value, $("tfoot input").index(this) );
+	} );
+
+	/*
+	 * Support functions to provide a little bit of 'user friendlyness'
+	 * to the textboxes in the footer
+	 */
+	$("tfoot input").each( function (i) {
+	    asInitVals[i] = this.value;
+	    this.value = oSettings.aoPreSearchCols[i].sSearch;
+	} );
+				
+	$("tfoot input").focus( function () {
+	    if ( this.className == "search_init" )
+	    {
+		this.className = "";
+		this.value = oSettings.aoPreSearchCols[i].sSearch;
+	    }
+	} );
+				
+	$("tfoot input").blur( function (i) {
+	    if ( this.value == "" )
+	    {
+		this.className = "search_init";
+		this.value = asInitVals[$("tfoot input").index(this)];
+	    }
+	} );
+    } );
+</script>
+

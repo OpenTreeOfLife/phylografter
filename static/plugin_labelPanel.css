@@ -1,0 +1,40 @@
+.labelSearchInput {
+    margin: 0px auto 0px auto !important;
+    padding: 5px;
+    text-align: left;
+    color: black;
+    width: 100% !important;
+}
+
+
+
+.labelSearchContainer {
+    padding: 10px 10px 10px 10px;
+    float: left;
+    width: 85%;
+}
+
+.labelOptionsContainer {
+    float: left;
+    padding: 10px 10px 10px 5px;
+}
+
+.labelListContainer {
+    overflow: auto;
+}
+
+.labelPanelListItem {
+    padding: 4px 0px 0px 5px;
+}
+
+.labelPanelListItemHighlighted {
+    cursor: pointer;
+    background-color: #FFA500;
+    font-weight: bold;
+}
+
+.labelPanelListItemSelected {
+    background-color: #CEE8F0;
+}
+
+.noLabels { padding-top: 10px; }

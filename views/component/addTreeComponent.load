@@ -1,0 +1,65 @@
+
+<div>
+    <a id="addTreeButton" href="javascript:void(0);">Add Tree</a>
+<div>
+<div id="zBoxContainer" class="hide">
+    <div class="zBoxOverlay"></div>
+    <div id="zBoxContent">
+        <div class="zBoxTitle">Add Tree</div>
+        <div id="zBoxForm" class="zBoxForm">
+            <div>
+                <span>Name : </span>
+                <input type="text" id="newTreeName"></input>
+            </div>
+            <div>
+                <span>Newick : </span>
+                <input type="text" id="newTreeNewick"></input>
+            </div>
+            <div>
+                <a href="javascript:void(0)" id="uploadTreeButton">Upload Tree</a>
+                <a href="javascript:void(0)" id="cancelTreeUploadButton">Cancel</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+   
+    $('#zBoxForm').corner();
+    $('#addTreeButton').click( handleAddTreeButtonClick );
+    $('#uploadTreeButton').click( handleUploadTreeButtonClick );
+    $('#cancelTreeUploadButton').click( handleCancelTreeUploadButtonClick );
+
+    function handleAddTreeButtonClick( p ) {
+
+        var viewport = $(window);
+        var viewportHeight = viewport.height();
+        var viewportWidth = viewport.width();
+
+        $('#zBoxContainer').height( viewportHeight ).width( viewportWidth ).show('slow').removeClass('hide');
+
+
+        var content = $('#zBoxContent');
+
+        content.offset( { top: ( (viewportHeight - content.height() ) / 2 ),
+                          left: ( ( viewportWidth - content.width() ) / 2 ) } );
+    }
+
+    function handleUploadTreeButtonClick( p ) {
+
+        $.ajax( { url: makeUrl( { argList: [ 'addTree' ] } ),
+              type: "POST",
+              data: { name: $('#newTreeName').val(),
+                      newick: $('#newTreeNewick').val() },
+              success: addTreeOnSuccess } );
+    }
+
+    function addTreeOnSuccess( response ) {
+
+        if( response == 'parseError' ) { alert('Error Parsing String'); }
+        else { $('#addTreeContainer').trigger( 'addTreeSuccess', response ); }
+    }
+
+    function handleCancelTreeUploadButtonClick( p ) { $('#zBoxContainer').hide('slow'); }
+
+</script>

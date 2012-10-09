@@ -1,0 +1,40 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="{{=T.accepted_language or 'en'}}">
+
+    <head>
+        <title>Plugin App</title>
+
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+        {{include 'web2py_ajax.html'}}
+
+        <script type='text/javascript'>var applicationName = '{{=request.application}}';</script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','plugin_common.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','optionsMenu.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','modalBox.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','plugin_treeViewer.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','plugin_treeGrafter.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','plugin_clipboard.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','plugin_labelPanel.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','plugin_graftAudit.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','plugin_collaboration.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','phylogram.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','phylogramGraft.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','controlPanel.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','phylogramSidebar.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','phylogramColumn.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','phylogramColumnCollapsedNode.js')}}"></script>
+        
+        <link rel="stylesheet" media="screen,projection" type="text/css" href="{{=URL(request.application,'static','plugin_common.css')}}" />
+    </head>
+
+    <!-- oncontextmenu return false disables default right click -->
+    <body oncontextmenu="return false;">
+        
+        <script type='text/javascript'>BioSync.Common.applicationName = '{{=request.application}}';</script>
+
+    </body>
+
+</html>

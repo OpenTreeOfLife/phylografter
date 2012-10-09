@@ -1,0 +1,53 @@
+<h1>collaborative assembly of phylogenetic trees</h1>
+
+<h2>Getting started</h2>
+
+<div style="max-width:45em">
+Phylografter is a web application for creating large phylogenetic
+trees "by hand."
+<br>
+The workflow is simple:
+
+<ol>
+  <li>
+  {{=A("Log in", _href=URL(r=request,c="default",f="login"))}}
+  (necessary to add, edit, and delete trees).
+  </li>
+  <li>
+  Upload {{=A('"source trees"', 
+  _href=URL(r=request,c="stree",f="index"))}} (normally, these are
+  from published literature).
+  </li>
+  <li>
+  Create {{=A('"grafted trees"',
+  _href=URL(r=request,c="gtree",f="index"))}} from source trees.
+  <ol>
+    <li>
+    Select a source tree to be the "backbone" of a new grafted tree.
+    </li>
+    <li>
+    Select branches from other source trees.  You can {{=A('search for
+    taxa', _href=URL(r=request,c="taxa",f="index"))}} (named clades)
+    to find branches of interest.
+    </li>
+    <li>
+    Copy the branches to the clipboard.
+    </li>
+    <li>
+    Graft them onto the grafted tree.
+    </li>
+    <li>
+    Branches from grafted trees may be grafted onto other grafted trees.
+    </li>
+  </ol>
+</ol>
+</div>
+
+<div style="padding-top:1em; max-width:45em">
+{{include 'faq.html'}}
+</div>
+
+<div style="padding-top:1em; max-width:45em">
+<h2>Contact</h2>
+<address>Rick Ree &lt;<a href="mailto:rree at field museum dot org">rree at field museum dot org</a>&gt;</address>
+</div>

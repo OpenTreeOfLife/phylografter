@@ -1,0 +1,3 @@
+{{=request.vars.newLabel}}
+
+<script type="text/javascript"> closeZBox(); </script>

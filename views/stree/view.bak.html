@@ -1,0 +1,47 @@
+{{extend "layout.html"}}
+</h3>
+<div id="sidebar" class="sidebar">
+
+  <div style="float:top;background-color:#195866; padding-left:0.5em;padding-top:0.25em"
+       onclick="updateMenuState('clickoptions', 'nodeMenuHideTxt')">
+    <table width="100%" style="color:#FF5C1F; font-weight:bold;">
+      <td align="left">Node Menu</td>
+      <td id="nodeMenuHideTxt" title="Click to hide/unhide Node Menu" style="text-align:right; font-size:75%" align="right">[hide]</td>
+    </table>
+  </div>
+  <div id="clickoptions" style="float:top; padding-bottom:0.5em">
+  {{=clickoptions}}
+  </div>
+
+  <div style="float:top;background-color:#195866; padding-left:0.5em;padding-top:0.25em"
+       onclick="updateMenuState('treemenu', 'treeMenuHideTxt');">
+    <table width="100%" style="color:#FF5C1F; font-weight:bold;">
+      <td align="left">Tree Menu</td>
+      <td id="treeMenuHideTxt" title="Click to hide/unhide Node Menu" style="text-align:right; font-size:75%" align="right">[hide]</td>
+    </table>
+  </div>
+  <div id="treemenu" style="float:top; padding-bottom:0.5em">
+  {{=treemenu}}
+  </div>
+  
+  <div style="float:top;background-color:#195866; padding-left:0.5em;padding-top:0.25em"
+       onclick="updateMenuState('clipboard', 'clipboardHideTxt');">
+    <table width="100%" style="color:#FF5C1F; font-weight:bold;">
+      <td align="left">Clipboard</td>
+      <td id="clipboardHideTxt" title="Click to hide/unhide Node Menu" style="text-align:right; font-size:75%" align="right">[hide]</td>
+    </table>
+  </div>
+  <div id="clipboard" style="float:top; padding-bottom:0.5em">
+  {{=clipboard}}
+  </div>
+
+</div>
+
+<div>
+
+<div id="treecss" class="treeview"
+     ondblclick="ajax2('{{=URL(r=request,f='render')}}','','treecss');ajax2('{{=URL(r=request,f='nodeclick_options')}}','','nodeclick')">
+{{=tree_html}}
+</div>
+
+</div>

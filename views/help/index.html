@@ -1,0 +1,196 @@
+{{extend 'layout.html'}}
+<h2>Introduction</h2>
+<p>
+One of the problems with compiling phylogenies is that it soon creates very large trees that are difficult to view and analyze.  Few tools are available with the ability to graft multiple trees together and then manage the large trees that are created.  Large phylogenies can contain tens of thousands (or more) leaves which requires efficient storage and retrieval of the tree information.  Users may also need to make modifications to a tree or to specific nodes so the database needs to correctly reflect these changes.  While many ways have been devised on how to view tree information, few work well for managing what portions of a tree are to been seen at one time.  For example, a user may want to maintain the context of the overall tree with thousands of leaves but will only be examining small portions at a single time.
+</p>
+<p>
+Phylografter addresses some of these issues with creating and maintaining large phylogenies.  It is a web application that allows users to upload trees, typically from publications, and then graft them together into larger phylogenies.  Users can search the uploaded source trees and graft both specific clades or nodes as well as entire trees into a larger phylogeny.  Any subtree, whole tree, or leaf of a grafted tree may also be grafted into a larger phylogeny.  The user can then customize their view of these larger trees by expanding or collapsing clades without changing the actual tree information.  All trees and modifications are stored in a database and can be retrieved and shared as needed.
+</p>
+
+<h2>Current Specifications</h2>
+<p>
+The current version of Phylografter has been developed on Windows XP and Linux using Mozilla Firefox 3.0.11 and Microsoft Internet Explorer 8.  It uses web2py version 1.65.1 and Python 2.5.2.
+</p>
+
+<h2>Installation and Setup</h2>
+<p>
+Phylografter is a web2py appliance.  To use Phylografter, you must first download and install web2py, version 1.65 or higher.  The binary versions of web2py come with the Python interpreter for running the application.  If you want to run the source code version of web2py, you will also need to install Python 2.5 or higher.
+</p>
+<p>
+After installing web2py (and Python, if needed), run web2py and start the server.  Once you login to the main administration page, you will see the installed applications.  At the bottom of the page, you can upload the Phylografter appliance which will then show in the installed applications.  You can then click on the Phylografter link to start the application.
+</p>
+
+<h2>Database Model</h2>
+<p>
+Phylografter runs on the default SQLite database included in the web2py framework.  It contains the tables for storing all of the tree and node information as well as the T2 plugin tables.  If needed, the application can be configured to run on other database systems (see web2py documentation for instructions).
+</p>
+<p>
+The database contains the tables with tree metadata and specific node information for both the source and grafted tree types.  While the structure of the information is similar, each tree and node table contains data specific for that type.  All records contain an automatically generated id field which is the unique identifier for that tree or node in the Phylografter application.
+</p>
+<p>
+stree:  Source tree meta data.  Requires contributor, citation, and newick string.
+<br>
+Field Name  Type    Attributes
+contributor string  length=128
+upload_date datetime    default=datetime.datetime.now()
+citation    string  length=4096
+newick  text
+tree_label  string  length=256
+tree_title  string  length=128
+tree_type   string  length=128
+tb_study_id string  length=128
+tb_analysis_id  string  length=128
+tb_tree_id  string  length=128
+comment text
+<br>
+snode:  Source node information.
+<br>
+Field Name  Type    Attributes
+label   string  length=128
+istip   boolean default=False
+parent_id   integer
+length  double
+bootstrap_support   double  requires=IS_FLOAT_IN_RANGE(0,1.0)
+posterior_support   double  requires=IS_FLOAT_IN_RANGE(0,1.0)
+other_support   double
+other_support_type  string
+tree_id integer required=True
+taxon_id    integer
+mtime   datetime    default=datetime.datetime.now()
+<br>
+gtree:  Grafted tree metadata.
+<br>
+Field Name  Type    Attributes
+contributor string  length=128
+mtime   datetime    default=datetime.datetime.now()
+title   string  length=255
+comment text
+date    datetime
+<br>
+gnode:  Grafted tree node information.
+<br>
+Field Name  Type    Attributes
+label   string  length=128
+istip   boolean default=False
+ntips   integer required=False
+pruned  boolean default=False
+parent_id   integer
+length  double  required=False
+bootstrap_support   double  requires=IS_NULL_OR(IS_FLOAT_IN_RANGE(0,1.0))
+posterior_support   double  requires=IS_NULL_OR(IS_FLOAT_IN_RANGE(0,1.0))
+other_support   double
+other_support_type  string
+tree_id integer required=True
+snode_id    integer required=True
+stree_id    integer required=True
+taxon_id    integer
+mtime   datetime    default=datetime.datetime.now()
+<br>
+Gtree_edit:  Maintains history of grafted tree edits.
+<br>
+Field Name  Type    Attributes
+gtree_id    integer required=True
+action  string  requires=IS_IN_SET(["prune","graft","replace"]), required=True)
+person  string  length=128
+mtime   datetime    default=datetime.datetime.now()
+target_gnode_id integer required=True
+source_node_id  integer
+source_node_type    string  requires=IS_IN_SET(["snode","gnode"])
+new_gnode_id    integer
+comment text
+</p>
+
+<h2>Views</h2>
+<p>
+All pages in Phylografter are based on the template layout.html.  The source and grafted tree view pages use a variation that is specific for that type of view page.
+</p>
+
+<h2>Layout</h2>
+<p>
+Phylografter consists of four main areas: source trees, grafted trees, taxa, and the help section.  All areas are links on the top menu in the application and can be accessed at any time.
+</p>
+<p>
+To access the login page, click on the ‘phylografter’ link in the top menu.  You can then either click on the ‘login’ link in the top menu or in the instructions on the main home page.
+</p>
+<p>
+To register a user for Phylografter, go to the login page and click on the ‘register’ link.
+</p>
+
+<h3>Source Trees</h3>
+<p>
+Source trees are the building blocks of the large trees that can be built using Phylografter.  Users upload a new tree in the Newick format which is stored in the database and available for grafting into an existing tree.
+</p>
+<p>
+To access the Source Tree pages, click on the ‘source’ link in the top menu.  This will bring you to the main search page for source trees.  By default, it will list the ten most recently loaded and ten most recently viewed source trees, allowing you to quickly link to what trees you were working on.  You can also search for source trees using words or phrases in the title, Newick, or citations.  If you do any searches, the main page will also display all search results that match your query.
+</p>
+<p>
+The main page also contains a link to upload a new source tree.  The title, Newick, and citation fields are required for a new tree to be added successfully.
+</p>
+<p>
+Once you click on a link to an existing tree or upload a new source tree, you are redirected to the page for viewing the tree.  You can link back to the tree metadata by clicking on [Edit metadata] next to the title.  You can also delete the current source tree by clicking [delete], which will redirect you to a confirmation page.  A source tree cannot be deleted if it has been used as a basis for a grafted tree.  In the top menu you can modify the current view by collapsing or uncollapsing clades, edit a node label, or create a grafted tree from any node in the tree.  You must select the operation and then click on the node in the tree for the action to be executed.  The tree menu allows you to perform the following tree operations: copy any clade, expand all nodes, toggle between viewing the tree or the Newick string, view all the taxa, collapse a specific clade, or create a grafted tree from the entire source tree.  The clipboard shows any clades or trees, both from source or grafted, that have been copied to it at any time in the current session and can be cleared by clicking [Empty].
+</p>
+
+<h3>Grafted Trees</h3>
+<p>
+The ability to graft trees together is the main purpose of Phylografter.  Instead of uploading a grafted tree, you create it from an existing source or grafted tree.  This is done from the source tree or grafted tree view page.  Once created it is stored in the database and then is accessible for future use.
+</p>
+<p>
+To access the Grafted Tree pages, click on the ‘grafted’ link in the top menu.  This will bring you to the main search page for grafted trees.  By default, it will list the ten most recently loaded and ten most recently viewed grafted trees, allowing you to quickly link to what trees you were working on.  You can also search for grafted trees using words or phrases in the title or by the user who created the tree.  You cannot search the Newick or citations because these do not apply to grafted trees.  If you do any searches, the main page will also display all search results that match your query.
+</p>
+<p>
+Once you click on a link to a grafted tree, you are redirected to the page for viewing the tree.  You can delete the current grafted tree by clicking [delete], which will redirect you to a confirmation page.  A grafted tree cannot be deleted if it has been used as the basis for another grafted tree.  At any time if you want to view the base tree for a given grafted tree, click on the [?] in the view.
+</p>
+<p>
+The view page for grafted trees contains several menus.  The top menu allows you to zoom into any named clade in the tree.  The page will then show only that clade but allow you to zoom back you with the <<zoom out>> link.  The click actions menu contains all of the actions allowed at a node in the tree.  You can collapse or expand clades, zoom into a specific clade (named or unnamed), edit a node label, graft new nodes or clades by replacement or as a new child, and prune any clades from the tree.  To use any of the click actions you must select that action first and then click on the node where the action is to be taken.  The clade being modified will be highlighted in red.
+</p>
+<p>
+The tree menu allows the user to expand all collapsed clades, view all taxa, suggest leaf replacements or internal additions, or collapsed a specific node.  The clipboard shows any clades or trees, both from source or grafted, that have been copied to it at any time in the current session and can be cleared by clicking [Empty].  The recent edits show the history of changes that have been made.
+</p>
+
+<h2>User Access and Visibility</h2>
+<p>
+Phylografter does not require a valid login to access the application.  Any user can search and view the source and grafted trees contained in the database.
+</p>
+<p>
+A login is required to make any changes or add new information.  This includes uploading a new source tree or making modifications to an existing tree.
+</p>
+
+<h2>Frequently Asked Questions</h2>
+<p>
+What are trees?<br>
+Trees are graphical representations of hierarchical information.  They are called trees because they mimic the structure of trees in nature.  The highest level in the structure of data, the most basic piece of information, is the ‘root’.  Other nodes are then connected to the root and then to each other.  A single connection only links a parent node to a child node so there is always only one path from one node to another in the tree.  These connections represent the relationships between the nodes and branches of the tree.   A group of nodes is called a clade, i.e. a branch, in the tree.  The nodes in the tree that have no children are called the leaves.
+</p>
+<p>
+What is phylogenetics?<br>
+Phylogenetics is the study of the evolutionary relationships between organisms or groups of organisms.  Researchers use genetic data or morphology to create trees that reflect the relationships.  For example, the branching in the trees shows how an organism may evolve into new organisms.  If a branch terminates, a species may have become extinct.
+</p>
+<p>
+What is a Newick string?<br>
+A Newick formatted string is a character representation of the tree structure.  The relationships between nodes and leaves in the trees are shown by nesting parentheses.  Nodes can be named or unnamed and other information about the tree can also be included such as branch lengths and comments.
+</p>
+<p>
+What are source trees and grafted trees?<br>
+Source trees are building blocks for creating super trees.  They are typically trees based on the data collected and analyzed by researchers which is then published in journals.  A source tree usually contains a smaller number of nodes because they are built for a specific purpose or from a specific experiment.
+Grafted trees are trees where multiple source and/or grafted trees are connected together, i.e. grafted, to create very large trees.
+</p>
+<p>
+Why does phylografter require a login?<br>
+In Phylografter, a user must login to make changes to the database.  A valid login is required for uploading new source trees as well creating a new grafted tree.  A user must also be logged in to make changes to an existing grafted tree.  A login is not required to search any tree data or viewing any trees for both source and grafted trees.
+</p>
+<p>
+How was Phylografter built?<br>
+Phylografter is built using the web2py web application framework.  This is a free, open source, customizable framework written in Python in the Model-View-Controller (MVC) design.  It requires no installation or configuration and includes all that is needed to deploy Phylografter including a web server, database, and an interface for developing and managing the application.  Web2py runs on most platforms though Phylografter has only been tested on Windows and Linux.
+</p>
+<p>
+Why does it take so long for some pages to display?<br>
+For large trees, there may be a lag time for the requested action to be processed and the tree to be redrawn on the page. Please be patient.
+</p>
+<p>
+Web2py also comes with the T2 plugin that has the components for managing users and login as well as several other libraries like AJAX, JQuery, etc.
+</p>
+
+
+<div style="padding-top:1em; max-width:45em">
+<h2>Contact</h2>
+<address>Rick Ree &lt;<a href="mailto:rree at field museum dot org">rree at field museum dot org</a>&gt;</address>
+</div>

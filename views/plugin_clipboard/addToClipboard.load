@@ -1,0 +1,9 @@
+<script type="text/javascript">
+
+    {{include 'plugin_clipboard/scripts.load'}}
+    
+    {{include 'plugin_clipboard/instantiate.load'}}
+
+    BioSync.Clipboard.instances['{{=request.vars.containerId}}'].addToClipboard();
+
+</script>

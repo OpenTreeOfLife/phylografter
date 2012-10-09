@@ -1,0 +1,36 @@
+{{extend 'layout.html'}}
+
+<div style="width:100%; background-color:lightgray">
+<div style="padding:0.25em; background-color:gray;">
+Data set: {{=label}}
+</div>
+<div id="sdata_form">{{=form}}</div>
+
+<div style="padding:0.25em; background-color:gray">
+Trees derived from this data set:
+</div>
+<div id="sdata_trees">
+<table>
+{{for t in trees:}}
+<tr>
+<td>{{=t.type}}</td>
+<td><a href="{{=URL(c='stree',f='view',args=[t.id])}}">view/annotate</a></td>
+<td><a href="{{=URL(c='stree',f='edit',args=[t.id])}}">edit</a></td>
+</tr>
+{{pass}}
+<tr>
+<td>
+{{u=URL(c='stree',f='create',args=[request.args(0)])}}
+<a href={{=u}}>New tree</a>
+</td>
+</td>
+</table>
+
+<div id="stree_create_form" style="display:none">
+{{=LOAD(c='stree',f='create.load',args=[request.args(0)],ajax=False)}}
+</div>
+
+</div>
+
+</div>
+

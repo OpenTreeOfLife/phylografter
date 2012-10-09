@@ -1,0 +1,9 @@
+<script type="text/javascript">
+
+    {{include 'plugin_treeViewer/scripts.load'}}
+    
+    {{include 'plugin_treeGrafter/scripts.load'}}
+    
+    {{include 'plugin_treeGrafter/instantiate.load'}}
+       
+</script>

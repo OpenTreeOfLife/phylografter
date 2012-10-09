@@ -1,0 +1,393 @@
+.treeViewerContainer {
+    position: relative;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -ms-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    width: 100%;
+    border: black 1px solid;
+}
+
+
+.viewPanel {
+    overflow: auto;
+    position: relative;
+}
+
+.browseSvgDiv {
+    position: relative;
+}
+
+.svgLabel:hover { cursor: pointer; } 
+
+.descendantWrapper {
+    margin: 2px;
+    padding: 2px;
+    background-color: white;
+}
+
+.expandOptionContainer {
+    padding: 2px;
+    background-color: white;
+    position: absolute;
+    z-index: 500;
+    padding: 5px;
+    -moz-border-radius: 10px;
+    border-radius: 10px;
+}
+
+.descendantAction:hover {
+    text-decoration: underline;
+    color: blue;
+}
+
+.descendantAction {
+    cursor: pointer;
+    text-align: center;
+    padding-bottom: 3px;
+}
+
+.descendantLabelContainer {
+    cursor: pointer;
+    text-align: center;
+}
+
+.treeLabel:hover {
+    cursor: pointer;
+}
+
+.labelListWrapper {
+    -moz-border-radius: 10px;
+    border-radius: 10px;
+    padding: 5px;
+    background-color: #DADADA;
+    position: absolute;
+}
+
+.descendantList {
+    overflow: auto;
+    background-color: white;
+}
+
+.minimap:hover {
+    cursor: default;
+}
+
+.minimap {
+    position: absolute;
+    z-index: 500;
+    border-top: 1px solid black;
+    border-left: 1px solid black;
+    -moz-border-radius: 10px;
+    border-radius: 10px;
+    overflow: auto;
+    background-color: white;
+}
+
+.miniMapContainer:hover {
+    cursor: move;
+}
+
+.miniMapContainer {
+    position: absolute;
+    z-index: 200;
+    border-top: 1px solid black;
+    border-left: 1px solid black;
+    -moz-border-radius: 10px;
+    border-radius: 10px;
+    background-color: #CEE8F0;
+}
+
+.closeMinimapButton:hover {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.closeMinimapButton {
+    float: right;
+    padding-right: 5px;
+    font-size: small;
+    color: blue;
+}
+
+.showMinimapButton:hover {
+    cursor: pointer;
+}
+
+.showMinimapButton {
+    position: absolute;
+    z-index: 500;
+    color: blue;
+    padding: 5px;
+    font-size: small;
+}
+
+.viewOptionsContainer {
+    position: absolute;
+    z-index: 500;
+}
+
+.columnWrapper {
+    position: relative;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -ms-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+}
+
+.hoverBridge { position: absolute; }
+
+.viewerMenu {
+    color: #607890; 
+    background-color: #DADADA;
+    border-bottom-right-radius: 5px;
+    -moz-border-radius-bottomright: 5px;
+    -webkit-border-bottom-right-radius: 5px;
+    border-bottom-left-radius: 5px;
+    -moz-border-radius-bottomleft: 5px;
+    -webkit-border-bottom-left-radius: 5px;
+}
+
+.viewerMenu:hover {
+    cursor: default;
+}
+
+.checkableItem:hover {
+    cursor: pointer;
+    background-color: lightGrey;
+}
+
+.subMenu {
+    position: absolute;
+}
+
+.viewerWrapper {
+    background-color: white;
+}
+
+.menuItem {
+    color: #607890; 
+    background-color: #DADADA;
+    border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+}
+
+.modulePanel {
+    float: right;
+    height: 100%;
+}
+
+.modulePanelBorder {
+    border-left: 1px solid black;
+    height: 100%;
+}
+
+.moduleHeader {
+    text-align: center;
+    font-size: large;
+    padding: 5px;
+    border: 1px solid black;
+}
+
+.moduleHeader:hover {
+    background-color: lightGrey;
+    cursor: pointer;
+}
+
+.moduleContainer {
+    overflow: hidden;
+}
+
+#colorOptions {
+    width: auto !important;
+    margin: auto;
+}
+
+.configSaveButton {
+    color: blue;
+    padding-top: 10px;
+}
+
+.configSaveButton:hover {
+    cursor: pointer;
+}
+
+.configColorColumn {
+    float: left;
+    text-align: center;
+}
+
+.dropDownLabel {
+    line-height: 20px;
+    vertical-align: middle;
+}
+
+.colorOptionContainer {
+    padding: 5px;
+}
+
+.currentColorContainer {
+    padding: 5px;
+}
+
+.farbtastic { margin: auto; }
+
+.rangeDataLabel {
+    float: left;
+    vertical-align: middle;
+    line-height: 10px;
+    padding: 0px 5px;
+}
+
+.rangeDataContainer {
+    padding: 10px;
+}
+
+.rangeDataOutput {
+    width: 100%;
+    height: 25px;
+}
+
+.configMenuButtonUI {
+    position: absolute;
+    background: url(/phylografter/static/images/configUI.png) no-repeat;
+    background-position: center;
+    width: 50px;
+    height: 50px;
+    top: 5px;
+    left: 5px;
+}
+
+.configMenuButtonUI:hover {
+    cursor: pointer;
+    background: url(/phylografter/static/images/configUIRotate.png) no-repeat;
+    background-position: center;
+    width: 50px;
+    height: 50px;
+    top: 5px;
+    left: 5px;
+    position: absolute;
+}
+
+.userListContainer {
+    overflow-y: scroll;
+    -moz-border-radius-bottomleft: 10px;
+    -moz-border-radius-topleft: 10px;
+    border-bottom-left-radius: 10px;
+    border-top-left-radius: 10px;
+    border: 1px solid black;
+}
+
+.collapseUI {
+    position: absolute;
+    background: url(/phylografter/static/images/collapseUI.png) no-repeat;
+    background-position: center;
+    width: 20px;
+    height: 20px;
+}
+
+.horiExpandUI {
+    position: absolute;
+    background: url(/phylografter/static/images/horiExpandUI.png) no-repeat;
+    background-position: center;
+    width: 20px;
+    height: 20px;
+}
+
+.vertExpandUI {
+    position: absolute;
+    background: url(/phylografter/static/images/vertExpandUI.png) no-repeat;
+    background-position: center;
+    width: 20px;
+    height: 20px;
+}
+
+.d3EditNodeLabel {
+    font-weight: bold;
+}
+
+.d3EditNodeLabel:hover {
+    cursor: pointer;
+}
+
+.controlPanelItem {
+    display: none;
+    white-space: nowrap;
+    padding: 2px 0px;
+}
+
+.controlPanelItemLabel {
+
+    padding: 2px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+}
+
+.parentHover {
+    background-color: #CFDEFF;
+}
+
+.controlPanelItemLabel:hover {
+    background-color: #CFDEFF;
+}
+
+.controlPanelContent {
+}
+
+
+
+.showContent {
+    font-weight: bold;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.sliderContainer { padding 5px; }
+
+.panelHeader {
+    font-weight: bold;
+}
+
+.panelContainer {
+    position: absolute;
+    border-left: 1px solid black;
+    border-bottom: 1px solid black;
+    border-top: 1px solid black;
+    //-moz-border-bottom-left-radius: 5px;
+    //border-bottom-left-radius: 5px;
+    -moz-border-top-left-radius: 5px;
+    border-top-left-radius: 5px;
+    z-index: 1000;
+}
+   
+.panelName { 
+    padding: 5px 5px 5px 5px;
+    float: left;
+}
+
+.panelClose { 
+    padding: 5px 5px 5px 5px;
+    color: white;
+    float: right;
+}
+
+.panelClose:hover { 
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.panelName:hover {
+   cursor: pointer; 
+   text-decoration: underline;
+}
+
+.panelContent {
+    overflow: auto;
+}
+
+ul, ul li {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}

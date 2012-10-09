@@ -1,0 +1,1 @@
+BioSync.Clipboard.instances['{{=request.vars.containerId}}'] = new BioSync.Clipboard.clipboard( '{{=request.vars.containerId}}' );

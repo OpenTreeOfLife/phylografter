@@ -1,0 +1,23 @@
+{{extend 'layout.html'}}
+
+<h3>OTUs in TreeBASE study {{=rec.treebase_id}}</h3>
+
+{{=table}}
+
+{{=form}}
+
+
+{{=A("Edit OTUs", _href=URL('otu','study',args=rec.id))}}
+
+{{u = URL('study','tbimport_trees',args=rec.treebase_id)}}
+{{=A("Import/edit trees", _href=u)}}
+
+<script type="text/javascript" charset="utf-8">
+    $(document).ready(function() {
+	var oTable = $('#{{=tid}}').dataTable( {
+	    "bProcessing": false,
+	    "bStateSave": true,
+	    "bJQueryUI": true,
+	} );
+    });
+</script>

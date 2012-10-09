@@ -1,0 +1,11 @@
+<script type="text/javascript">
+
+    if( BioSync.LabelPanel == null ) {
+        BioSync.Common.loadScript( { name: 'plugin_labelPanel' } );
+        BioSync.Common.loadCSS( { name: 'plugin_labelPanel' } );
+    }
+
+    BioSync.LabelPanel.instances['{{=request.cid}}'] =
+        new BioSync.LabelPanel.labelPanel( { containerId: '{{=request.cid}}',
+                                             eventInfo: eval( "(" + {{response.write(eventInfo, escape=False)}} + ")" ) } );
+</script>

@@ -1,0 +1,12 @@
+{{extend 'layout.html'}}
+
+{{=plugin_treeViewer( dict( tree = tree, modal = True, viewInfo = dict( mode = 'browse' ) ) ) }}
+
+<script type="text/javascript">
+
+$('#content').height( $(window).height()
+             - $('#header').outerHeight( { margin: true } )
+             - $('#statusbar').outerHeight( { margin: true } )
+             - 65 - 25 );
+
+</script>

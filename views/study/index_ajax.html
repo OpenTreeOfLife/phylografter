@@ -1,0 +1,37 @@
+{{extend 'layout.html'}}
+
+<h2 onclick="$('#search').slideToggle()">Search</h2>
+<div id="search">
+{{=form}}
+</div>
+
+<h2 id="results_hdr" style="display:none"
+    onclick="$('#results').slideToggle()">
+Results
+</h2>
+
+<div id="results" style="height:30em;overflow:auto;"></div>
+
+<h2 id="record_hdr" style="display:none"
+    onclick="$('#record').slideToggle()">
+Record
+</h2>
+<div id="record"></div>
+
+<script>
+var form = $('#searchform');
+form.submit(function() {
+  var qs = form.serialize();
+  $('#results').load(form.attr('action') + '?' + qs);
+  $('#search').hide('slow');
+  $('#results_hdr').show('slow');
+  return false;
+})
+
+function load_record(i) {
+  $('#search').hide('slow');
+  $('#results').hide('slow');
+  $('#record_hdr').show('slow');
+  $('#record').load('load_record/'+i);
+}
+</script>

@@ -1,0 +1,12 @@
+.noLabels { padding-top: 10px; }
+
+.searcResultTaxonLabel {
+    font-style: italic;
+    color: gray;
+}
+
+.searchResultLabelLabel {
+    font-style: italic;
+    color: gray;
+    padding-left: 10px;
+}

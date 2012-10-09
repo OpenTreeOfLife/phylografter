@@ -1,0 +1,11 @@
+<script type="text/javascript">
+
+    if( BioSync.GraftAudit == null ) {
+        BioSync.Common.loadScript( { name: 'plugin_graftAudit' } );
+        BioSync.Common.loadCSS( { name: 'plugin_graftAudit' } );
+    }
+
+    BioSync.GraftAudit.instances['{{=request.cid}}'] =
+        new BioSync.GraftAudit.graftAudit( { containerId: '{{=request.cid}}',
+                                             eventInfo: eval( "(" + {{response.write(eventInfo, escape=False)}} + ")" ) } );
+</script>

@@ -1,0 +1,9 @@
+
+{{=form[0]}}
+{{=form[1]}}
+
+<script type="text/javascript">
+
+    $('#zBoxSubmit').click( function() { web2py_ajax_page( 'get', makeUrl( { argList: [ 'editLabel.load' ] } ), { nodeId: $('#editLabelNodeId').val(),
+                                                                                                                  newLabel: $('#editLabelNewLabel').val() }, 'label'+$('#editLabelNodeId').val() ); } );
+ </script>

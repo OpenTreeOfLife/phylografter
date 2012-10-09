@@ -1,0 +1,22 @@
+{{extend 'layout.html'}}
+
+<table>
+<th>Node label</th>
+<th>Taxon</th>
+
+{{for n in nodes:}}
+{{v='snode-%s'%n.id}}
+<tr>
+<td>{{=n.label}}</td>
+<td>
+<div id="{{=v}}">
+{{if n.taxon:}}{{s=n.taxon.name}}
+{{else:}}{{s="None assigned"}}
+{{pass}}
+{{avars = dict(target=v,edit=1)}}
+{{u=URL("snode_widget", args=[n.id], vars=avars)}}
+{{=A(s, _href=u, cid=v)}}
+</div></td>
+</tr>
+{{pass}}
+</table>

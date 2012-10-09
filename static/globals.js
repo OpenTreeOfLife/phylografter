@@ -1,0 +1,3 @@
+var globals = {
+    applicationName: undefined
+};

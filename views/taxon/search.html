@@ -1,0 +1,20 @@
+{{extend 'layout.html'}}
+
+<table>
+<th>Unassigned taxa ({{=len(recs)}})</th>
+{{for r,d in zip(recs,v):}}
+<tr>
+<td>
+{{s="%s (%s)" % (r.name,  parents[r.id])}}
+{{u=URL("ncbi_search",args=[r.id])}}
+{{=A(s, _href=URL('assign_ncbi',args=[r.id]))}}
+</td>
+<td>
+{{=d}}
+</td>
+</tr>
+{{pass}}
+</table>
+
+<div id="modal"></div>
+

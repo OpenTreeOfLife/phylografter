@@ -1,0 +1,14 @@
+{{extend 'layout.html'}}
+
+<script type="text/javascript">
+    $( window ).load(
+        function() { $('#content').height( $(window).height() -
+                     $('#header').outerHeight( { margin: true } ) -
+                     $('#statusbar').outerHeight( { margin: true } ) -
+                     $('#footer').outerHeight( { margin: true } ) - 15 ); } );
+</script>
+        
+<div class="fullWidth fullHeight">
+    {{=plugin_editOTU(
+        dict( treeId = request.args(0) ) ) }}
+</div>

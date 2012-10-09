@@ -1,0 +1,11 @@
+<script type="text/javascript">
+
+    if( BioSync.Collaboration == null ) {
+        BioSync.Common.loadScript( { name: 'plugin_collaboration' } );
+        BioSync.Common.loadCSS( { name: 'plugin_collaboration' } );
+    }
+
+    BioSync.Collaboration.instances['{{=request.cid}}'] =
+        new BioSync.Collaboration.collaboration( eval( "(" + '{{response.write(instanceParams, escape=False)}}' + ")" ) );
+
+</script>

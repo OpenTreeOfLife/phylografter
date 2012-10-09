@@ -1,0 +1,7 @@
+{{response.files.append(URL(request.application,"static","mine.css"))}}
+{{response.files.append(URL(request.application,"static","mine.js"))}}
+{{extend 'layout.html'}}
+
+{{=tree}}
+
+{{=modal}}

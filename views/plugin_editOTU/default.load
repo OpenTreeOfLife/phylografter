@@ -1,0 +1,12 @@
+<script type="text/javascript">
+
+    if( BioSync.EditOTU == null ) {
+        BioSync.Common.loadScript( { name: 'plugin_editOTU' } );
+        BioSync.Common.loadCSS( { name: 'plugin_editOTU' } );
+    }
+
+    BioSync.EditOTU.instances['{{=request.cid}}'] =
+        new BioSync.EditOTU.editOTU( { containerId: '{{=request.cid}}',
+                                       params: eval( "(" + '{{response.write( instanceParams, escape=False)}}' + ")" ) } );
+    
+</script>

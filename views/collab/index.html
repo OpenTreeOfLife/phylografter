@@ -1,0 +1,14 @@
+{{extend 'layout.html'}}
+
+<div class="blackBorder width98 fullHeight">
+    {{=plugin_collaboration( dict() )}}
+</div>
+
+<script>
+
+$('#content').height( $(window).height()
+             - $('#header').outerHeight( { margin: true } )
+             - $('#statusbar').outerHeight( { margin: true } )
+             - 65 - 15 );
+
+</script>
