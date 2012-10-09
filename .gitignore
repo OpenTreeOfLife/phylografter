@@ -1,1 +1,4 @@
 *.pyc
+cache
+errors
+sessions
