@@ -1,0 +1,250 @@
+d3 force directed changes :
+
+#make sure labels don't touch one another
+
+expand 'vertical' and 'horizontal'
+
+branch length : aestehically pleasing( how? ), or use branch length data
+
+minor : keep labels in box
+
+label the root( remove icon )
+
+place the root at the bottom
+
+differentiation ( shape or color ) of leaf nodes
+
+after horizontal expansion, keep previous view all collapsed into one node
+
+don't let labels touch other nodes
+
+
+check out d3 tree view
+
+check out d3 sunburst view
+
+
+11/30/2011 discussion :
+
+
+use plantlist, apg_taxon, and ncbi_node to populate a sunburst tree
+
+
+use mutiple sunburst trees to compare
+    - type in a name, highlight area in all trees
+    - mouseover, same thing
+    - select different data points to highlight in each tree (support values?)
+
+
+
+force directed tree - pin node ( zero gravity, fixed ) after it is grabbed and released
+
+re-implement search field ( label panel )
+    - let user know if its collapsed
+    - highlight visible nodes
+    - let user edit searched for node
+    - let user navigate to node
+
+
+(minor) traditional cladograms branch lengths are "split late" rather than early
+
+- add branch length selector option
+
+- work out a menu module for each view mode
+
+- add option to adjeust # of max tips'
+
+
+
+12/20/2011 discussion :
+
+#put force directed on hold for now
+
+svgView - cladogram changes:
+
+#make sure sure edit node works - use a dummy tree
+
+#source tree id = 37 has an error dealing with internal nodes
+
+#after a collapsed node is expanded horizontally - add a collapse dialogue in place of the expand hori dialogue
+
+#after a collapse action - scroll to collapsed node
+
+#show a descendant taxon name and # of nodes next to the collapsed ui
+
+#add a control panel to the left side of the tree - branch length, slider scale (mousewheel?), search bar 
+
+#the path does not look right where the lines intersect - may have to change attributes - may have to rewrite pathstring function and remove the move tos
+
+add a circular viz layout
+
+add a stop action to the node selector so that it stays on the node selected when a menu pops up
+
+
+1/02/2011 discussion :
+
+#internal node labels - give transparentyellow background
+
+#vertical  expansion - don't expand entire clade - just make sure not is not collapsed
+
+future - expand multiple nodes in one column into a draggable box
+
+1/20 : need to make 'view descendant labels ajax' - taking up too much space
+
+
+1/30 discussion :
+
+#allow slider to adjust branch length, the vertical tip buffer, and the font-size
+
+#maxTips should be independent of window size
+
+#when expanding vertically, maxtips should increase 50 percent ( or what we find to be aesthetically pleasing )
+
+#label , taxa search, when a label or taxa is selected - redraw tree ( one column ) - the node's ancestors are all in the keep visible list
+
+
+2/10/12 :
+
+create column class in phylogram view
+
+
+2/20/12 :
+
+#branch lengths : smoothed, scaled (don't is broken right now)
+
+internal labels : yellow is opaque and on top of tree, texti s on top of this
+
+#number of tips -> control panel slider option
+
+
+2/27/2012 :
+
+bug with clipboard names having a single quote
+
+personal clipboard - shared clipboard ?
+
+2/29/2012 :
+
+add to clipboard, any modal box, have automatic text selection so the user doesn't have to manually delete the text
+
+create panel object
+
+3/13/20120 :
+
+add options to rotate siblings?
+
+ladderize everything by default ?
+
+3/14/2012 :
+
+redirect after login still does not work =/
+
+give notify timeout for "dotdotdot"
+
+fix clipboard on initial open when the content overflows
+
+3/16 :
+
+re evaluate slider control
+
+areThereBranchLengths should only be called once per source tree and once per gtree edit
+
+#collapsed node ui doesn't seem to work - probably when sizes are changed ? -- unable to reproduce
+
+3/19
+
+#maxtips value are aribitrary list of numbers 50, 100, 150 ..
+
+store tree data into table so one doesn't have to recurse through it each time
+
+determine collapsed nodes : average out number of collapsed nodes across tree
+
+4/4/2012
+
+after tree edit - update graft history panel
+
+4/17/2012 :
+
+was unable to edit tree twice using clipboard - error on clip drop
+
+5/3/2012 :
+
+after vertical node expansion, max tips is increased - need to update the control panel when this happens
+after horizontal, vertical node expansion - we add ids to the keep visible list - this needs to be reverted at some point - i think
+after a vertical expand node, a popup appears next to the expanded node to notify that it is the expanded node, when scrolling, this popup is misaligned - fix this
+
+
+5/23/2012 :
+
+#after a graft on a source tree, the graft history comes to us via ajax call, need to make sure it shows up in the right spot - should probably close the clipboard if its open
+
+collapse clade is broken
+
+
+6/31/2012 :
+
+moving item from clipboard to graft clade - dialogue comes up. user presses escape, modal dialogue box disappears, but the clade is still highlighted
+
+
+6/12/12 :
+
+on window resize: fix sidebar header width
+
+
+7/12/12:
+
+#need to create a collapsed node object
+
+7/19/12:
+
+#control panel hover sizing is broken - le sigh
+
+7/24/12:
+
+#need to figure out what to do regarding descendant labels when a user collapses a node on a tree that is un processed
+
+
+7/30/12:
+
+#when calculating node coordinates, make sure the depth of the tree reflects the actual depth of the tree being shown, not the entire tree ( collapsed nodes )
+
+
+
+8/20/12:
+
+save whether nodes are collapsed / expanded ( vertically, horizontally ) in session
+
+
+9/5/12:
+
+#collapse node in column that is not an ancestor of an expanded node in the same column
+
+
+9/6/12:
+
+#while vertically scrolling after a vertical expand - make sure the node selector is node being updated
+
+
+9/18/12:
+
+collapse internal node with label - refreshed, shown label is incorrect
+
+
+9/24/12:
+
+#make all? some? config settings last for the session
+#switch between scaled / smooth -> don't remove columns
+#save columns ( visble, collapsed ) in session
+after horizontal expand, zoom out on the previous column so that it fits on the screen
+#collapsed ui should push everything to the right - not the left
+minimum tips per column needed
+
+9/27/12:
+
+#make sure collapsed node dialogue is correct when retrieving a tree with multiple columns already open
+
+
+10/8/12 :
+
+scale collapsed node ui with size of font ?
+hidden hover border is on top of view descendant labels - this shouldn't be the case
