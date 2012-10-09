@@ -1,0 +1,5 @@
+[db]
+dbname=phylografter
+host=localhost
+user=guest
+password=12345
