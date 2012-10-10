@@ -1,0 +1,34 @@
+The tree viewer was implemented as a web2py plugin ( http://web2py.com/books/default/chapter/29/12#Plugins ) with the intention of allowing another developer to be able to simply place our tree viewer into their application.  This is why some source code files associated with the viewer have the 'plugin_' prefix.  However, currently, the tree viewer relies on phylografter code not also contained in the plugin, so one is unable to simply drop this plugin into another web2py application.
+
+Instantiating a Tree Viewer into a view
+
+
+Here is an example from views/stree/svgView :
+
+{{=plugin_treeViewer(
+    dict( treeId = request.args(0),
+          menuInfo = dict( options = [ dict( name = 'branchLength' ), dict( name = 'search' ), dict( name = 'treeSize' ) ] ),
+          eventInfo = dict( labelClick = 'showEditTaxonDialogue',
+                            nodeRightClick = dict( handler = 'showNodeContextMenu',
+                                                   options = [ dict( handler = 'handleCollapseCladeOptionClick', text = 'Collapse Clade' ),
+                                                               dict( handler = 'handleEditNodeOptionClick', text = 'Edit Node' ),
+                                                               dict( handler = 'handleAddToClipboardOptionClick', text = 'Add to Clipboard' ) ] ) ), 
+          viewInfo = dict( type = 'phylogram', mode = 'navigate' ) ) ) }}
+
+
+Arguments :
+
+    treeId - the database row id of the tree to be viewed.  Currently, and I would argue, incorrectly, there are two different database tables that contain information for viewing trees - 'stree' and 'gtree'.  Therefore, a treeId and a 'treeType' are needed to map to a single tree.  Right now, the tree type is stored in the session and assigned in the controller - when someone makes a request to views/stree/svgView, we know they are looking for a source tree.
+
+    menuInfo - a list of options that will appear when the control panel is hovered with a mouse.  Each of these options ( above: 'branchLength', 'search', 'treeSize' ) must be defined in static/controlPanel.js.  Obviously, it would have been easier to make the argument as a list of strings [ 'branchLength', 'search', 'treeSize' ], but I left it this way in case unforseen options wanted to creep into this argument.
+
+    eventInfo - a dictionary for customizing events.  This argument is not structured properly.  Right now, the viewer assumes the 'labelClick' value and the 'nodeRightClick' handler value are events in static/phylogramColumn.js.  It was done this way to acheive proper functionality quicker.  I think a better solution would involve having these events the static/phylogram.js - the file containing code regarding the tree viewer's render object.
+
+    viewInfo - a dictionary describing the tree visualization style.  Originally, there would be many, but, as of now, a 'phylogram' type and a 'navigate' mode is all we have.
+
+
+
+
+What happens when a request is made to a web page ( view ) that contains a Tree Viewer instantiation :
+
+A Tree Viewer instantiation 
