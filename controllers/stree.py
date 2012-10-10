@@ -78,33 +78,6 @@ response.subtitle = "Source trees"
    
 ##     return dict(table=powerTable.create())
 
-class Virtual(object):
-    @virtualsettings(label='Study')
-    def study_url(self):
-        study = self.stree.study
-        u = URL(c="study",f="view",args=[study],extension="html")
-        citation = s = db.study[study].citation
-        N = 50
-        if len(s)>N: s = s[:N-3]+" ..."
-        return A(s, _href=u, _title=citation)
-
-    @virtualsettings(label='Tree')
-    def tree_url(self):
-        u = URL(c="stree",f="svgView",args=[self.stree.id],extension="html")
-        return A(self.stree.type, _href=u)
-
-    @virtualsettings(label='Focal Clade')
-    def clade(self):
-        fc = db.study[self.stree.study].focal_clade_ottol
-        name = fc.name if fc else ""
-        return name
-
-    @virtualsettings(label='OTUs')
-    def ntax(self):
-        q = ((db.snode.tree==self.stree.id)&
-             (db.snode.isleaf==True))
-        return db(q).count()
-
 def index():
     theme = "smoothness"
     for x in (
