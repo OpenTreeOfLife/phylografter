@@ -96,4 +96,10 @@ def index():
 
 @auth.requires_login()
 def backbone():
+
+    if( 'TreeViewer' not in session ):
+        session.TreeViewer = Storage()
+        session.TreeViewer.treeType = 'source'
+        session.TreeViewer.strNodeTable = 'snode'
+
     return dict()

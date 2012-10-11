@@ -31,4 +31,38 @@ Arguments :
 
 What happens when a request is made to a web page ( view ) that contains a Tree Viewer instantiation :
 
-A Tree Viewer instantiation 
+A Tree Viewer instantiation is simply a function call.  In the models/plugin_treeViewer.py file, you'll find the definition of the plugin_treeViewer function.  Remember in web2py, all model files are executed for every request, so functions defined in models are always available.  Because its so small, I'll copy the plugin_treeViewer function definition here :
+
+return LOAD( 'plugin_treeViewer', 'treeViewer.load', ajax=True, vars=p )
+
+LOAD is a web2py function to be used by non programmers to make ajax calls from the view more simple.  Read more about it here : http://web2py.com/books/default/chapter/29/12#Components.  Concisely, it makes an ajax call to /plugin_treeViewer/treeViewer.load.  The arguments to this ajax call are the same arguments passed to the plugin_treeViewer function in the view.
+
+So the ajax request is made and the treeViewer function in controllers/plugin_treeViewer.py handles the request.  Because there are both Tree Viewers and Tree Grafters with common functionality, we use a module function to handle a Viewer instantiation on the server.  In modules/plugin_treeViewer, the function is called handleViewerInstantiation.  It stores information about the tree in the session and processes parameter information for the client.
+
+Now that we've got what we want from the server, let's take a look at the view that will be passed to the client.  web2py's LOAD function will insert the corresponding view - views/plugin_treeViewer/treeViewer.load - into the DOM.  From the view :
+
+
+<script type="text/javascript">
+
+    {{include 'plugin_treeViewer/scripts.load'}}
+    
+    {{include 'plugin_treeViewer/instantiate.load'}}
+    
+</script>
+
+Here, we are inserting javascript code into the DOM.  Again, because there are multiple types of Tree Viewers that have similar functionality, we reference modular view files to be used by multiple viewers.  Let's take a look at plugin_treeViewer/scripts.load :
+
+if(  BioSync.TreeViewer == null ) {
+    BioSync.Common.loadScript( { name: 'plugin_treeViewer' } );
+    BioSync.Common.loadCSS( { name: 'plugin_treeViewer' } );
+}
+
+This javascript code loads Tree Viewer specific code and styling into memory.  Specifically, static/plugin_treeViewer.js and static/plugin_treeViewer.css are loaded into memory.
+
+
+Regarding plugin_treeViewer/instantiate.load :
+
+BioSync.TreeViewer.instances['{{=request.cid}}'] = new BioSync.TreeViewer.viewer().start( eval( "(" + '{{response.write(instanceParams, escape=False)}}' + ")" ) );
+
+This javascript code instantiates a Tree Viewer javascript object on the client.
+

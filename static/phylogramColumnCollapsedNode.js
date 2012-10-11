@@ -166,12 +166,15 @@ BioSync.TreeViewer.Column.CollapsedNode.prototype = {
         this.menu.hide();
     },
 
+    hoverInExpandOption: function() { $( this ).css( { 'background-color': 'lightGrey' } ); BioSync.Common.setMouseToPointer(); },
+    hoverOutExpandOption: function() { $( this ).css( { 'background-color': 'white' } ); BioSync.Common.setMouseToDefault(); },
+
     makeVerticalOption: function() {
     
         this.verticalOption =
-            this.make('div').attr( { 'class': 'expandOption menuOptionItem' } )
-                            .css( { 'padding': this.config.optionPadding,
-                                    'background-color': 'white' } ).append(
+            this.make('div').css( { 'padding': this.config.optionPadding,
+                                    'background-color': 'white' } )
+                            .hover( this.hoverInExpandOption, this.hoverOutExpandOption ).append(
                 this.make('div').attr( { 'class': 'fLeft' } ).height( this.config.expandIconHeight ).width( this.config.expandIconWidth ).append(
                     this.make('div').attr( { 'class': 'vertExpandUI' } ) ),
                     this.make('div').attr( { 'class': 'fLeft' } ).text( 'Expand Vertically' ).css( { 'font-size': this.config.optionFontSize } ),
@@ -194,11 +197,11 @@ BioSync.TreeViewer.Column.CollapsedNode.prototype = {
                                                     .text( data.text ).css( { 'font-size': this.config.optionFontSize } );
 
         this.horizontalOption =
-            this.make('div').attr( { 'class': 'expandOption menuOptionItem' } )
-                            .css( { 'padding': this.config.optionPadding,
+            this.make('div').css( { 'padding': this.config.optionPadding,
                                     'background-color': 'white' } )
                             .bind( 'click', { }, $.proxy( this.hideMenu, this ) )
-                            .bind( 'click', { }, data.handler ).append(
+                            .bind( 'click', { }, data.handler )
+                            .hover( this.hoverInExpandOption, this.hoverOutExpandOption ).append(
                 this.make('div').attr( { 'class': 'fLeft' } )
                        .height( this.config.expandIconHeight )
                        .width( this.config.expandIconWidth ).append( this.horizontalOptionIcon ),

@@ -26,16 +26,6 @@
     background-color: white;
 }
 
-.expandOptionContainer {
-    padding: 2px;
-    background-color: white;
-    position: absolute;
-    z-index: 500;
-    padding: 5px;
-    -moz-border-radius: 10px;
-    border-radius: 10px;
-}
-
 .descendantAction:hover {
     text-decoration: underline;
     color: blue;
