@@ -1,13 +1,11 @@
 treeUtil = local_import("treeUtil", reload=True)
 viewerUtil = local_import("viewerUtil", reload=True)
-util = local_import("util", reload=True)
 from gluon.storage import Storage
 
 ivy = local_import("ivy", reload=True)
 build = local_import("build", reload=True)
 util = local_import( "plugin_treeViewer", reload = True )
 graftUtil = local_import( "plugin_treeGrafter", reload = True )
-
 
 
 def treeGrafter():
@@ -18,6 +16,12 @@ def treeGrafter():
     """
     
     return util.handleViewerInstantiation( request, response, session, db )
+
+
+def pruneClade():
+
+    return response.json( util.getRenderModule( request, session, 'Graft' ).pruneClade( db, session, request, auth ) )
+
 
 
 def updateURL():
@@ -80,36 +84,12 @@ def graftClade():
 
     graftUtil.graftClade( tree, newCladeSiblingId, build.node2tree( db, newCladeRecord.nodeId, newCladeRecord.treeType ) )
 
-    session.treeEdit = \
-        Storage( currentTree = tree,
-                 graftedCladeSiblingId = newCladeSiblingId,
-                 graftedCladeType = newCladeRecord.treeType,
-                 graftedCladeNodeId = newCladeRecord.nodeId,
-                 originalTreeType = session.TreeViewer.type,
-                 treeName = request.vars.treeName,
-                 treeDescription = request.vars.treeDescription,
-                 comment = request.vars.comment )
 
 
 def postGraftDBUpdate():
     
     graftUtil.postGraftDBUpdate( db, session, auth )
 
-
-def preProcessEditedTree():
-
-    import sys
-    sys.stdout.write( str( 'preprocess new tree : ' ) )
-    sys.stdout.write( str( datetime.datetime.now() ) )
-    sys.stdout.write( "\n" )
-
-    util.gatherTreeInfo( session.treeEdit.currentTree, session, db, True )
-    
-    sys.stdout.write( str( 'done preprocess new tree : ' ) )
-    sys.stdout.write( str( datetime.datetime.now() ) )
-    sys.stdout.write( "\n" )
-
-    del session['treeEdit']
 
 def replaceClade():
 
@@ -124,23 +104,6 @@ def replaceClade():
     request.vars.clipboardNodeType = newClade.treeType
 
     graftUtil.postReplaceDBUpdate( db, session, auth, tree, session.TreeViewer.type, replacedCladeId, newClade.nodeId, request.vars )
-
-
-def pruneClade():
-
-    nodeIdToPrune = int( request.vars.nodeId )
-
-    tree = build.tree( db, session.TreeViewer.treeId, session.TreeViewer.type )
-
-    graftUtil.pruneClade( tree, nodeIdToPrune )
-
-    session.treeEdit = \
-        Storage( currentTree = tree,
-                 originalTreeType = session.TreeViewer.type,
-                 treeName = request.vars.treeName,
-                 treeDescription = request.vars.treeDescription,
-                 comment = request.vars.comment,
-                 prunedNodeId = nodeIdToPrune )
 
 
 def postPruneDBUpdate():

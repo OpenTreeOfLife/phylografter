@@ -1,3 +1,21 @@
+BioSync.TreeViewer.RenderUtil = {
+
+    phylogram: {
+    
+        browse: function() {
+
+            BioSync.Common.loadCSS( { name: 'jquery-ui-1.8.5.custom' } );
+            return this;
+        },
+        
+        navigate: function() {
+           
+            BioSync.Common.loadCSS( { name: 'jquery-ui-1.8.5.custom' } );
+            return this;
+        }
+    }
+}
+
 BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype = {
 
     config: {
@@ -10,22 +28,8 @@ BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype = {
         this.viewer = viewer;
         this.make = BioSync.Common.makeEl;
 
-        BioSync.TreeViewer.Column =
-            function( renderObj ) {
-                this.renderObj = renderObj;
-                this.make = renderObj.make;
-                return this;
-            }
-        
         BioSync.Common.loadScript( { name: 'phylogramColumn' } );
 
-        BioSync.TreeViewer.Column.CollapsedNode =
-            function( column ) {
-                this.column = column;
-                this.make = column.make;
-                return this;
-            }
-            
         return this;
     },
 
@@ -528,7 +532,7 @@ BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype = {
                       data: { rootNodeId: p.rootNodeId }, type: "GET", async: false } );
         }
 
-        var columnObj = new BioSync.TreeViewer.Column( this ).initialize( { index: this.columns.length } );
+        var columnObj = this.getColumnObj();
 
         this.columns.push( columnObj );
 
@@ -541,6 +545,11 @@ BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype = {
         this.columnConnections.push( [] );
 
         return columnObj;
+    },
+
+    getColumnObj: function() {
+
+        return new BioSync.TreeViewer.RenderUtil.Column( this ).initialize( { index: this.columns.length } );
     },
 
     insertNewColumn: function( p ) {
@@ -648,17 +657,6 @@ BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype = {
                 }
             }
         }
-
-        console.log( 'shouldnt happen' );
-        newColumn.nodeIdToFocusOn = p.nodeId;
-        var successArray = new Array(
-            $.proxy( this.columns[0].renderReceivedClade, this.columns[0] ),
-            $.proxy( this.columns[0].afterNavigateToNode, this.columns[0] ) );
-
-        $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeViewer', argList: [ 'navigateToNode' ] } ),
-                  type: "GET", 
-                  data: { nodeId: p.nodeId },
-                  success: successArray } );
     },
 
     getNodePathString: function( p ) {

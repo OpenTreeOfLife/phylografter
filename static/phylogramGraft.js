@@ -1,6 +1,40 @@
+BioSync.TreeGrafter.RenderUtil = {
+
+    phylogram: {
+    
+        browse: function() {
+
+            BioSync.Common.loadCSS( { name: 'jquery-ui-1.8.5.custom' } );
+            return this;
+        },
+        
+        navigate: function() {
+           
+            BioSync.Common.loadCSS( { name: 'jquery-ui-1.8.5.custom' } );
+            return this;
+        }
+    }
+}
+
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype = new BioSync.TreeViewer.RenderUtil.phylogram.navigate();
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.constructor = BioSync.TreeGrafter.RenderUtil.phylogram.navigate;
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.super = BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype;
+
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.start = function( viewer ) {
+
+    this.viewer = viewer;
+    this.make = BioSync.Common.makeEl;
+
+    BioSync.Common.loadScript( { name: 'phylogramColumn' } );
+    BioSync.Common.loadScript( { name: 'phylogramColumnGraft' } );
+
+    return this;
+}
+
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getColumnObj = function() {
+
+    return new BioSync.TreeGrafter.RenderUtil.Column( this ).initialize( { index: this.columns.length } );
+}
 
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showCollapseDetail = function( e ) {
 
@@ -492,57 +526,52 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.handleMovingClipboar
     }
 }
 
-BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.pruneClade = function( p, q ) {
-
-    var clickedColumn = p.data.column;
-    var renderObj = p.data.renderObj;
-    var nodeId = p.data.nodeId;
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.pruneClade = function( p ) {
 
     var modal = BioSync.ModalBox;
 
-    renderObj.highlightClade( { column: clickedColumn, nodeId: nodeId } );
+    this.highlightClade( { column: p.column, nodeId: p.nodeId } );
     
-    if( clickedColumn.expandedNodeId ) {
+    if( p.column.expandedNodeId ) {
         
-        var pruneNodeInfo = clickedColumn.nodeInfo[ nodeId ];
-        var expandedNodeInfo = clickedColumn.nodeInfo[ clickedColumn.expandedNodeId ];
+        var pruneNodeInfo = p.column.nodeInfo[ p.nodeId ];
+        var expandedNodeInfo = p.column.nodeInfo[ p.column.expandedNodeId ];
 
-        if( renderObj.viewer.isAncestor( { ancestor: pruneNodeInfo, descendant: expandedNodeInfo } ) ) {
+        if( this.viewer.isAncestor( { ancestor: pruneNodeInfo, descendant: expandedNodeInfo } ) ) {
 
-            for( var i = clickedColumn.index + 1, ii = renderObj.columns.length; i < ii; i++ ) {
+            for( var i = p.column.index + 1, ii = this.columns.length; i < ii; i++ ) {
 
-                var column = renderObj.columns[ i ];
-                renderObj.highlightClade( { column: column, nodeId: column.rootId, } );
-                //renderObj.removeColumns( { start: clickedColumn + 1, end: renderObj.columns.length - 1 } );
-                //delete clickedColumn.expandedNodeId;
+                var column = this.columns[ i ];
+                this.highlightClade( { column: column, nodeId: column.rootId, } );
             }
         }
     }
 
-    renderObj.editActionString = 'prune';
+    this.editActionString = 'prune';
     
-    var successArray = new Array( $.proxy( renderObj.treeEditSuccess, renderObj ) );
+    var successArray = new Array( $.proxy( this.treeEditSuccess, this ) );
 
-    var content = renderObj.make('div').append(
+    var content = this.make('div').append(
         modal.makeBasicTextRow( { text: 'Please provide a comment on your prune action.' } ),
         modal.makeBasicTextInput( { text: 'Comment : ', name: 'comment', value: '' } ),
-        modal.makeHiddenInput( { name: 'nodeId', value: nodeId } ),
+        modal.makeHiddenInput( { name: 'nodeId', value: p.nodeId } ),
+        modal.makeHiddenInput( { name: 'columnIndex', value: p.column.index } ),
         modal.makeBasicActionRow( {
-             onClick:  $.proxy( renderObj.showTreeEditStatus, renderObj ),
+             onClick:  $.proxy( this.showTreeEditStatus, this ),
              submitText: 'Continue',
              submitArgs: { onSuccess: successArray,
                            submitUrl: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'pruneClade' ] } ) } } ) );
 
-    if( renderObj.viewer.treeType == 'source' ) {
+    if( this.viewer.treeType == 'source' ) {
 
-        $( content.children().last() ).before( renderObj.make('div').append( 
+        $( content.children().last() ).before( this.make('div').append( 
             modal.makeBasicTextRow( { 'text': '' } ),
             modal.makeBasicTextRow( { 'text': "This action will create a new 'grafted' tree.  Please give it a name and description" } ),
             modal.makeBasicTextInput( { text: 'Grafted Tree Name : ', name: 'treeName', value: 'Untitled Grafted Tree' } ),
             modal.makeBasicTextInput( { text: 'Description : ', name: 'treeDescription', value: '' } ) ) );
     }
 
-    BioSync.ModalBox.showModalBox( { content: content, title: 'Prune Clade', onClose: new Array( $.proxy( renderObj.unHighlightClade, renderObj ) ) } );
+    BioSync.ModalBox.showModalBox( { content: content, title: 'Prune Clade', onClose: new Array( $.proxy( this.unHighlightClade, this ) ) } );
 }
 
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.handleGraftHistory = function( response ) {

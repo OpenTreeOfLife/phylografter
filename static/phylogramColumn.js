@@ -1,4 +1,11 @@
-BioSync.TreeViewer.Column.prototype = {
+BioSync.TreeViewer.RenderUtil.Column = function( renderObj ) {
+
+    this.renderObj = renderObj;
+    this.make = BioSync.Common.makeEl;
+    return this;
+}
+
+BioSync.TreeViewer.RenderUtil.Column.prototype = {
 
     config: {
 
@@ -579,7 +586,7 @@ BioSync.TreeViewer.Column.prototype = {
 
     renderCollapsedNodeUI: function() {
 
-        if( ! BioSync.TreeViewer.Column.CollapsedNode.prototype.config ) {
+        if( ! BioSync.TreeViewer.RenderUtil.Column.CollapsedNode ) {
             BioSync.Common.loadScript( { name: 'phylogramColumnCollapsedNode' } );
         }
 
@@ -588,7 +595,7 @@ BioSync.TreeViewer.Column.prototype = {
         for( var i = 0, ii = this.collapsedNodeIds.length; i < ii; i++ ) {
 
             this.collapsedNodeObjs[ this.collapsedNodeIds[ i ] ] =
-                new BioSync.TreeViewer.Column.CollapsedNode( this ).initialize( {
+                new BioSync.TreeViewer.RenderUtil.Column.CollapsedNode( this ).initialize( {
                     nodeId: this.collapsedNodeIds[ i ],
                     nodeInfo: this.nodeInfo[ this.collapsedNodeIds[ i ] ] } );
         }

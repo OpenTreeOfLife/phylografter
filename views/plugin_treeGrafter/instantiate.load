@@ -1,2 +1,3 @@
-BioSync.TreeGrafter.instances['{{=request.cid}}'] = new BioSync.TreeGrafter.viewer().start( eval( "(" + '{{response.write(instanceParams, escape=False)}}' + ")" ) );
-BioSync.TreeViewer.instances['{{=request.cid}}'] = BioSync.TreeGrafter.instances['{{=request.cid}}'];
+BioSync.TreeViewer.instances['{{=request.cid}}'] =
+    BioSync.TreeGrafter.instances['{{=request.cid}}'] =
+        new BioSync.TreeGrafter.viewer().start( eval( "(" + '{{response.write(instanceParams, escape=False)}}' + ")" ) );

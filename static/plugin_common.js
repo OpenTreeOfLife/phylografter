@@ -654,5 +654,5 @@ $( BioSync.Common.getScrollbarWidth );
 $( BioSync.Common.setScrollbarWidth );
 $( BioSync.Common.setSessionWindowDimensions );
 $( BioSync.Common.setTextWidthMetric );
-$( BioSync.Common.setPageHeight );
+//$( BioSync.Common.setPageHeight );
 

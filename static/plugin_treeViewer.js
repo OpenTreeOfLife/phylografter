@@ -3,62 +3,6 @@ BioSync.TreeViewer = {
     instances: { },
 
     viewer: function() { return this; },
-    
-    RenderUtil: {
-
-        phylogram: {
-
-            browse: function( ) {
-                
-                BioSync.Common.loadCSS( { name: 'jquery-ui-1.8.5.custom' } );
- 
-                return this;
-            },
-
-            navigate: function( ) {
-                
-                BioSync.Common.loadCSS( { name: 'jquery-ui-1.8.5.custom' } );
-
-                return this;
-            }
-        },
-
-        d3: {
-
-            forceDirected: function( viewer ) {
-            
-                this.viewer = viewer;
-               
-                BioSync.Common.loadScript( { name: 'd3/d3' } );
-                BioSync.Common.loadScript( { name: 'd3/d3.geom' } );
-                BioSync.Common.loadScript( { name: 'd3/d3.layout' } );
-                BioSync.Common.loadCSS( { name: 'forceDirected' } );
-
-                if( ! viewer.events.nodeRightClick ) {
-
-                    viewer.events.nodeRightClick = {
-                        type: 'action',
-                        handler: 'unFixNode' };
-                }
-
-                viewer.events.nodeDoubleClick.options.push(
-                    { type: 'depends',
-                      test: { handler: 'isFixed',
-                              fixed: { handler: 'unFixNode', text: 'Unpin' },
-                              unFixed: { handler: 'fixNode', text: 'Pin' } } } );
-
-            },
-
-            sunburst: function( viewer ) {
-            
-                this.viewer = viewer;
-              
-                BioSync.Common.loadScript( { name: 'd3/d3' } );
-                BioSync.Common.loadScript( { name: 'd3/d3.layout' } );
-                BioSync.Common.loadCSS( { name: 'sunburst' } );
-            }
-        }
-    },
 
     Sidebar: {
 

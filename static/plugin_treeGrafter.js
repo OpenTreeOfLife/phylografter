@@ -4,16 +4,6 @@ BioSync.TreeGrafter = {
 
     viewer: function() { return this; },
 
-    RenderUtil: {
-
-        phylogram: {
-
-            browse: function() { return this; },
-
-            navigate: function() { return this; }
-        },
-    },
-    
     checkClipboardItemDrop: function( p, q ) {
 
         var grafters = BioSync.TreeViewer.instances;
@@ -273,138 +263,6 @@ BioSync.TreeViewer.viewer.prototype.removeGraftInfo = function( p ) {
 }
 
 
-BioSync.TreeViewer.RenderUtil.phylogram.navigate.renderTree = function( p ) {
-
-    var viewer = p.viewer;
-
-    viewer.getTree( { viewer: viewer } );
-
-    if( viewer.treeType =='grafted' ) { 
-        
-        //hack for webkit (jquery synch ajax?) bug
-        //don't think i need this anymore
-        if( ! viewer.columns[ viewer.currentColumnIndex ].nodeInfo ) {
-
-            var date = new Date();
-            var curDate = null;
-
-            do { curDate = new Date(); } 
-            while(curDate-date < 500);
-        }
-        
-        //viewer.getGraftHistory( { viewer: viewer } );
-    }
-}
-
-BioSync.TreeViewer.RenderUtil.phylogram.navigate.verticallyExpandNode = function( p ) {
-                
-    var viewer = p.data.viewer;
-
-    var clickedColumn = viewer.columns[ p.data.columnIndex ];
-    var rootId = clickedColumn.rootId;
-
-    viewer.renderUtil.updateColumns( { clickedIndex: p.data.columnIndex, viewer: viewer } );
-                
-    $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeViewer', argList: [ 'verticallyExpandNode' ] } ),
-              type: "GET",
-              context: viewer,
-              data: { nodeId: p.data.nodeId, rootId: rootId, collapsedNodeIds: clickedColumn.collapsedNodeIds.join(':'), treeType: viewer.treeType },
-              success: new Array(
-                viewer.renderUtil.handleVerticalExpandResponse,
-                ( p.success ) ? p.success : function() { },
-                function() { $(document).trigger('verticallyExpandNodeSuccess', { viewer: viewer } ); } ) } );
-
-    $('body').find('div.expandOptionContainer:visible').hide();
-}
-
-BioSync.TreeViewer.RenderUtil.phylogram.navigate.expandNode = function( p ) {
-
-    var viewer = p.data.viewer;
-    
-    viewer.renderUtil.updateColumns( { clickedIndex: p.data.columnIndex, viewer: viewer } );
-
-    var controller = ( viewer.treeType == 'grafted' ) ? 'plugin_treeGrafter' : 'plugin_treeViewer';
-    
-    $.ajax( { url: BioSync.Common.makeUrl( { controller: controller, argList: [ 'navigateExpandNode' ] } ),
-              type: "GET",
-              context: viewer,
-          data: { nodeId: p.data.nodeId },
-              success: new Array( viewer.handleReceivedTree,
-                      function() { viewer.renderUtil.addAnimations( {
-                                        viewer: viewer, clickedHover: $(p.target).closest('div.hiddenHover') } );
-                                   viewer.container.trigger('expandNodeSuccess', { } ); },
-                      ( p.success ) ? p.success : function() { },
-                      function() {  } ) } );
-                
-    $('body').find('div.expandOptionContainer:visible').hide();
-}
-
-
-BioSync.TreeViewer.RenderUtil.phylogram.navigate.moveCurrentColumn = function( p ) {
-    var viewer = p.viewer;
-    var prevColumn = viewer.columns[ viewer.currentColumnIndex - 1 ];
-
-    var extraOffset = ( viewer.graftInfo && ( viewer.graftColumnIndex != viewer.currentColumnIndex - 1 ) ) ? 50 : 0;
-    extraOffset = 0;
-
-    viewer.columns[ viewer.currentColumnIndex ].container.css( {
-        'top': 0,
-        'left': prevColumn.containerWidth + prevColumn.containerPosition.left + extraOffset } );
-}
-
-BioSync.TreeViewer.RenderUtil.phylogram.navigate.animateGraft = function( p ) {
-
-    var viewer = p.viewer;
-    var currentColumn = viewer.columns[ viewer.currentColumnIndex ];
-    var prevColumn = viewer.columns[ viewer.currentColumnIndex - 1 ];
-    var graftInfo = viewer.graftInfo;
-
-    var make = BioSync.Common.makeEl;
-
-    var graftContainerWidth = 50;
-    var graftContainerHeight = 100;
-    var graftContainerWidthBy2 = 25;
-    var graftContainerHeightBy2 = 50;
-
-    graftInfo.animateGraftContainer = make('div').attr( { 'class': 'animateGraftContainer' } )
-                                                 .css( { top: ( viewer.containerHeight / 2 ) - graftContainerHeightBy2, left: currentColumn.containerPosition.left } )
-                                                 .width( graftContainerWidth ).insertBefore( currentColumn.container );
-    
-    currentColumn.container.css( { top: 0, left: prevColumn.containerWidth + prevColumn.containerPosition.left + graftContainerWidth } );
-    currentColumn.containerOffset.left = currentColumn.containerOffset.left + graftContainerWidth;
-    currentColumn.containerRight = currentColumn.containeRight + graftContainerWidth;
-    currentColumn.containerPosition.left = currentColumn.containerPosition.left + graftContainerWidth;
-
-    graftInfo.animateGraftCanvas = Raphael( graftInfo.animateGraftContainer.get(0), 50, 100 );
-    graftInfo.animateGraftPath = graftInfo.animateGraftCanvas.path(  "M0 25L" ).attr( { stroke: 'blue', "stroke-width": 2 } );
-
-    graftInfo.graftButton =
-        graftInfo.animateGraftCanvas.text( graftContainerWidthBy2, 20, [ 'Approve\n', BioSync.Common.capitalizeFirstLetter( graftInfo.graftType ) ].join('') )
-                                    .attr( { opacity: 0, stroke: '#275B90', fill: '#275B90', "stroke-width": .5, "font-size": 12 } );
-                                                    
-    graftInfo.cancelButton =
-        graftInfo.animateGraftCanvas.text( graftContainerWidthBy2, 80, [ 'Cancel\n', BioSync.Common.capitalizeFirstLetter( graftInfo.graftType ) ].join('') )
-                                    .attr( { opacity: 0, stroke: '#275B90', fill: '#275B90', "stroke-width": .5, "font-size": 12 } );
-
-    graftInfo.animateGraftPath.animate( { path: "M0 50L 45 50L 35 60M45 50 L 35 40" }, 2000 );
-    
-    var revertInfo = $('.graftAuditContainer.disabledItem');
-
-    $( graftInfo.graftButton.node ).bind( 'mouseover', { el: graftInfo.animateGraftContainer }, BioSync.Common.addHoverPointer );
-    $( graftInfo.graftButton.node ).bind( 'mouseout', { el: graftInfo.animateGraftContainer }, BioSync.Common.removeHoverPointer );
-    $( graftInfo.graftButton.node ).bind( 'click', { viewer: viewer }, ( revertInfo.length ) ? viewer.addressUnsavedChanges : viewer.renderUtil.approveGraft );
-    
-    $( graftInfo.cancelButton.node ).bind( 'mouseover', { el: graftInfo.animateGraftContainer }, BioSync.Common.addHoverPointer );
-    $( graftInfo.cancelButton.node ).bind( 'mouseout', { el: graftInfo.animateGraftContainer }, BioSync.Common.removeHoverPointer );
-    $( graftInfo.cancelButton.node ).bind( 'click', { viewer: viewer }, viewer.renderUtil.cancelGraft );
-
-    setTimeout( viewer.renderUtil.showCurrentColumn, 2000, { currentColumn: currentColumn } ); 
-    setTimeout( viewer.renderUtil.showGraftOptions, 4000, { viewer: viewer } ); 
-                
-    viewer.columnWrapper.width( currentColumn.containerPosition.left + currentColumn.containerWidth );
-
-    viewer.renderUtil.scrollCheck( { viewer: viewer } );
-}
 
 BioSync.TreeViewer.viewer.prototype.addressUnsavedChanges = function( p ) { 
   
@@ -461,80 +319,7 @@ BioSync.TreeViewer.viewer.prototype.handleSavedChanges = function( response ) {
     viewer.container.trigger( 'graftSuccess', { } );
 }
 
-
-BioSync.TreeViewer.RenderUtil.phylogram.navigate.showGraftOptions = function( p ) {
-
-    var graftInfo = p.viewer.graftInfo;
-
-    graftInfo.graftButton.animate( { opacity: 1 }, 750 );
-    graftInfo.cancelButton.animate( { opacity: 1 }, 750 );
-}
-
-BioSync.TreeViewer.RenderUtil.phylogram.navigate.approveGraft = function( p ) {
-
-    var viewer = p.data.viewer;
-    var graftInfo = viewer.graftInfo;
-
-    var make = BioSync.Common.makeEl;
-    var form = BioSync.ModalBox;
-               
-    var struct = ( viewer.treeType == 'source' )
-        ? { content: make('div').append(
-                form.makeBasicTextRow( { text: [ 'A ', graftInfo.graftType, ' action on a source tree requires the creation of a \'grafted\' tree' ].join('') } ),
-                form.makeBasicTextInput( { name: 'treeName', text: 'Tree Name : ', value: 'Untitled Grafted Tree' } ),
-                form.makeBasicLongTextInput( { name: 'treeComment', text: 'Tree Description : ', value: '' } ),
-                form.makeBasicTextInput( { name: 'graftComment', text: 'Graft Comment : ', value: '' } ) ),
-            title: 'Create Grafted Tree' }
-
-        : { content: make('div').append(
-                form.makeBasicTextRow( { text: [ 'Please provide a comment to describe your ', graftInfo.graftType, '.' ].join('') } ),
-                form.makeBasicTextInput( { name: 'graftComment', text: 'Comment : ', value: '' } ) ),
-            title: BioSync.Common.capitalizeFirstLetter( graftInfo.graftType ) };
-
-    struct.content.append(
-          form.makeHiddenInput( { name: 'clipboardNodeId', value: graftInfo.clipboardNodeId } ),
-          form.makeHiddenInput( { name: 'affectedNodeId', value: graftInfo.affectedNodeId } ),
-          form.makeHiddenInput( { name: 'affectedCladeId', value: graftInfo.affectedCladeId } ),
-          form.makeHiddenInput( { name: 'graftType', value: graftInfo.graftType } ),
-          form.makeHiddenInput( { name: 'treeId', value: viewer.treeId } ),
-          form.makeHiddenInput( { name: 'treeType', value: viewer.treeType } ),
-          form.makeHiddenInput( { name: 'viewMode', value: viewer.viewMode } ),
-          form.makeBasicActionRow( {
-              submitText: 'Create Tree',
-              submitArgs: { context: viewer, 
-                            onSuccess: new Array( function() { viewer.renderUtil.cancelGraft( { data: { viewer: viewer } } );
-                                                               viewer.renderUtil.updateColumns( { clickedIndex: -1, viewer: viewer } ); },
-                                                  viewer.handleGraftResponse ),
-                            submitUrl: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'commitGraftAction' ] } ) } } ) );
-
-    BioSync.ModalBox.showModalBox( { title: struct.title, content: struct.content } );
-}
-
-
-BioSync.TreeViewer.RenderUtil.phylogram.navigate.cancelGraft = function( p ) {
-
-    var viewer = p.data.viewer;
-    var currentColumn = viewer.columns[ viewer.graftColumnIndex ];
-    var graftInfo = viewer.graftInfo;
-
-    if( graftInfo.graftType != 'prune' ) {
-
-        viewer.currentColumnIndex = viewer.graftColumnIndex;
-        viewer.renderUtil.removeColumns( { clickedIndex: viewer.graftColumnIndex, viewer: viewer } );
-
-        currentColumn.container.find('.hiddenHover').hover( viewer.showDescendantInfo, viewer.hideDescendantInfo );
-        currentColumn.container.bind( 'mousemove', { viewer: viewer, column: currentColumn, nodeSelector: currentColumn.nodeSelector }, viewer.renderUtil.updateNodeSelector );
-        currentColumn.path.attr( { stroke: viewer.style.color } );
-   
-        graftInfo.affectedCladePath.remove(); 
-        graftInfo.newCladePath.remove();
-        graftInfo.clipboardCladePath.remove();
-        graftInfo.animateGraftCanvas.clear();
-    }
-
-    delete viewer.graftInfo;
-}
-
+/*
 BioSync.TreeViewer.RenderUtil.phylogram.navigate.handleClipboardItemMovement = function( p ) {
 
     var viewer = p.viewer;
@@ -567,7 +352,7 @@ BioSync.TreeViewer.RenderUtil.phylogram.navigate.handleClipboardItemMovement = f
     }
 };
 
-
+*/
 
 
 $(document).bind( 'clipboardItemDrop', { }, BioSync.TreeGrafter.checkClipboardItemDrop ); 

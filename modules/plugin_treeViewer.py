@@ -213,3 +213,21 @@ def getDescendantLabelsRecurse( clade, descendantLabels ):
 
    for child in clade.children:
     getDescendantLabelsRecurse( child, descendantLabels )
+
+
+def getRenderModule( request, session, suffix = '' ):
+
+    moduleName = ''.join( [ 'unprocessed', session.TreeViewer.viewInfo['type'].capitalize(), suffix ] )
+
+    root = [ 'applications', '.', 
+            request.application, '.',
+            'modules', '.' ]
+
+    highLevelModule = __import__(
+        ''.join( [ ''.join( root ), moduleName  ] ) )
+
+    renderModule = getattr( getattr( getattr( highLevelModule, root[2] ), root[4] ), moduleName )
+
+    reload( renderModule )
+
+    return renderModule

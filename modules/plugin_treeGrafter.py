@@ -186,48 +186,46 @@ def updateSessionCauseNewGtree( session ):
     session.TreeViewer.strNodeTable = 'gnode'
 
 
-def pruneClade( tree, nodeId, hack=None ):
+def pruneClade( tree, nodeId ):
     
     cladeToPrune = util.getNodeById( tree, nodeId )
     parentClade = cladeToPrune.parent
 
     parentClade.remove_child( cladeToPrune )
+
+    return cladeToPrune
     
 
-def postPruneDBUpdate( db, session, auth ):
+def postPruneDBUpdate( db, session, request, auth, tree, prunedNodeObj ):
 
-    treeType = session.TreeViewer.type
-
-    prunedNodeRecord = db( db[ session.TreeViewer.strNodeTable ].id == session.treeEdit.prunedNodeId ).select().first()
+    treeType = session.TreeViewer.treeType
 
     if treeType == 'source':
 
-        gtreeId = createGTreeRecord( db, auth, session.treeEdit.treeName, session.treeEdit.treeDescription )
+        gtreeId = createGTreeRecord( db, auth, request.vars.treeName, request.vars.treeDescription )
 
         session.TreeViewer.treeId = gtreeId
 
 
-    index( session.treeEdit.currentTree )
+    index( tree )
 
-    sys.stdout.write( treeType )
-    
     if treeType == 'source':
-     
-        reference = dict( oldAffectedCladeId = prunedNodeRecord.parent, newAffectedCladeId = None )
+    
+        reference = dict( oldAffectedCladeId = prunedNodeObj.parent.id, newAffectedCladeId = None )
 
-        insertSnodesToGtree( db, session.TreeViewer.treeId, session.treeEdit.currentTree, None, reference )
+        insertSnodesToGtree( db, session.TreeViewer.treeId, tree, None, reference )
         
-        createEditRecord( db, auth, gtreeId, 'prune', reference['newAffectedCladeId'], prunedNodeRecord.id, None, session.treeEdit.comment, treeType, auth.user.id )
+        createEditRecord( db, auth, gtreeId, 'prune', reference['newAffectedCladeId'], prunedNodeObj.id, None, request.vars.comment, treeType, auth.user.id )
 
         updateSessionCauseNewGtree( session )
 
     else:
         
-        updateGtreeDB( db, session.treeEdit.currentTree )
+        updateGtreeDB( db, tree )
         
-        editId = createEditRecord( db, auth, session.TreeViewer.treeId, 'prune', prunedNodeRecord.parent, prunedNodeRecord.id, None, session.TreeEdit.comment, treeType, auth.user.id )
+        editId = createEditRecord( db, auth, session.TreeViewer.treeId, 'prune', prunedNodeObj.parent.id, prunedNodeId, None, request.vars.comment, treeType, auth.user.id )
         
-        pruneGNodeRecords( db, session.TreeViewer.treeId, prunedNodeRecord, editId )
+        pruneGNodeRecords( db, session.TreeViewer.treeId, prunedNodeObj.id, editId )
         
 
 

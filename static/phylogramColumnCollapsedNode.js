@@ -1,4 +1,11 @@
-BioSync.TreeViewer.Column.CollapsedNode.prototype = {
+BioSync.TreeViewer.RenderUtil.Column.CollapsedNode = function( column ) {
+    
+    this.column = column;
+    this.make = column.make;
+    return this;
+}
+
+BioSync.TreeViewer.RenderUtil.Column.CollapsedNode.prototype = {
 
     config: {
         strokeWidth: 1,
