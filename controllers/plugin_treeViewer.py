@@ -104,7 +104,7 @@ def refreshColumn():
 
 def horizontallyExpandNode():
 
-    return response.json( util.getRenderModule( reuqest, session ).horizontallyExpandNode( db, session, request ) )
+    return response.json( util.getRenderModule( request, session ).horizontallyExpandNode( db, session, request ) )
 
 
 def verticallyExpandNode():
