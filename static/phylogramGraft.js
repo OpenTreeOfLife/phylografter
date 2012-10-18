@@ -378,7 +378,9 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showTreeEditStatus =
             ? { present: 'Replacing', past: 'Replaced' }
             : { present: 'Pruning', past: 'Pruned' };
 
-    var content = this.make( 'div' ).attr( { 'class': 'treeEditStatus' } ).append( this.make( 'span' ).text( actionParticiple.present ) );
+    var content =
+        this.make( 'div' ).attr( { 'class': 'treeEditStatus' } ).append(
+            this.make( 'span' ).text( actionParticiple.present ) );
 
     var myDoc = $(document);
 
@@ -532,6 +534,8 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.pruneClade = functio
 
     this.highlightClade( { column: p.column, nodeId: p.nodeId } );
     
+    var successArray = new Array();
+    
     if( p.column.expandedNodeId ) {
         
         var pruneNodeInfo = p.column.nodeInfo[ p.nodeId ];
@@ -544,13 +548,13 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.pruneClade = functio
                 var column = this.columns[ i ];
                 this.highlightClade( { column: column, nodeId: column.rootId, } );
             }
+
+            successArray.push( function() { this.removeColumns( { start: p.column.index + 1, end: this.columns.length - 1 } ); } );
         }
     }
-
+    
     this.editActionString = 'prune';
     
-    var successArray = new Array( $.proxy( this.treeEditSuccess, this ) );
-
     var content = this.make('div').append(
         modal.makeBasicTextRow( { text: 'Please provide a comment on your prune action.' } ),
         modal.makeBasicTextInput( { text: 'Comment : ', name: 'comment', value: '' } ),

@@ -755,7 +755,12 @@ def setScaledNodeCoordsAndPathStringRecurse( nodeId, config, curTip, collapsedNo
 
 def refreshColumn( db, session, request ):
 
-    return getRenderResponse( build.node2tree( db, session, request.vars.rootId ), session )
+    columnInfo = session.TreeViewer.treeState[ session.TreeViewer.treeId ].columns[ int( request.vars.columnIndex ) ]
+
+    return getRenderResponse( \
+                getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, columnInfo.rootNodeId, columnInfo.collapsedNodeStorage ),
+                session,
+                columnInfo )
 
 
 def assignCollapseDetail( nodeDict, infoDict, config, curTip, totalNodes, branching ):

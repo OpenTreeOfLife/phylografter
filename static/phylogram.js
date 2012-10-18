@@ -472,7 +472,7 @@ BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype = {
         }
 
         $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeViewer', argList: [ 'refreshColumn' ] } ),
-                  type: "GET", data: { rootId: p.column.rootNodeId, collapsedNodeIds: p.column.collapsedNodeIds.join(':') },
+                  type: "GET", data: { columnIndex: p.column.index },
                   success: successHandlers } );
     },
 

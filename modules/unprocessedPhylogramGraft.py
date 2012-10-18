@@ -2,7 +2,7 @@ import math, sys, build
 from gluon.storage import Storage
 import plugin_treeViewer as util
 import plugin_treeGrafter as graftUtil
-
+import unprocessedPhylogram as super
 
 def pruneClade( db, session, request, auth ):
 
@@ -12,24 +12,12 @@ def pruneClade( db, session, request, auth ):
     treeState = session.TreeViewer.treeState[ session.TreeViewer.treeId ]
     columnInfo = treeState.columns[ columnIndex ]
 
-    tree = getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, columnInfo.rootNodeId, columnInfo.collapsedNodeStorage )
+    prunedCladeRow = db( db[ session.TreeViewer.strNodeTable ].id == nodeIdToPrune ).select()[ 0 ]
 
-    prunedClade = graftUtil.pruneClade( tree, nodeIdToPrune )
+    tree = getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, treeState.columns[ 0 ].rootNodeId, columnInfo.collapsedNodeStorage )
 
-    graftUtil.postPruneDBUpdate( db, session, request, auth, tree, prunedClade )
+    graftUtil.pruneClade( tree, nodeIdToPrune )
 
-    for ( collapsedNodeId, collapsedNodeData ) in columnInfo.collapsedNodeStorage.items():
-        
-        if( util.isAncestor( prunedClade, collapsedNodeData ) ):
-            
-            if( nodeIdToPrune not in treeState.formerlyCollapsedNodeStorage ):
-                treeState.formerlyCollapsedNodeStorage[ collapsedNodeId ] = columnInfo.collapsedNodeStorage[ collapsedNodeId ]
+    graftUtil.postPruneDBUpdate( db, session, request, auth, tree, prunedCladeRow )
 
-        del columnInfo.collapsedNodeStorage[ collapsedNodeId ]
-
-
-    return getRenderResponse( \
-        tree,
-        session,
-        columnInfo )
-
+    return dict() 
