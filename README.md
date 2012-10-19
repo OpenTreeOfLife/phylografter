@@ -2,10 +2,12 @@ Below here are notes on installing phylografter on installing phylografter on Ma
 
 1. Install Ivy
 
-    for module in matplotlib scipy numpy biopython pyparsing ipython lxml PIL ivy
-    do
-        pip install --upgrade "$module" 
-    done
+<code>
+for module in matplotlib scipy numpy biopython pyparsing ipython lxml PIL ivy
+do
+    pip install --upgrade "$module" 
+done
+<pre>
 
 2. Install MySQL
 I'm assuming below that it is installed in /usr/local/mysql 
@@ -44,9 +46,7 @@ http://www.web2py.com/examples/default/download I used Version 1.99.7
     $ ln -s /full/path/to/phylografterv2 .
 
 8. Bootstrap the DB tables for phylografter. Download new mysql dump from
- https://dl.dropbox.com/u/1939917/phylografter.sql.gz
-
-To load a SQL dump: launch the mysql daemon with large packet sizes:
+ https://dl.dropbox.com/u/1939917/phylografter.sql.gz To load a SQL dump: launch the mysql daemon with large packet sizes:
 
     $ mysqld_safe --max_allowed_pack=32M
 
