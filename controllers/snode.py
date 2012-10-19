@@ -1,6 +1,7 @@
 tree = local_import("tree", reload=True)
 build = local_import("build", reload=True)
 util = local_import( "plugin_treeViewer", reload = True )
+from pprint import pprint
 
 def index():
     return dict()
@@ -10,29 +11,34 @@ def update_snode():
     t = db.snode
     t.otu.readable = t.otu.writable = False
     rec = t(int(request.args(0) or 0))
-    t.taxon.readable = t.taxon.writable = False
+    ## t.taxon.readable = t.taxon.writable = False
     w = SQLFORM.widgets.autocomplete(
         request, db.ottol_name.name, id_field=db.ottol_name.id)
     t.ottol_name.widget = w
 
-    d = dict([ (k, v) for k, v in request.vars.items()
-               if k in t.fields ])
-    
-    if d:
-        rec.update_record(**d)
-
     form = SQLFORM(t, rec, showid=False, _id="updateform",
                    _action=URL(c="snode",f="update_snode.load",args=[rec.id]))
     
-    ## if form.accepts(request):
-    ##     pass
+    def valid(f):
+        print 'update snode', request.args(0), rec.label
+        print ' form.vars.ingroup then', f.vars.ingroup
+        print ' request.vars.ingroup then', request.vars.ingroup
+        print ' rec.ingroup then', rec.ingroup
+    if form.process(message_onsuccess='Node updated',
+                    onvalidation=valid).accepted:
+        print ' form.vars.ingroup now', form.vars.ingroup
+        print ' request.vars.ingroup now', request.vars.ingroup
+        print ' rec.ingroup now', rec.ingroup
+        name = form.vars.ottol_name
+        if name and rec.otu:
+            rec.otu.update_record(ottol_name=name)
 
     return dict(form=form)
 
 def editSnodeTaxon():
     t = db.snode
     rec = t( int(request.args(0)) )
-    t.taxon.readable = t.taxon.writable = False
+    ## t.taxon.readable = t.taxon.writable = False
     w = SQLFORM.widgets.autocomplete(
         request, db.ottol_name.name, id_field=db.ottol_name.id)
     t.ottol_name.widget = w
