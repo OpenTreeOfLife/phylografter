@@ -6,9 +6,9 @@ def getTree( db, session, request ):
 
     response = [ ]
 
-    for index in range( len( session.TreeViewer.treeState[ session.TreeViewer.treeId ].columns ) ):
+    for index in range( len( session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ].columns ) ):
        
-        columnInfo = session.TreeViewer.treeState[ session.TreeViewer.treeId ].columns[ index ]
+        columnInfo = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ].columns[ index ]
 
         response.append( \
             getRenderResponse( \
@@ -24,7 +24,7 @@ def collapseClade( db, session, request ):
     collapsingNodeId = int( request.vars.nodeId )
     columnIndex = int( request.vars.columnIndex )
 
-    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeId ]
+    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
 
     if( collapsingNodeId in treeState.formerlyCollapsedNodeStorage ):
 
@@ -53,7 +53,7 @@ def collapseClade( db, session, request ):
 
 def addColumn( db, session, request ):
 
-    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeId ]
+    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
 
     columnRootNodeId = request.vars.rootNodeId if len( treeState.columns ) != 0 else session.TreeViewer.rootNodeId
 
@@ -66,7 +66,7 @@ def addColumn( db, session, request ):
 
 def removeColumns( db, session, request ):
 
-    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeId ]
+    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
 
     start = int( request.vars.start )
     end = int( request.vars.end )
@@ -89,7 +89,7 @@ def horizontallyExpandNode( db, session, request ):
     expandingNodeId = int( request.vars.nodeId )
     columnIndex = int( request.vars.columnIndex )
     
-    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeId ]
+    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
 
     newColumnInfo = treeState.columns[ -1 ]
     
@@ -127,7 +127,7 @@ def verticallyExpandNode( db, session, request ):
 
     columnIndex = int( request.vars.columnIndex )
 
-    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeId ]
+    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
 
     session.TreeViewer.treeConfig[ session.TreeViewer.treeId ].maxTips.value = session.TreeViewer.config.maxTips.value = \
         session.TreeViewer.config.maxTips.value * 1.5
@@ -157,7 +157,7 @@ def navigateToNode( db, session, request ):
 
     nodeId = int( request.vars.nodeId )
     
-    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeId ]
+    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
 
     nodeTable = db.snode if session.TreeViewer.treeType == 'source' else db.gnode
     nodeRec = db( nodeTable.id == nodeId ).select()[0]
@@ -395,7 +395,7 @@ def removeNodeAndDescendants( renderInfo, nodeId, gatherLabels, descendantLabels
 
 def determineCollapsedNodes( session, renderInfo, tipsToCollapse, columnInfo ):
     
-    formerlyCollapsedNodeStorage = session.TreeViewer.treeState[ session.TreeViewer.treeId ].formerlyCollapsedNodeStorage
+    formerlyCollapsedNodeStorage = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ].formerlyCollapsedNodeStorage
 
     nodesToCollapseStorage = Storage()
 
@@ -755,7 +755,7 @@ def setScaledNodeCoordsAndPathStringRecurse( nodeId, config, curTip, collapsedNo
 
 def refreshColumn( db, session, request ):
 
-    columnInfo = session.TreeViewer.treeState[ session.TreeViewer.treeId ].columns[ int( request.vars.columnIndex ) ]
+    columnInfo = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ].columns[ int( request.vars.columnIndex ) ]
 
     return getRenderResponse( \
                 getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, columnInfo.rootNodeId, columnInfo.collapsedNodeStorage ),
