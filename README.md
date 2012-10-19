@@ -17,7 +17,7 @@ Assign the user a password ('abc123' in our example)
 Create an SQL database called something ('phylografter' in our example)
 Give the user privileges to modify the database
 
-    $ mysql -u root --password=<sqluserspassword>
+    $ mysql -u root --password=sqluserspassword
     mysql> CREATE USER 'tester'@'localhost' IDENTIFIED BY 'abc123' ;
     mysql> CREATE database phylografter ;
     mysql> GRANT ALL ON phylografter.* to 'tester'@'localhost' ;
@@ -40,15 +40,15 @@ http://www.web2py.com/examples/default/download I used Version 1.99.7
 
 7. Register phylografter as a web2py app by creating a symbolic link
 
-    cd web2py/appications
-    ln -s /full/path/to/phylografterv2 .
+    $ cd web2py/appications
+    $ ln -s /full/path/to/phylografterv2 .
 
 8. Bootstrap the DB tables for phylografter. Download new mysql dump from
  https://dl.dropbox.com/u/1939917/phylografter.sql.gz
 
 To load a SQL dump: launch the mysql daemon with large packet sizes:
 
-    mysqld_safe --max_allowed_pack=32M
+    $ mysqld_safe --max_allowed_pack=32M
 
 
 9. Launch web2py (you can use -a <recycle> to re-use the admin password:
