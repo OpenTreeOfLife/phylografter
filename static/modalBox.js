@@ -41,9 +41,18 @@ BioSync.ModalBox.getUrlForm = function( p ) {
     BioSync.ModalBox.successTriggerData = p.successData;
 }
 
+BioSync.ModalBox.handleCheckboxChange = function() {
+
+    var checkbox = $(this);
+
+    checkbox.val( ( checkbox.is( ':checked' ) ) ? 'on' : '' );
+}
+
 BioSync.ModalBox.acceptForm = function( response ) {
 
     $('#modalBoxForm').html( response );
+
+    $('input[type="checkbox"]').change( BioSync.ModalBox.handleCheckboxChange );
     
     $('#modalBoxContainer').show( 'slow', BioSync.ModalBox.alignBox );
 }
