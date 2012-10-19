@@ -2,12 +2,12 @@ Below here are notes on installing phylografter on installing phylografter on Ma
 
 1. Install Ivy
 
-<code>
+<pre>
 for module in matplotlib scipy numpy biopython pyparsing ipython lxml PIL ivy
 do
     pip install --upgrade "$module" 
 done
-<pre>
+</pre>
 
 2. Install MySQL
 I'm assuming below that it is installed in /usr/local/mysql 
