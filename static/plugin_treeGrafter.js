@@ -45,7 +45,7 @@ BioSync.TreeGrafter.viewer.prototype.onWindowLoad = function() {
 
     $.proxy( this.super.onWindowLoad, this )();
 
-    if( this.treeType == 'grafted' ) { this.getGraftHistory(); }
+    //if( this.treeType == 'grafted' ) { this.getGraftHistory(); }
 
 }
 
@@ -213,21 +213,15 @@ BioSync.TreeViewer.viewer.prototype.updateUrl = function() {
 
 BioSync.TreeViewer.viewer.prototype.handleUpdateUrlResponse = function( response ) { 
 
-    console.log( 'as' );
-
     var responseObj = eval( [ "(", response, ")" ].join('') );
     
     this.treeId = responseObj.treeId;
     this.treeType = responseObj.treeType;
 
-    console.log( BioSync.Common.makeUrl( { 'controller': 'gtree', argList: [ 'backbone', [ this.treeId, '?treeType=', this.treeType ].join('') ] } ) );
-
     window.history.pushState(
         { },
         'Phylografter',
         BioSync.Common.makeUrl( { 'controller': 'gtree', argList: [ 'backbone', [ this.treeId, '?treeType=', this.treeType ].join('') ] } ) ); 
-
-    console.log('a');
 }
 
 BioSync.TreeViewer.viewer.prototype.handleGraftResponse = function( response ) { 

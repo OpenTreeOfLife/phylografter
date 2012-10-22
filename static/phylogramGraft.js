@@ -421,11 +421,8 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getTreeAfterEdit = f
         stopTrigger: 'getCladeSuccess',
         stopFunction: new Array( BioSync.ModalBox.closeBox ),
         stopText: 'Received Tree' } );
-   
-    var successArray = new Array( $.proxy( this.getCladeSuccess, this ) ); 
-
-    $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeViewer', argList: [ 'getTree' ] } ),
-              type: "GET", success: successArray } );
+  
+    this.redrawTree();
 }
 
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.preProcessEditedTree = function() {
