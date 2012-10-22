@@ -136,11 +136,13 @@ BioSync.TreeViewer.RenderUtil.Column.CollapsedNode.prototype = {
                .appendTo( this.hiddenHover );
 
         this.menu.attr( { 'topPos': this.menu.css('top'), 'leftPos': this.menu.css('left') } ).css( { top: -1000, left: -1000 } );
-            
+    
+        var headerText = ( this.nodeInfo.text ) ? [ this.nodeInfo.text, this.nodeInfo.collapsed.text ].join(' ') : this.nodeInfo.collapsed.text;
+
         this.menuHeader =
             this.make('div')
                 .attr( { 'class': 'centerText' } )
-                .text( this.nodeInfo.collapsed.text )
+                .text( headerText )
                 .css( { 'font-size': 'medium',
                         'background-color': 'white',
                         'margin-bottom': '5px',

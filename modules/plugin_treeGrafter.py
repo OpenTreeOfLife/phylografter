@@ -1,6 +1,6 @@
 import plugin_treeViewer as util
 from ivy.tree import *
-import datetime, sys
+import datetime, sys, math
 import build as build
 
 
@@ -107,7 +107,7 @@ def postGraftDBUpdate( db, session, auth):
         
         createEditRecord( db, auth, session.TreeViewer.treeId, 'graft', reference['newAffectedCladeId'], graftedCladeSiblingRecord.id, session.treeEdit.graftedCladeNodeId, session.treeEdit.comment, session.TreeViewer.type, auth.user.id, reference['targetGNode'] )
         
-        updateSessionCauseNewGtree( session )
+        updateSessionForNewGtree( session )
 
     else:
 
@@ -181,9 +181,33 @@ def postReplaceDBUpdate( db, session, auth, tree, treeType, replacedCladeId, new
         
 
 
-def updateSessionCauseNewGtree( session ):
-    session.TreeViewer.type = 'grafted'
+def updateTreeStateForPrunedSourceTree( session, columnRootNodeIds, collapsedNodeIds, prunedNodeRow ):
+
+    session.TreeViewer.treeType = 'grafted'
     session.TreeViewer.strNodeTable = 'gnode'
+
+    oldTreeState = session.TreeViewer.treeState[ 'source' ][ session.TreeViewer.recentlyEditedSourceTreeId ]
+    newTreeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ] = \
+                   Storage( columns = [ ], formerlyCollapsedNodeStorage = Storage() )
+        
+    for column in oldTreeState.columns:
+
+        rootNodeId = columnRootNodeIds[ column.rootNodeId ]
+
+        newCollapsedNodeStorage = Storage()
+
+        for ( collapsedNodeId, collapsedNodeData ) in column.collapsedNodeStorage.items():
+            
+            newCollapsedNodeStorage[ collapsedNodeIds[ collapsedNodeId ].nodeId ] = collapsedNodeData
+            newCollapsedNodeStorage[ collapsedNodeIds[ collapsedNodeId ].nodeId ]['next'] = collapsedNodeIds[ collapsedNodeId ]['next']
+            newCollapsedNodeStorage[ collapsedNodeIds[ collapsedNodeId ].nodeId ]['back'] = collapsedNodeIds[ collapsedNodeId ]['back']
+
+        newTreeState.columns.append( Storage( rootNodeId = rootNodeId, collapsedNodeStorage = newCollapsedNodeStorage  ) )
+ 
+    newTreeState.totalNodes = oldTreeState.totalNodes - math.floor( ( prunedNodeRow.back - prunedNodeRow.next - 1 ) / 2 )
+    newTreeState.allNodesHaveLength = oldTreeState.allNodesHaveLength
+
+    del session.TreeViewer.recentlyEditedSourceTreeId
 
 
 def pruneClade( tree, nodeId ):
@@ -200,25 +224,31 @@ def postPruneDBUpdate( db, session, request, auth, tree, prunedNodeRow ):
 
     if treeType == 'source':
 
+        ( columnRootNodeIds, collapsedNodeIds ) = gatherTreeStateIds( session )
+        session.TreeViewer.recentlyEditedSourceTreeId = session.TreeViewer.treeId
+
         gtreeId = createGTreeRecord( db, auth, request.vars.treeName, request.vars.treeDescription )
 
         session.TreeViewer.treeId = gtreeId
 
+        index( tree )
 
-    index( tree )
-
-    if treeType == 'source':
-    
-        reference = dict( oldAffectedCladeId = prunedNodeRow.parent, newAffectedCladeId = None )
+        reference = dict( \
+            oldAffectedCladeId = prunedNodeRow.parent,
+            newAffectedCladeId = None,
+            columnRootNodeIds = columnRootNodeIds,
+            collapsedNodeIds = collapsedNodeIds )
 
         insertSnodesToGtree( db, session.TreeViewer.treeId, tree, None, reference )
         
         createEditRecord( db, auth, gtreeId, 'prune', reference['newAffectedCladeId'], prunedNodeRow.id, None, request.vars.comment, treeType, auth.user.id )
 
-        updateSessionCauseNewGtree( session )
+        updateTreeStateForPrunedSourceTree( session, columnRootNodeIds, collapsedNodeIds, prunedNodeRow )
 
     else:
         
+        index( tree )
+
         updateGtreeDB( db, tree )
         
         editId = createEditRecord( db, auth, session.TreeViewer.treeId, 'prune', prunedNodeRow.parent, prunedNodeRow.id, None, request.vars.comment, treeType, auth.user.id )
@@ -226,6 +256,20 @@ def postPruneDBUpdate( db, session, request, auth, tree, prunedNodeRow ):
         pruneGNodeRecords( db, session.TreeViewer.treeId, prunedNodeRow.id, editId )
         
 
+def gatherTreeStateIds( session ):
+
+    columnRootNodeIds = Storage()
+    collapsedNodeIds = Storage()
+
+    for column in session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ].columns:
+
+        columnRootNodeIds[ column.rootNodeId ] = None
+
+        for ( collapsedNodeId, collapsedNodeData ) in column.collapsedNodeStorage.items():
+            
+            collapsedNodeIds[ collapsedNodeId ] = None
+
+    return ( columnRootNodeIds, collapsedNodeIds )
 
 
 def updateGtreeDB( db, currentNode ):
@@ -278,8 +322,6 @@ def insertSnodesToGtree( db, gtreeId, node, parentId, reference=None ):
         snode = node.id,
         pruned = False )
 
-    node.id = gnode.id
-
     if( reference is not None ):
         
         if( ( 'newCladeId' in reference ) and ( node.id == reference['newCladeId'] ) ):
@@ -289,6 +331,14 @@ def insertSnodesToGtree( db, gtreeId, node, parentId, reference=None ):
         if( ( 'oldAffectedCladeId' in reference ) and ( node.id == reference['oldAffectedCladeId'] ) ):
 
             reference['newAffectedCladeId'] = gnode.id
+        
+        if( ( 'columnRootNodeIds' in reference ) and ( node.id in reference[ 'columnRootNodeIds' ] ) ):
+            reference[ 'columnRootNodeIds' ][ node.id ] = gnode.id
+        
+        if( ( 'collapsedNodeIds' in reference ) and ( node.id in reference[ 'collapsedNodeIds' ] ) ):
+            reference[ 'collapsedNodeIds' ][ node.id ] = Storage( nodeId = gnode.id, next = node.next, back = node.back )
+    
+    node.id = gnode.id
 
     for child in node.children:
         insertSnodesToGtree( db, gtreeId, child, gnode.id, reference )

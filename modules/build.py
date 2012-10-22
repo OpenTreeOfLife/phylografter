@@ -15,88 +15,72 @@ from collections import defaultdict
 
 def node2tree( db, session, nodeId ):
     if session.TreeViewer.treeType == 'source':
-        return sourceClade( db, nodeId, session.collapsedNodeStorage[ session.TreeViewer.treeId ] )
+        return sourceClade( db, session, nodeId, session.collapsedNodeStorage[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ] )
     else:
-        #return getGClade( db, i )
-        return gnode2tree( db, i, q, lim, maxdepth )
+        return graftedClade( db, session, nodeId, session.collapsedNodeStorage[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ] )
 
    
-def treeFromRootRow( db, rootRecord, treeType, collapsedNodeRecs ):
-    if( treeType == 'source' ):
-        return sourceClade( db, rootRecord, collapsedNodeRecs )
-    else:
-        return getGClade( db, rootRecord, collapsedNodeRecs )
+def getRootRecord( db, session, rootNodeId ):
+
+    return db( db[ session.TreeViewer.strNodeTable ].id == rootNodeId ).select()[0]
 
 
-def getGClade( db, rootRec, collapsedNodeRecs ):
-  
-    cladeRoot = None
+def getCladeSqlString( session, rootRec, collapsedNodeStorage ):
 
-    parentStack = []
+    nodeTable = session.TreeViewer.strNodeTable
 
-    query = db( ( db.gnode.tree == rootRec.tree ) &
-                ( db.gnode.next >= rootRec.next ) &
-                ( db.gnode.back <= rootRec.back ) )
-    
-    for rec in collapsedNodeRecs:
-        query=query( ~( ( db.gnode.next > rec['gnode']['next'] ) & ( db.gnode.back < rec['gnode']['back'] ) ) )
+    joinString = notPruned = ''
 
-    for gnodeRow in query.select( db.gnode.ALL, orderby = db.gnode.next ).as_list():
+    if( nodeTable == 'snode' ):
 
-        node = Node()
+        joinString = 'FROM snode LEFT JOIN taxon on snode.taxon = taxon.id '
 
-        node.id = gnodeRow['id']; node.next = gnodeRow['next']; node.back = gnodeRow['back']
-        node.label = gnodeRow['label']; node.depth = len( parentStack )
+    elif( nodeTable == 'gnode' ):
 
+        joinString = ''.join( [ 'FROM gnode LEFT JOIN snode on gnode.snode = snode.id ',
+                                'LEFT JOIN taxon on snode.taxon = taxon.id ' ] )
 
-        if( node.next - node.back == 1 ):
-            node.isleaf = True
+        notPruned = 'gnode.pruned = "F" AND '
 
-        if( node.next == rootRec.next ):
-            cladeRoot = node
-            parentStack.append( node )
-            continue
+    stringList = [ \
+        'SELECT ', nodeTable, '.id, ',
+                   nodeTable, '.next, ',
+                   nodeTable, '.back, ',
+                   nodeTable, '.length, ',
+                   nodeTable, '.label, ',
+                   'taxon.name ',
+        joinString,
+        'WHERE ', nodeTable, '.tree = ', str( rootRec.tree ), ' AND ',
+        notPruned,
+        nodeTable, '.next >= ', str( rootRec.next ), ' AND ',
+        nodeTable, '.back <= ', str( rootRec.back ) ]
 
-        while( node.back > parentStack[ -1 ].back ):
-            parentStack.pop() 
-
-        node.parent = parentStack[ -1 ]
-        parentStack[ -1 ].add_child( node )
-        parentStack.append( node )
-
-    return cladeRoot
-
-
-def sourceClade( db, rootNodeId, collapsedNodeStorage ):
-
-    rootRec = db( db.snode.id == rootNodeId ).select()[0]
-
-    sqlString = [ \
-        'SELECT snode.id, snode.next, snode.back, snode.length, snode.label, taxon.name ',
-        'FROM snode LEFT JOIN taxon on snode.taxon = taxon.id ',
-        'WHERE snode.tree = ', str( rootRec.tree ), ' AND ',
-        'snode.next >= ', str( rootRec.next ), ' AND ',
-        'snode.back <= ', str( rootRec.back ) ]
 
     if( len( collapsedNodeStorage ) ):
 
         for ( nodeId, collapsedNodeData ) in collapsedNodeStorage.items():
 
-            sqlString.append( ''.join( [ \
-                ' AND NOT ( ( snode.next > ', str( collapsedNodeData['next'] ), ' ) AND ( snode.back < ', str( collapsedNodeData['back'] ), ' ) )' ] ) )
+            stringList.append( \
+                ''.join( [ \
+                    ' AND NOT ( ( ', nodeTable, '.next > ', str( collapsedNodeData['next'] ), ' ) ',
+                           'AND ( ', nodeTable, '.back < ', str( collapsedNodeData['back'] ), ' ) )' ] ) )
 
-        
-    sqlString.append( ' ORDER BY snode.next;' )
+    stringList.append( ''.join( [ ' ORDER BY ', nodeTable, '.next;' ] ) )
 
-    list = db.executesql( ''.join( sqlString ) )
-    
+    print ''.join( stringList )
+
+    return ''.join( stringList ) 
+
+
+def getIvyTreeFromNodeList( resultList ):
+
     parentStack = []
 
-    cladeRoot = getNodeFromRowData( list[0] ) 
+    cladeRoot = getNodeFromRowData( resultList[0] ) 
     cladeRoot.depth = 0
     parentStack.append( cladeRoot )
 
-    for row in list[1:]:
+    for row in resultList[1:]:
 
         node = getNodeFromRowData( row )
         node.depth = len( parentStack );
@@ -109,6 +93,24 @@ def sourceClade( db, rootNodeId, collapsedNodeStorage ):
         parentStack.append( node )
     
     return cladeRoot
+
+
+def graftedClade( db, session, rootNodeId, collapsedNodeStorage ):
+
+    rootRec = getRootRecord( db, session, rootNodeId )
+
+    resultList = db.executesql( getCladeSqlString( session, rootRec, collapsedNodeStorage ) )
+
+    return getIvyTreeFromNodeList( resultList )
+
+
+def sourceClade( db, session, rootNodeId, collapsedNodeStorage ):
+
+    rootRec = getRootRecord( db, session, rootNodeId )
+
+    resultList = db.executesql( getCladeSqlString( session, rootRec, collapsedNodeStorage ) )
+   
+    return getIvyTreeFromNodeList( resultList )
 
 
 def getNodeFromRowData( row ):

@@ -380,38 +380,51 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showTreeEditStatus =
 
     var content =
         this.make( 'div' ).attr( { 'class': 'treeEditStatus' } ).append(
-            this.make( 'span' ).text( actionParticiple.present ) );
+            this.make( 'span' ).text( [ actionParticiple.present, ', updating database' ].join('') ) );
 
     var myDoc = $(document);
 
     modal.showModalBox( { content: content, width: ( myDoc.width() / 2 )  } );
+
+    var successFunctions = new Array();
+
+    if( ( this.viewer.treeType == 'source' ) ) {
+
+        successFunctions = successFunctions.concat( [ $.proxy( this.viewer.updateUrl, this.viewer ), $.proxy( this.getTreeAfterEdit, this ) ] );
+
+    } else {
+
+        successFunctions.push( $.proxy( this.getColumnAfterEdit, this ) );
+
+    }
 
     BioSync.Common.dotDotDotText( {
         content: content,
         minimumTime: 2000,
         stopTrigger: 'editSuccess',
         stopText: actionParticiple.past,
-        stopFunction: new Array( $.proxy( this.updateDBAfterTreeEdit, this ) ) } );
+        stopFunction: successFunctions } );
 }
 
-BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.updateDBAfterTreeEdit = function() {
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getColumnAfterEdit = function() {
+}
 
-    var content = this.make( 'div' ).attr( { 'class': 'treeEditStatus' } ).append( this.make( 'span' ).text( 'Updating database' ) );
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getTreeAfterEdit = function() {
+
+    var content = this.make( 'div' ).attr( { 'class': 'treeEditStatus' } ).append( this.make( 'span' ).text( 'Getting updated tree' ) );
 
     BioSync.ModalBox.contentContainer.append( content );
     
     BioSync.Common.dotDotDotText( {
         content: content,
         minimumTime: 2000,
-        stopTrigger: 'dbUpdateSuccess',
-        stopFunction: new Array( $.proxy( this.preProcessEditedTree, this ) ),
-        stopText: 'Database Updated' } );
+        stopTrigger: 'getCladeSuccess',
+        stopFunction: new Array( BioSync.ModalBox.closeBox ),
+        stopText: 'Received Tree' } );
    
-    var successArray = new Array( $.proxy( this.dbUpdateSuccess, this ) ); 
+    var successArray = new Array( $.proxy( this.getCladeSuccess, this ) ); 
 
-    if( this.viewer.treeType == 'source' ) { successArray.unshift( $.proxy( this.viewer.updateURL, this.viewer ) ); }
-
-    $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ [ 'post', BioSync.Common.capitalizeFirstLetter( this.editActionString ), 'DBUpdate' ].join('') ] } ),
+    $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeViewer', argList: [ 'getTree' ] } ),
               type: "GET", success: successArray } );
 }
 
@@ -436,11 +449,6 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.preProcessEditedTree
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.preprocessSuccess = function() {
     
     $( document ).trigger( 'preprocessSuccess' );
-}
-
-BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.dbUpdateSuccess = function() {
-
-    $( document ).trigger( 'dbUpdateSuccess' );
 }
 
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.treeEditSuccess = function() {
@@ -534,8 +542,8 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.pruneClade = functio
 
     this.highlightClade( { column: p.column, nodeId: p.nodeId } );
     
-    var successArray = new Array();
-    
+    var successArray = new Array( $.proxy( this.treeEditSuccess, this ) );
+
     if( p.column.expandedNodeId ) {
         
         var pruneNodeInfo = p.column.nodeInfo[ p.nodeId ];

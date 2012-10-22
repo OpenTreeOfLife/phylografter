@@ -24,9 +24,9 @@ def pruneClade():
 
 
 
-def updateURL():
+def updateUrl():
 
-    return response.json( dict( treeId = session.TreeViewer.treeId, treeType = session.TreeViewer.type ) )
+    return response.json( dict( treeId = session.TreeViewer.treeId, treeType = session.TreeViewer.treeType ) )
 
 
 def getRecentlyCreatedGTree():

@@ -97,6 +97,9 @@ def index():
 @auth.requires_login()
 def backbone():
 
+    #used for testing
+    del session.TreeViewer
+
     if( 'TreeViewer' not in session ):
         session.TreeViewer = Storage()
         session.TreeViewer.treeType = 'source'
@@ -104,5 +107,6 @@ def backbone():
 
     if( request.vars.treeType ):
         session.TreeViewer.treeType = request.vars.treeType
+        session.TreeViewer.strNodeTable = 'snode' if request.vars.treeType == 'source' else 'gnode'
 
     return dict()

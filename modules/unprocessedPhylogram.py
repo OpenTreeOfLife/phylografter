@@ -12,7 +12,7 @@ def getTree( db, session, request ):
 
         response.append( \
             getRenderResponse( \
-                getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, columnInfo.rootNodeId, columnInfo.collapsedNodeStorage ),
+                getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, session, columnInfo.rootNodeId, columnInfo.collapsedNodeStorage ),
                 session,
                 columnInfo ) )
 
@@ -32,7 +32,7 @@ def collapseClade( db, session, request ):
 
     else:
 
-        collapsingClade = getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, collapsingNodeId, Storage() )
+        collapsingClade = getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, session, collapsingNodeId, Storage() )
 
         renderInfo = getattr( sys.modules[__name__], ''.join( [ 'getRenderInfoFor', session.TreeViewer.viewInfo['mode'].capitalize(), 'Mode' ] ) )( collapsingClade )
 
@@ -45,7 +45,8 @@ def collapseClade( db, session, request ):
         treeState.columns[ columnIndex ].collapsedNodeStorage[ collapsingNodeId ] = collapsedCladeInfo
 
     return getRenderResponse( \
-        getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, treeState.columns[ columnIndex ].rootNodeId,
+        getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, session,
+                                                                                   treeState.columns[ columnIndex ].rootNodeId,
                                                                                    treeState.columns[ columnIndex ].collapsedNodeStorage ),
         session,
         treeState.columns[ columnIndex ] )
@@ -116,7 +117,7 @@ def horizontallyExpandNode( db, session, request ):
             newColumnInfo.keepVisibleNodeStorage[ int( rec[0] ) ] = True
 
     return getRenderResponse( \
-        getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, newColumnInfo.rootNodeId, newColumnInfo.collapsedNodeStorage ),
+        getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, session, newColumnInfo.rootNodeId, newColumnInfo.collapsedNodeStorage ),
         session,
         newColumnInfo )
 
@@ -148,7 +149,7 @@ def verticallyExpandNode( db, session, request ):
             treeState.columns.pop()
 
     return getRenderResponse( \
-        getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, treeState.columns[ columnIndex ].rootNodeId, treeState.columns[ columnIndex ].collapsedNodeStorage ),
+        getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, session, treeState.columns[ columnIndex ].rootNodeId, treeState.columns[ columnIndex ].collapsedNodeStorage ),
         session,
         treeState.columns[ columnIndex ] )
 
@@ -175,7 +176,7 @@ def navigateToNode( db, session, request ):
 
     return getRenderResponse( \
         getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) ) \
-            ( db, treeState.columns[ 0 ].rootNodeId, treeState.columns[ 0 ].collapsedNodeStorage ),
+            ( db, session, treeState.columns[ 0 ].rootNodeId, treeState.columns[ 0 ].collapsedNodeStorage ),
         session,
         treeState.columns[ 0 ] )
 
@@ -758,7 +759,7 @@ def refreshColumn( db, session, request ):
     columnInfo = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ].columns[ int( request.vars.columnIndex ) ]
 
     return getRenderResponse( \
-                getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, columnInfo.rootNodeId, columnInfo.collapsedNodeStorage ),
+                getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, session, columnInfo.rootNodeId, columnInfo.collapsedNodeStorage ),
                 session,
                 columnInfo )
 

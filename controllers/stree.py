@@ -387,6 +387,7 @@ def svgView():
         rec = db.stree(i)
     return dict(rec=rec)
 
+
 def editOTUs():
     response.title = 'Edit OTUs'
     return dict()
