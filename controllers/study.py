@@ -301,7 +301,7 @@ def load_record():
 def record():
     t = db.study
     rec = t(int(request.args(0) or 0))
-    t.focal_clade.readable = t.focal_clade.writable = False
+    ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ottol.label = 'Focal clade'
     t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
         request, db.ottol_name.name, id_field=db.ottol_name.id)
@@ -320,7 +320,7 @@ def create():
     t = db.study
     name = "%s %s" % (auth.user.first_name, auth.user.last_name)
     t.contributor.default=name
-    t.focal_clade.readable = t.focal_clade.writable = False
+    ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ottol.label = 'Focal clade'
     t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
         request, db.ottol_name.name, id_field=db.ottol_name.id)
@@ -332,7 +332,7 @@ def view():
     t = db.study
     rec = t(request.args(0)) or redirect(URL("create"))
     readonly = not auth.has_membership(role="contributor")
-    t.focal_clade.readable = t.focal_clade.writable = False
+    ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ottol.label = 'Focal clade'
     t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
         request, db.ottol_name.name, id_field=db.ottol_name.id)
@@ -432,7 +432,7 @@ def tbimport():
 def tbimport2():
     tbid = request.args(0)
     t = db.study
-    t.focal_clade.readable = t.focal_clade.writable = False
+    ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ottol.label = 'Focal clade'
     t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
         request, db.ottol_name.name, id_field=db.ottol_name.id)
@@ -485,7 +485,7 @@ def tbimport_otus():
         response.files.append(URL('static',x))
 
     t = db.study
-    t.focal_clade.readable = t.focal_clade.writable = False
+    ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ottol.label = 'Focal clade'
     t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
         request, db.ottol_name.name, id_field=db.ottol_name.id)
