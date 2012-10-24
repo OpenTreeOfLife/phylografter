@@ -6,7 +6,7 @@ track_changes()
 ivy = local_import('ivy')
 treebase = ivy.treebase
 #from ivy import treebase
-response.subtitle = "Studies"
+response.subtitle = A("Studies", _href=URL('study','index'))
 
 class Virtual(object):
     def study_url(self):
@@ -140,6 +140,7 @@ def dtrecords():
                 sdir = request.vars.get("sSortDir_%s" % i) or "asc"
                 if sdir == "desc": scol = ~scol
                 orderby.append(scol)
+
     start = int(request.vars.iDisplayStart or 0)
     end = start + int(request.vars.iDisplayLength or 10)
     limitby = (start,end)
@@ -358,6 +359,30 @@ def view():
     files = crud.select(db.study_file, db.study_file.study==rec, truncate=64)
     return dict(form=form, label=label, trees=trees, files=files, rec=rec)
         
+def delete_tag():
+    rec = db.study(request.args(0))
+    db.study_tag(request.args(1)).delete_record()
+    return dict()
+
+def tag():
+    t = db.study_tag
+    rec = db.study(request.args(0))
+    tags = db(t.study==rec.id).select(orderby=t.tag)
+    t.study.readable = t.study.writable = False
+    t.tag.label = 'Add'
+    t.study.default = rec.id
+    t.tag.widget = SQLFORM.widgets.autocomplete(request, t.tag)
+    form = SQLFORM(t)
+    if form.process().accepted:
+        tags = db(t.study==rec.id).select(orderby=t.tag)
+    v = []
+    for t in tags:
+        u = URL('study', 'delete_tag.load', args=[rec.id, t.id])
+        cid = 'study-tag-%s' % t.id
+        a = A("[X]", _href=u, cid=cid, _title='delete tag')
+        v.append(SPAN(t.tag, XML('&nbsp;'), a, _id=cid))
+    return dict(tags=v, form=form)
+
 def download():
     return response.download(request, db)
 

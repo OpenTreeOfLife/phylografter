@@ -104,7 +104,7 @@
         <div class="sixteen columns">
           <h2 style="margin:0; padding: .25em;
 		     background-color:#F0F0F0; color:SteelBlue;">
-          {{=response.title or request.application}}{{if response.subtitle:}}::{{=response.subtitle}}{{pass}}
+          {{=A(response.title or request.application, _href=URL('default','index'))}}{{if response.subtitle:}}::{{=response.subtitle}}{{pass}}
           </h2>
         </div>
       </div>

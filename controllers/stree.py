@@ -354,7 +354,7 @@ def edit():
     form.vars.study = rec.id
     if form.accepts(request.vars, session):
         response.flash = "record updated"
-    return dict(form=form)
+    return dict(form=form, rec=rec)
 
 def view():
     return dict()
@@ -387,6 +387,29 @@ def svgView():
         rec = db.stree(i)
     return dict(rec=rec)
 
+def delete_tag():
+    rec = db.stree(request.args(0))
+    db.stree_tag(request.args(1)).delete_record()
+    return dict()
+
+def tag():
+    t = db.stree_tag
+    rec = db.stree(request.args(0))
+    tags = db(t.stree==rec.id).select(orderby=t.tag)
+    t.stree.readable = t.stree.writable = False
+    t.tag.label = 'Add'
+    t.stree.default = rec.id
+    t.tag.widget = SQLFORM.widgets.autocomplete(request, t.tag)
+    form = SQLFORM(t)
+    if form.process().accepted:
+        tags = db(t.stree==rec.id).select(orderby=t.tag)
+    v = []
+    for t in tags:
+        u = URL('stree', 'delete_tag.load', args=[rec.id, t.id])
+        cid = 'stree-tag-%s' % t.id
+        a = A("[X]", _href=u, cid=cid, _title='delete tag')
+        v.append(SPAN(t.tag, XML('&nbsp;'), a, _id=cid))
+    return dict(tags=v, form=form)
 
 def editOTUs():
     response.title = 'Edit OTUs'

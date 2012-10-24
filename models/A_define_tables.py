@@ -86,37 +86,43 @@ def define_tables(db, migrate=False):
         migrate=migrate
         )
 
-    db.define_table(
-        "ottol_node",
-        Field("uid", "integer", required=True, unique=True, notnull=True),
-        Field("parent", "integer"),
-        Field("next", "integer"),
-        Field("back", "integer"),
-        Field("depth", "integer"),
-        Field("name", "string", required=True, notnull=True),
-        Field("mtime", "datetime", default=datetime.datetime.now(),
-              readable=False, writable=False),
-        format="%(name)s",
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     "ottol_node",
+    ##     Field("uid", "integer", required=True, unique=True, notnull=True),
+    ##     Field("parent", "integer"),
+    ##     Field("next", "integer"),
+    ##     Field("back", "integer"),
+    ##     Field("depth", "integer"),
+    ##     Field("name", "string", required=True, notnull=True),
+    ##     Field("mtime", "datetime", default=datetime.datetime.now(),
+    ##           readable=False, writable=False),
+    ##     format="%(name)s",
+    ##     migrate=migrate
+    ##     )
 
     db.define_table(
         "ottol_name",
-        Field("uid", "integer", required=True, unique=True, notnull=True),
-        Field("primary_source", "string"),
-        Field("primary_source_taxid", "string"),
+        Field("opentree_uid", "string", length=32,
+              required=True, notnull=True, unique=True),
+        Field("opentree_parent_uid", "string", length=32),
+        Field("preottol_taxid", "integer", unique=True),
+        Field("preottol_parent_taxid", "integer", unique=True),
+        Field("preottol_source", "string"),
+        Field("preottol_source_taxid", "string"),
         Field("ncbi_taxid", "integer"),
         Field("namebank_taxid", "integer"),
         Field("treebase_taxid", "integer"),
-        Field("node", db.ottol_node, ondelete="NO ACTION"),
+        ## Field("node", db.ottol_node, ondelete="NO ACTION"),
         Field("name", "string", required=True, notnull=True),
-        Field("authority", "string"),
-        Field("code", "string"),
+        Field("unique_name", "string", unique=True,
+              required=True, notnull=True),
+        Field("preottol_authority", "string"),
+        Field("preottol_code", "string"),
         Field("rank", "string"),
-        Field("ottol_date", "string"),
+        Field("preottol_date", "string"),
         Field("comments", "string"),
-        Field("homonym_flag", "boolean"),
-        Field("pdb_flag", "boolean"),
+        Field("preottol_homonym_flag", "boolean"),
+        Field("preottol_pdb_flag", "boolean"),
         Field("mtime", "datetime", default=datetime.datetime.now(),
               readable=False, writable=False),
         format="%(name)s",
@@ -220,6 +226,20 @@ def define_tables(db, migrate=False):
     db.study.citation.requires = [IS_NOT_EMPTY()]
 
     db.define_table(
+        "study_tag",
+        Field("study", db.study, ondelete="NO ACTION"),
+        Field("tag", "string", required=True, notnull=True),
+        Field("name", "string"),
+        Field("value", "string"),
+        format="%(tag)s",
+        migrate=migrate
+        )
+    db.study_tag.name.readable = False
+    db.study_tag.name.writable = False
+    db.study_tag.value.readable = False
+    db.study_tag.value.writable = False
+
+    db.define_table(
         "study_file",
         Field("study", db.study, ondelete="NO ACTION"),
         Field("description"),
@@ -291,14 +311,30 @@ def define_tables(db, migrate=False):
     db.stree.newick.requires = [IS_NOT_EMPTY()]
 
     db.define_table(
+        "stree_tag",
+        Field("stree", db.stree, ondelete="NO ACTION"),
+        Field("tag", "string", required=True, notnull=True),
+        Field("name", "string"),
+        Field("value", "string"),
+        format="%(tag)s",
+        migrate=migrate
+        )
+    db.stree_tag.name.readable = False
+    db.stree_tag.name.writable = False
+    db.stree_tag.value.readable = False
+    db.stree_tag.value.writable = False
+
+    db.define_table(
         "snode",
         Field("label", "string", length=128),
         Field("otu", db.otu, ondelete="NO ACTION"),
-        Field("taxon", db.taxon, ondelete="NO ACTION"),
-        Field("ottol_name", db.ottol_name, ondelete="NO ACTION"),
+        ## Field("taxon", db.taxon, ondelete="NO ACTION"),
+        Field("ottol_name", db.ottol_name, ondelete="NO ACTION",
+              requires=IS_EMPTY_OR(IS_IN_DB(db, 'ottol_name.id',
+                                            '%(name)s'))),
         ## Field("exemplar", db.taxon, ondelete="NO ACTION"),
-        Field("ingroup", "boolean", default=False),
-        Field("isleaf", "boolean", default=False,
+        Field("ingroup", "boolean", notnull=True, default=False),
+        Field("isleaf", "boolean", notnull=True, default=False,
               readable=False, writable=False),
         Field("parent", "reference snode", readable=False, writable=False,
               ondelete="NO ACTION"),

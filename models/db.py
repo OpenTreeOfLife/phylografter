@@ -79,11 +79,11 @@ else:
 crud.settings.auth = None                      # =auth to enforce authorization on crud
 
 # from http://www.web2pyslices.com/main/slices/take_slice/8
-clienttools = local_import('clienttools')
-page = clienttools.PageManager(globals())
-event = clienttools.EventManager(page)
-js = clienttools.ScriptManager(page) # javascript helpers
-jq = clienttools.JQuery # don't instantiate, just to shorten
+## clienttools = local_import('clienttools')
+## page = clienttools.PageManager(globals())
+## event = clienttools.EventManager(page)
+## js = clienttools.ScriptManager(page) # javascript helpers
+## jq = clienttools.JQuery # don't instantiate, just to shorten
 
 define_tables(db)
 

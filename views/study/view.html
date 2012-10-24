@@ -1,7 +1,7 @@
 {{extend 'layout_right_sidebar.html'}}
 
 <div style="padding:0.25em; background-color:lightgray;">
-Data set: {{=label}}
+Study {{=rec.id}}: {{=label}}
 </div>
 <div id="study_form" style="padding-bottom:0.5em">{{=form}}</div>
 
@@ -55,4 +55,7 @@ Trees derived from this data set:
 {{=DIV(a)}}
 {{=DIV(b)}}
 {{pass}}
+
+{{=LOAD('study', 'tag.load', args=[rec.id], ajax=True)}}
+
 {{end}} 

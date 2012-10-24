@@ -1,7 +1,11 @@
-{{extend 'layout.html'}}
+{{extend 'layout_right_sidebar.html'}}
 
 {{=form}}
 
 {{if form.errors:}}
 {{=BEAUTIFY(form.errors)}}
 {{pass}}
+
+{{block right_sidebar}} 
+{{=LOAD('stree', 'tag.load', args=[rec.id], ajax=True)}}
+{{end}} 

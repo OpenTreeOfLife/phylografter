@@ -149,22 +149,22 @@ def dtrecords():
     start = int(request.vars.iDisplayStart or 0)
     end = start + int(request.vars.iDisplayLength or 10)
     limitby = (start,end)
-    q = q0 = (t.study==study)
+    q = q0 = (t.study==study.id)
     for i, f in enumerate(fields):
         sterm = request.vars.get("sSearch_%s" % i)
         if f and sterm:
             q &= f.like('%'+sterm+'%')
                 
-    def tx(r):
+    def tx(otu):
         if auth.has_membership(role="contributor"):
-            return taxon_link(r)
+            return taxon_link(otu)
         else:
-            return SPAN(r.ottol_name.name)
+            return SPAN(otu.ottol_name.name if otu.ottol_name else '')
 
-    rows = db(q).select(t.id, t.label, db.ottol_name.name,
+    rows = db(q).select(t.id, t.label, t.ottol_name,
                         left=left, orderby=orderby, limitby=limitby)
 
-    data = [ (r.otu.label, tx(r).xml()) for r in rows ]
+    data = [ (r.label, tx(r).xml()) for r in rows ]
     totalrecs = db(q0).count()
     disprecs = db(q).count()
     return dict(aaData=data,
@@ -172,9 +172,9 @@ def dtrecords():
                 iTotalDisplayRecords=disprecs,
                 sEcho=int(request.vars.sEcho))
     
-def taxon_link(r):
-    otu = r.otu
-    taxon = r.ottol_name or Storage()
+def taxon_link(otu):
+    ## print otu.keys()
+    taxon = db.ottol_name(otu.ottol_name) or Storage()
     ## d = request.vars
     ## if d.otu != otu: d.otu = otu
     ## if d.taxon != taxon.id: d.taxon = taxon.id
@@ -187,14 +187,15 @@ def taxon_edit():
     otu = db.otu(int(request.args(0)))
     field = Field("taxon", "integer", default=otu.ottol_name)
     field.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.name, id_field=db.ottol_name.id)
+        request, db.ottol_name.name, id_field=db.ottol_name.id,
+        orderby=db.ottol_name.name)
     form = SQLFORM.factory(field, formstyle="divs")
     if form.accepts(request.vars, session):
         taxon = form.vars.taxon
         if taxon != otu.ottol_name:
-            response.flash="record updated"
+            ## response.flash="record updated"
             otu.update_record(ottol_name=taxon)
-        return dict(form=None, cancel=None, a=taxon_link(otu.id))
+        return dict(form=None, cancel=None, a=taxon_link(otu))
 
     cancel = A("Cancel",
                _href=URL(c="otu",f="taxon_edit_cancel.load",args=[otu.id]),
@@ -202,8 +203,9 @@ def taxon_edit():
     return dict(form=form, cancel=cancel, a=None)
 
 def taxon_edit_cancel():
-    t = db.otu
-    left = db.ottol_name.on(db.ottol_name.id==t.ottol_name)
-    r = db(t.id==request.args(0)).select(
-        t.id, t.label, db.ottol_name.name, left=left).first()
+    r = db.otu(request.args(0))
+    ## t = db.otu
+    ## left = db.ottol_name.on(db.ottol_name.id==t.ottol_name)
+    ## r = db(t.id==request.args(0)).select(
+    ##     t.id, t.label, db.ottol_name.name, left=left).first()
     return taxon_link(r)
