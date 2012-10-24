@@ -187,8 +187,8 @@ def taxon_edit():
     otu = db.otu(int(request.args(0)))
     field = Field("taxon", "integer", default=otu.ottol_name)
     field.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.name, id_field=db.ottol_name.id,
-        orderby=db.ottol_name.name)
+        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
+        orderby=db.ottol_name.unique_name)
     form = SQLFORM.factory(field, formstyle="divs")
     if form.accepts(request.vars, session):
         taxon = form.vars.taxon
