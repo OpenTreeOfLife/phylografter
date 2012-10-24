@@ -24,7 +24,7 @@ by <b>taxon</b>.</li>
 {{nstudies = db(db.study.id>0).count()}}
 {{nstrees = db(db.stree.id>0).count()}}
 {{notus = db(db.otu.id>0).count()}}
-{{ntaxa = len(db(db.otu.taxon!=None).select(db.otu.taxon, distinct=True))}}
+{{ntaxa = len(db(db.otu.ottol_name!=None).select(db.otu.ottol_name, distinct=True))}}
 
 <p>The database currently contains {{=nstudies}}
 <a href="{{=URL(c='study',f='index')}}">studies</a> and
