@@ -135,3 +135,6 @@ def addColumn():
 def addItemToClipboard():
     row = db.clipboard.insert( name = request.vars.name, treeType = request.vars.treeType, creationDate = datetime.datetime.now(), nodeId = request.vars.nodeId )
     return response.json( dict() )
+
+def uncollapseNodes():
+    return response.json( util.getRenderModule( request, session ).uncollapseNodes( db, session, request ) )

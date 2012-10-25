@@ -233,7 +233,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
               name: 'max tips (per column)',
               viewerConfigName: 'maxTips',
               min: 5,
-              max: 500
+              max: 500,
+              handleOnChange: 'handleMaxTipsOnChange',
             }
          }
     },
@@ -343,6 +344,22 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
         
             this.controlPanel.viewer.updateConfig( { names: [ e.data.name ], values: [ ui.value ], redraw: true } );
         }
+    },
+
+    handleMaxTipsOnChange: function( e, ui ) {
+
+        var optionObj = this.config.options.maxTips;
+
+        var currentValue = this.controlPanel.viewer.config.maxTips.value;
+        var newValue = ui.value;
+
+        if( newValue > currentValue ) {
+            
+            $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeViewer', argList: [ 'uncollapseNodes' ] } ),
+                      type: "POST", async: false } );
+        }
+
+        this.updateConfig( e, ui );
     },
     
     updateFontSize: function( e, ui ) {

@@ -260,14 +260,14 @@ def recurseForInfoNavigateMode( renderInfo, node, recurseInfo ):
         if( node.length ):
             currentIterationInfo.longestTraversal += node.length
         
-        nodeWeight = ( currentIterationInfo.descendantTipCount / int( currentIterationInfo.distanceFromLeaf ) )
+        nodeInfo['weight'] = ( currentIterationInfo.descendantTipCount / int( currentIterationInfo.distanceFromLeaf ) )
 
         if( recursiveIterationInfo.hasDescendantLabel ):
             currentIterationInfo.hasDescendantLabel = True
-            nodeWeight *= .25
+            nodeInfo['weight'] *= .25
 
-        position = bisect.bisect( renderInfo.collapseOrder.weights, nodeWeight )
-        renderInfo.collapseOrder.weights.insert( position, nodeWeight )
+        position = bisect.bisect( renderInfo.collapseOrder.weights, nodeInfo['weight'] )
+        renderInfo.collapseOrder.weights.insert( position, nodeInfo['weight'] )
         renderInfo.collapseOrder.ids.insert( position, nodeInfo['nodeId'] )
 
         if( text ):
@@ -332,7 +332,7 @@ def allRootChildrenCollapsed( tree, collapsedNodeStorage, nodesToCollapseStorage
 
 
 def determineTreeToRenderForNavigateMode( tree, renderInfo, session, columnInfo ):
-
+        
     numberOfTips = renderInfo.nodeInfo[ tree.id ]['descendantTipCount']
     maxTips = session.TreeViewer.config.maxTips.value;
         
@@ -381,7 +381,6 @@ def determineTreeToRenderForNavigateMode( tree, renderInfo, session, columnInfo 
 
             columnInfo.collapsedNodeStorage[ nodeId ] = collapsedNodeData
 
-         
 def removeNodeAndDescendants( renderInfo, nodeId, gatherLabels, descendantLabels ):
    
     for childId in renderInfo.nodeInfo[ nodeId ]['children']:
@@ -879,4 +878,24 @@ def setSmoothNodeCoordsAndPathStringRecurse( id, nodeInfo, config, collapsedNode
             if( 'collapsed' in nodeInfo[ grandkidId ] ):
                 info = nodeInfo[ grandkidId ]['collapsed']
                 info['pathString'] = getCollapseUIPathString( nodeInfo[ grandkidId ], info, config, 'smooth' )
-    
+   
+
+def uncollapseNodes( db, session, request ):
+
+    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
+
+    columnCount = len( treeState.columns )
+
+    for index in range( columnCount ):
+       
+        columnInfo = treeState.columns[ index ]
+
+        for ( collapsedNodeId, collapsedNodeData ) in columnInfo.collapsedNodeStorage.items():
+
+            if( ( index == ( columnCount - 1 ) ) or \
+                ( ( index < columnCount - 1 ) and ( treeState.columns[ index + 1 ].rootNodeId != collapsedNodeId ) ) ):
+                columnInfo.keepVisibleNodeStorage[ collapsedNodeId ] = True
+
+            if collapsedNodeId not in treeState.formerlyCollapsedNodeStorage:
+                treeState.formerlyCollapsedNodeStorage[ collapsedNodeId ] = columnInfo.collapsedNodeStorage[ collapsedNodeId ]
+                del columnInfo.collapsedNodeStorage[ collapsedNodeId ]

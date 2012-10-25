@@ -67,8 +67,6 @@ def getCladeSqlString( session, rootRec, collapsedNodeStorage ):
 
     stringList.append( ''.join( [ ' ORDER BY ', nodeTable, '.next;' ] ) )
 
-    print ''.join( stringList )
-
     return ''.join( stringList ) 
 
 
