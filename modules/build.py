@@ -4,15 +4,6 @@ module for building trees of ivy.tree.Nodes from database tables
 from ivy.tree import Node
 from collections import defaultdict
 
-## def root_taxon(db):
-##     "return the root taxon record for taxon table"
-##     t = db.taxon
-##     q = (t.parent==None)
-##     v = db(q).select()
-##     assert len(v)==1
-##     return v[0]
-
-
 def node2tree( db, session, nodeId ):
     if session.TreeViewer.treeType == 'source':
         return sourceClade( db, session, nodeId, session.collapsedNodeStorage[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ] )
@@ -33,12 +24,12 @@ def getCladeSqlString( session, rootRec, collapsedNodeStorage ):
 
     if( nodeTable == 'snode' ):
 
-        joinString = 'FROM snode LEFT JOIN taxon on snode.taxon = taxon.id '
+        joinString = 'FROM snode LEFT JOIN ottol_name on snode.ottol_name = ottol_name.id '
 
     elif( nodeTable == 'gnode' ):
 
         joinString = ''.join( [ 'FROM gnode LEFT JOIN snode on gnode.snode = snode.id ',
-                                'LEFT JOIN taxon on snode.taxon = taxon.id ' ] )
+                                'LEFT JOIN ottol_name on snode.ottol_name = ottol_name.id ' ] )
 
         notPruned = 'gnode.pruned = "F" AND '
 
@@ -48,7 +39,7 @@ def getCladeSqlString( session, rootRec, collapsedNodeStorage ):
                    nodeTable, '.back, ',
                    nodeTable, '.length, ',
                    nodeTable, '.label, ',
-                   'taxon.name ',
+                   'ottol_name.name ',
         joinString,
         'WHERE ', nodeTable, '.tree = ', str( rootRec.tree ), ' AND ',
         notPruned,
@@ -119,38 +110,6 @@ def getNodeFromRowData( row ):
     node.taxon = row[5];
 
     return node
-
-
-def getGTree( db, treeId ):
-   
-    root = None
-
-    parentStack = []
-
-    for gnodeRow in db( ( db.gnode.tree == treeId ) &
-                        ( db.gnode.pruned == False ) ).select( db.gnode.ALL, orderby = db.gnode.next ).as_list():
-
-        node = Node()
-
-        node.id = gnodeRow['id']; node.next = gnodeRow['next']; node.back = gnodeRow['back']
-        node.label = gnodeRow['label']; node.depth = len( parentStack )
-
-        if( node.next - node.back == 1 ):
-            node.isleaf = True
-
-        if( node.next == 1 ):
-            node.isroot = True
-            root = node
-            parentStack.append( node )
-            continue
-
-        while( node.back > parentStack[ -1 ].back ):
-            parentStack.pop() 
-
-        parentStack[ -1 ].add_child( node )
-        parentStack.append( node )
-
-    return root
 
 
 def root_snode(db, tree):
