@@ -39,8 +39,8 @@ def getMatchingDescendantLabels():
     limit = ''.join( [ 'LIMIT ', str( ( int( request.vars.page ) - 1 ) * pageLength ), ', ', str( pageLength ) ] )
 
     query = [ \
-        'SELECT SQL_CALC_FOUND_ROWS ', nTbl, '.id, ' , nTbl, '.label, taxon.name, ', nTbl, '.next, ', nTbl, '.back '
-        'FROM ', nTbl, ' LEFT JOIN taxon ON ', nTbl, '.taxon = taxon.id ',
+        'SELECT SQL_CALC_FOUND_ROWS ', nTbl, '.id, ' , nTbl, '.label, ottol_name.name, ', nTbl, '.next, ', nTbl, '.back '
+        'FROM ', nTbl, ' LEFT JOIN ottol_name ON ', nTbl, '.ottol_name = ottol_name.id ',
         'WHERE ', nTbl, '.tree = ', session.TreeViewer.treeId, ' AND ' ]
 
     if( int( request.vars.next ) != 1 ):
@@ -49,7 +49,7 @@ def getMatchingDescendantLabels():
             nTbl, '.next > ', request.vars.next, ' AND ',
             nTbl, '.back < ', request.vars.back, ' AND ' ] ) )
 
-    query.append( ''.join( ['( ', nTbl, '.label LIKE ', value, ' OR taxon.name LIKE ', value, ' ', ' ) ', limit, ';' ] ) )
+    query.append( ''.join( ['( ', nTbl, '.label LIKE ', value, ' OR ottol_name.name LIKE ', value, ' ', ' ) ', limit, ';' ] ) )
 
     limitedRows = db.executesql( ''.join( query ) );
     total = db.executesql( 'SELECT FOUND_ROWS();' )
