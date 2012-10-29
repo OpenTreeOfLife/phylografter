@@ -52,9 +52,21 @@ BioSync.ModalBox.acceptForm = function( response ) {
 
     $('#modalBoxForm').html( response );
 
-    $('input[type="checkbox"]').change( BioSync.ModalBox.handleCheckboxChange );
+    $('#modalBoxForm > input[type="checkbox"]').change( BioSync.ModalBox.handleCheckboxChange );
+    
+    BioSync.ModalBox.sqlFormCheckboxHack();
     
     $('#modalBoxContainer').show( 'slow', BioSync.ModalBox.alignBox );
+}
+
+BioSync.ModalBox.sqlFormCheckboxHack = function() {
+ 
+    $('#modalBoxForm input[type="checkbox"]').each(
+        function( index ) {
+            var checkbox = $(this);
+            if( ! checkbox.is( ':checked' ) ) { checkbox.val( '' ); }
+        }
+    );
 }
 
 BioSync.ModalBox.ajaxizeForm = function() {
