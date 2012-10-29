@@ -899,3 +899,6 @@ def uncollapseNodes( db, session, request ):
             if collapsedNodeId not in treeState.formerlyCollapsedNodeStorage:
                 treeState.formerlyCollapsedNodeStorage[ collapsedNodeId ] = columnInfo.collapsedNodeStorage[ collapsedNodeId ]
                 del columnInfo.collapsedNodeStorage[ collapsedNodeId ]
+
+    while( len( treeState.columns ) > 1 ):
+        treeState.columns.pop()
