@@ -56,7 +56,7 @@ def addColumn( db, session, request ):
 
     treeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
 
-    columnRootNodeId = request.vars.rootNodeId if len( treeState.columns ) != 0 else session.TreeViewer.rootNodeId
+    columnRootNodeId = int( request.vars.rootNodeId ) if len( treeState.columns ) != 0 else session.TreeViewer.rootNodeId
 
     treeState.columns.append( \
         Storage( rootNodeId = columnRootNodeId,
@@ -892,13 +892,16 @@ def uncollapseNodes( db, session, request ):
 
         for ( collapsedNodeId, collapsedNodeData ) in columnInfo.collapsedNodeStorage.items():
 
+            if( index < columnCount - 1 ):
+                print "collapsed node id:", str( type( collapsedNodeId ) )
+                print "next column root node id:", str( type( treeState.columns[ index + 1 ].rootNodeId ) )
+
             if( ( index == ( columnCount - 1 ) ) or \
                 ( ( index < columnCount - 1 ) and ( treeState.columns[ index + 1 ].rootNodeId != collapsedNodeId ) ) ):
+                print 'keepVisible :', str( collapsedNodeId )
                 columnInfo.keepVisibleNodeStorage[ collapsedNodeId ] = True
 
             if collapsedNodeId not in treeState.formerlyCollapsedNodeStorage:
                 treeState.formerlyCollapsedNodeStorage[ collapsedNodeId ] = columnInfo.collapsedNodeStorage[ collapsedNodeId ]
-                del columnInfo.collapsedNodeStorage[ collapsedNodeId ]
-
-    while( len( treeState.columns ) > 1 ):
-        treeState.columns.pop()
+            
+            del columnInfo.collapsedNodeStorage[ collapsedNodeId ]
