@@ -271,7 +271,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
                             'text-align': 'center',
                             'padding': [ '0px', this.config.optionPadding ].join(' ' ) } )
                     .val( this.controlPanel.viewer.config[ option.viewerConfigName ].value )
-                    .bind( 'keyup', option, $.proxy( this.handleValueChange, this ) );
+                    .bind( 'keyup', option, $.proxy( this.handleValueChange, this ) )
+                    .bind( 'keypress', option, $.proxy( this.filterAlphaKeyPress, this ) );
 
             option.labelDiv =
                 this.make('div')
@@ -319,6 +320,24 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
         return this;
     },
 
+    filterAlphaKeyPress: function( e ) {
+
+        var key = e.keyCode || e.which;
+
+        if( e.keyCode == 8 || e.keyCode == 46 ) { return true; }
+
+        key = String.fromCharCode( key );
+
+        var regex = /[0-9]|/;
+
+        if( !regex.test( key ) ) {
+        
+            e.returnValue = false;
+
+            if( e.preventDefault ) { e.preventDefault(); }
+        }
+    },
+
     handleValueChange: function( e ) {
 
         if( e.data.userInputTimeout ) { clearTimeout( e.data.userInputTimeout ); }
@@ -326,7 +345,15 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
         e.data.userInputTimeout = setTimeout( $.proxy( this.updateValue, e.data ), this.config.valueChangeTimeout );
     },
 
-    updateValue: function() { this.slider.slider( 'option', 'value', this.valueBox.val() ); },
+    updateValue: function() {
+
+        if( this.valueBox.val() < this.slider.slider( 'option', 'min' ) ) {
+
+            this.valueBox.val( this.slider.slider( 'option', 'min' ) );
+        }
+
+        this.slider.slider( 'option', 'value', this.valueBox.val() );
+    },
     
     handleMouseOverOptionList: function( e ) {
     },
