@@ -52,7 +52,7 @@ BioSync.ModalBox.acceptForm = function( response ) {
 
     $('#modalBoxForm').html( response );
 
-    $('#modalBoxForm > input[type="checkbox"]').change( BioSync.ModalBox.handleCheckboxChange );
+    $('#modalBoxForm input[type="checkbox"]').change( BioSync.ModalBox.handleCheckboxChange );
     
     BioSync.ModalBox.sqlFormCheckboxHack();
     
@@ -84,6 +84,8 @@ BioSync.ModalBox.showModalBox = function( p ) {
     var modalBoxContent = $('#modalBoxContent');
     var modalBoxTitle = $('#modalBoxTitle');
 
+    modalBoxContent.css( { 'height': '', 'width': '' } );
+
     if( p.title ) { modalBoxTitle.text( p.title ); } else { modalBoxTitle.text( '' ); }
 
     modalBoxForm.append( p.content );
@@ -102,8 +104,7 @@ BioSync.ModalBox.showModalBox = function( p ) {
     
     modalBoxContainer.show( 'slow', BioSync.ModalBox.afterSlowShow );
 
-    BioSync.ModalBox.onClose = p.onClose;
-
+    if( p.onClose ) { BioSync.ModalBox.onClose = p.onClose; }
 };
 
 BioSync.ModalBox.afterSlowShow = function() {
@@ -118,7 +119,16 @@ BioSync.ModalBox.checkForOutSideMouseClick = function( e ) {
 
     if( ( ! BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: $( '#modalBoxContent' ) } ) ) ) {
 
-        BioSync.ModalBox.closeBox();
+        var cancelButton =  $('#modalBoxForm .modalBoxCancel');
+
+        if( cancelButton.length ) {
+        
+            cancelButton.click();
+        
+        } else {
+            
+            BioSync.ModalBox.closeBox();
+        }
     }
 
 }
@@ -290,11 +300,15 @@ BioSync.ModalBox.makeBasicActionRow = function( p ) {
 
     var make = BioSync.Common.makeEl;
 
+    var cancelElement = make('div').attr( { 'class': 'dialogueButton twoOpt modalBoxCancel' } ).text('Cancel').click( BioSync.ModalBox.closeBox );
+
+    if( p.onCancel ) { cancelElement.click( p.onCancel ); }
+
     return make('div').attr( { 'class': 'actionRow' } ).append(
         make('div').attr( { 'class': 'dialogueButton twoOpt modalBoxSubmit' } ).text( p.submitText )
             .bind( 'click', p.submitArgs, BioSync.ModalBox.submitBox )
             .bind( 'click', { }, ( p.onClick ) ? p.onClick : function() { } ),
-        make('div').attr( { 'class': 'dialogueButton twoOpt modalBoxCancel' } ).text('Cancel').click( BioSync.ModalBox.closeBox ),
+        cancelElement,
         make('div').attr( { 'class': 'clear' } ) );
 }
 

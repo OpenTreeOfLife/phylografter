@@ -194,6 +194,9 @@ def updateTreeStateForPrunedSourceTree( session, columnRootNodeIds, collapsedNod
 
         rootNodeId = columnRootNodeIds[ column.rootNodeId ]
 
+        if not rootNodeId:
+            break
+
         newCollapsedNodeStorage = Storage()
 
         for ( collapsedNodeId, collapsedNodeData ) in column.collapsedNodeStorage.items():
@@ -253,7 +256,7 @@ def postPruneDBUpdate( db, session, request, auth, tree, prunedNodeRow ):
         
         editId = createEditRecord( db, auth, session.TreeViewer.treeId, 'prune', prunedNodeRow.parent, prunedNodeRow.id, None, request.vars.comment, treeType, auth.user.id )
         
-        pruneGNodeRecords( db, session.TreeViewer.treeId, prunedNodeRow.id, editId )
+        pruneGNodeRecords( db, session.TreeViewer.treeId, prunedNodeRow, editId )
         
 
 def gatherTreeStateIds( session ):

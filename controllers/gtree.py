@@ -98,7 +98,7 @@ def index():
 def backbone():
 
     #used for testing
-    del session.TreeViewer
+    #del session.TreeViewer
 
     if( 'TreeViewer' not in session ):
         session.TreeViewer = Storage()

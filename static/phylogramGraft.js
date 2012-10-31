@@ -368,25 +368,19 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getPostEditClade = f
 }
 
 
-BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showTreeEditStatus = function() {
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showPruneEditStatus = function() {
 
     var modal = BioSync.ModalBox;
 
-    var actionParticiple = ( this.editActionString == 'graft' )
-        ? { present: 'Grafting', past: 'Grafted' }
-        : ( this.editActionString == 'replace' )
-            ? { present: 'Replacing', past: 'Replaced' }
-            : { present: 'Pruning', past: 'Pruned' };
-
     var content =
         this.make( 'div' ).attr( { 'class': 'treeEditStatus' } ).append(
-            this.make( 'span' ).text( [ actionParticiple.present, ', updating database' ].join('') ) );
+            this.make( 'span' ).text( 'Pruning tree, updating database' ) );
 
     var myDoc = $(document);
 
     modal.showModalBox( { content: content, width: ( myDoc.width() / 2 )  } );
 
-    var successFunctions = new Array();
+    var successFunctions = new Array( $.proxy( this.unHighlightClade, this ) );
 
     if( ( this.viewer.treeType == 'source' ) ) {
 
@@ -395,18 +389,30 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showTreeEditStatus =
     } else {
 
         successFunctions.push( $.proxy( this.getColumnAfterEdit, this ) );
-
     }
 
     BioSync.Common.dotDotDotText( {
         content: content,
         minimumTime: 2000,
         stopTrigger: 'editSuccess',
-        stopText: actionParticiple.past,
+        stopText: 'Pruned',
         stopFunction: successFunctions } );
 }
 
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getColumnAfterEdit = function() {
+
+    var content = this.make( 'div' ).attr( { 'class': 'treeEditStatus' } ).append( this.make( 'span' ).text( 'Getting updated column' ) );
+
+    BioSync.ModalBox.contentContainer.append( content );
+    
+    BioSync.Common.dotDotDotText( {
+        content: content,
+        minimumTime: 2000,
+        stopTrigger: 'getCladeSuccess',
+        stopFunction: new Array( BioSync.ModalBox.closeBox ),
+        stopText: 'Received Column' } );
+
+    this.refreshColumn( { column: this.prunedColumn } );
 }
 
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getTreeAfterEdit = function() {
@@ -537,36 +543,21 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.pruneClade = functio
 
     var modal = BioSync.ModalBox;
 
+    this.prunedColumn = p.column;
+    this.prunedNodeId = p.nodeId;
+
     this.highlightClade( { column: p.column, nodeId: p.nodeId } );
     
     var successArray = new Array( $.proxy( this.treeEditSuccess, this ) );
 
-    if( p.column.expandedNodeId ) {
-        
-        var pruneNodeInfo = p.column.nodeInfo[ p.nodeId ];
-        var expandedNodeInfo = p.column.nodeInfo[ p.column.expandedNodeId ];
-
-        if( this.viewer.isAncestor( { ancestor: pruneNodeInfo, descendant: expandedNodeInfo } ) ) {
-
-            for( var i = p.column.index + 1, ii = this.columns.length; i < ii; i++ ) {
-
-                var column = this.columns[ i ];
-                this.highlightClade( { column: column, nodeId: column.rootId, } );
-            }
-
-            successArray.push( function() { this.removeColumns( { start: p.column.index + 1, end: this.columns.length - 1 } ); } );
-        }
-    }
-    
-    this.editActionString = 'prune';
-    
     var content = this.make('div').append(
         modal.makeBasicTextRow( { text: 'Please provide a comment on your prune action.' } ),
         modal.makeBasicTextInput( { text: 'Comment : ', name: 'comment', value: '' } ),
         modal.makeHiddenInput( { name: 'nodeId', value: p.nodeId } ),
         modal.makeHiddenInput( { name: 'columnIndex', value: p.column.index } ),
         modal.makeBasicActionRow( {
-             onClick:  $.proxy( this.showTreeEditStatus, this ),
+             onClick:  $.proxy( this.showPruneEditStatus, this ),
+             onCancel: $.proxy( this.unHighlightClade, this ),
              submitText: 'Continue',
              submitArgs: { onSuccess: successArray,
                            submitUrl: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'pruneClade' ] } ) } } ) );
@@ -580,7 +571,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.pruneClade = functio
             modal.makeBasicTextInput( { text: 'Description : ', name: 'treeDescription', value: '' } ) ) );
     }
 
-    BioSync.ModalBox.showModalBox( { content: content, title: 'Prune Clade', onClose: new Array( $.proxy( this.unHighlightClade, this ) ) } );
+    BioSync.ModalBox.showModalBox( { content: content, title: 'Prune Clade' } );
 }
 
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.handleGraftHistory = function( response ) {

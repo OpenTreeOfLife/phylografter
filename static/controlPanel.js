@@ -204,6 +204,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
         containerPadding: '5px',
         sliderSize: 100,
         sliderTopOffset: 7,
+        valueChangeTimeout: 1000,
 
         options: {
 
@@ -262,10 +263,15 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
 
             var option = this.config.options[ optionName ];
 
-            option.valueDiv =
-                this.make('div')
-                    .css( { 'float': 'left', padding: [ '0px', this.config.optionPadding ].join(' ' ) } )
-                    .text( this.controlPanel.viewer.config[ option.viewerConfigName ].value );
+            option.valueBox =
+                this.make('input')
+                    .attr( { 'type': 'text' } )
+                    .width( 30 )
+                    .css( { 'float': 'left',
+                            'text-align': 'center',
+                            'padding': [ '0px', this.config.optionPadding ].join(' ' ) } )
+                    .val( this.controlPanel.viewer.config[ option.viewerConfigName ].value )
+                    .bind( 'keyup', option, $.proxy( this.handleValueChange, this ) );
 
             option.labelDiv =
                 this.make('div')
@@ -277,7 +283,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
                                 .slider( { max: option.max,
                                            min: option.min,
                                            value: this.controlPanel.viewer.config[ option.viewerConfigName ].value,
-                                           slide: $.proxy( this.handleSlide, option.valueDiv ) } )
+                                           slide: $.proxy( this.handleSlide, option.valueBox ) } )
                                 .bind( 'slidechange',
                                        { name: option.viewerConfigName },
                                        ( option.handleOnChange ) ? $.proxy( this[ option.handleOnChange ], this ) : $.proxy( this.updateConfig, this ) );
@@ -292,13 +298,13 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
                                             'float': 'left',
                                             'width': this.config.sliderSize } )
                                     .append( option.slider ),
-                    option.valueDiv,
+                    option.valueBox,
                     this.make('div').attr( { 'class': 'clear' } ) );
 
             //adding 15 to the width below so that if the numbers constituting the value div change
             //such that it increases the value div width - we needn't worry
             option.container.css( {'width':
-                option.valueDiv.outerWidth( true ) + 15 +
+                option.valueBox.outerWidth( true ) + 15 +
                 option.labelDiv.outerWidth( true ) +
                 this.config.sliderSize +
                 ( parseInt( this.config.optionPadding ) * 2 ) } );
@@ -312,6 +318,15 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
 
         return this;
     },
+
+    handleValueChange: function( e ) {
+
+        if( e.data.userInputTimeout ) { clearTimeout( e.data.userInputTimeout ); }
+
+        e.data.userInputTimeout = setTimeout( $.proxy( this.updateValue, e.data ), this.config.valueChangeTimeout );
+    },
+
+    updateValue: function() { this.slider.slider( 'option', 'value', this.valueBox.val() ); },
     
     handleMouseOverOptionList: function( e ) {
     },
@@ -332,7 +347,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
 
         optionObj.slider.slider( 'option', 'value', this.controlPanel.viewer.config.maxTips.value );
 
-        optionObj.valueDiv.text( this.controlPanel.viewer.config.maxTips.value );
+        optionObj.valueBox.val( this.controlPanel.viewer.config.maxTips.value );
                                        
         optionObj.slider.bind(
             'slidechange', { name: 'maxTips' }, ( optionObj.handleOnChange ) ? $.proxy( this[ optionObj.handleOnChange ], this ) : $.proxy( this.updateConfig, this ) );
@@ -370,7 +385,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
         this.updateConfig( e, ui );        
     },
 
-    handleSlide: function( e, ui ) { this.text( ui.value ); },
+    handleSlide: function( e, ui ) { this.val( ui.value ); },
 
     handleMouseOutOfContainer: function( e ) {
 

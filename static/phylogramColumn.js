@@ -573,6 +573,7 @@ BioSync.TreeViewer.RenderUtil.Column.prototype = {
                 if( node.children.length ) {
 
                     node.labelBackdrop = this.makeLabelBackdrop( { label: node.raphaelLabel, node: node, config: config } );
+                    node.raphaelLabel.toFront();
                 }
 
                 this.labels.push( { raphaelLabel: node.raphaelLabel, nodeId: nodeId } );

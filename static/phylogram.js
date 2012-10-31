@@ -737,17 +737,13 @@ BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype = {
 
         p.column.currentHighlight.push( canvasObj );
 
-        if( p.column.index < this.columns.length - 1 ) {
+        if( p.column.expandedNodeId ) {
 
-            var expandedNodeId = p.column.container.find('.expanded').attr('nodeId');
-            var expandedNode = p.column.nodeInfo[ expandedNodeId ];
+            var expandedNode = p.column.nodeInfo[ p.column.expandedNodeId ];
 
             if( this.viewer.isAncestor( { ancestor: nodeInfo, descendant: expandedNode } ) ) {
 
-                for( var i = p.column.index + 1, ii = this.columns.length; i < ii; i++ ) {
-                
-                    this.highlightClade( { column: this.columns[i], nodeId: this.columns[i].rootId, color: p.color } );
-                }
+                this.highlightClade( { column: this.columns[ p.column.index + 1 ], nodeId: this.columns[ p.column.index + 1 ].rootNodeId, color: p.color } );
             }
         }
     },
@@ -800,7 +796,7 @@ BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype = {
 
         var closestNodeInfo = renderObj.getClosestNode( {
             coords: renderObj.translateDOMToCanvas( { x: p.pageX, y: p.pageY, column: column } ),
-            currentNodeId: column.rootId,
+            currentNodeId: column.rootNodeId,
             column: column } );
 
         if( ( closestNodeInfo.distance < 50 ) && ( column.collapsedNodeIds.indexOf( closestNodeInfo.id ) == -1 ) ) {

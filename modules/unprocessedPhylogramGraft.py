@@ -19,14 +19,19 @@ def pruneClade( db, session, request, auth ):
 
     graftUtil.pruneClade( tree, nodeIdToPrune )
 
-    for ( collapsedNodeId, collapsedNodeData ) in columnInfo.collapsedNodeStorage.items():
+    if( session.TreeViewer.treeType == 'grafted' ):
+        
+        for ( collapsedNodeId, collapsedNodeData ) in columnInfo.collapsedNodeStorage.items():
 
-        if( util.isAncestor( prunedCladeRow, collapsedNodeData ) ):
+            if( util.isAncestor( prunedCladeRow, collapsedNodeData ) ):
 
-            if( collapsedNodeId not in treeState.formerlyCollapsedNodeStorage ):
-                treeState.formerlyCollapsedNodeStorage[ collapsedNodeId ] = columnInfo.collapsedNodeStorage[ collapsedNodeId ]
+                del columnInfo.collapsedNodeStorage[ collapsedNodeId ]
 
-            del columnInfo.collapsedNodeStorage[ collapsedNodeId ]
+                if( ( ( len( treeState.columns ) - 1 ) > columnIndex ) and \
+                      ( collapsedNodeId == treeState.columns[ columnIndex + 1 ].rootNodeId ) ):
+                                       
+                    while( ( len( treeState.columns ) - 1 ) > columnIndex ):
+                        treeState.columns.pop()
 
     graftUtil.postPruneDBUpdate( db, session, request, auth, tree, prunedCladeRow )
 
