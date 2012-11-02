@@ -3,7 +3,7 @@ Below here are notes on installing phylografter on installing phylografter on Ma
 1. Install Ivy. You can get pip from http://pypi.python.org/pypi/pip
 
 <pre>
-for module in matplotlib scipy numpy biopython pyparsing ipython lxml PIL ivy
+for module in matplotlib scipy numpy biopython pyparsing ipython lxml PIL ivy-phylo
 do
     pip install --upgrade "$module" 
 done
