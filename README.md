@@ -1,6 +1,6 @@
 Below here are notes on installing phylografter on installing phylografter on Mac.
 
-1. Install Ivy
+1. Install Ivy. You can get pip from http://pypi.python.org/pypi/pip
 
 <pre>
 for module in matplotlib scipy numpy biopython pyparsing ipython lxml PIL ivy
