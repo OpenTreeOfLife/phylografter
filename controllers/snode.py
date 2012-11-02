@@ -14,7 +14,8 @@ def update_snode():
     ## t.taxon.readable = t.taxon.writable = False
 
     w = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.unique_name, id_field=db.ottol_name.id)
+        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
+        limitby=(0,20), orderby=db.ottol_name.unique_name)
     t.ottol_name.widget = w
 
     form = SQLFORM(t, rec, showid=False, _id="updateform",
