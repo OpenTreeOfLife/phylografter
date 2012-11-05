@@ -34,4 +34,5 @@ try:
 except ImportError:
     pass
 
-import vis, chars, align, sequtil
+## import vis, chars, align, sequtil
+import chars, align, sequtil
