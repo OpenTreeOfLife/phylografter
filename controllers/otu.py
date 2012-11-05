@@ -195,6 +195,7 @@ def taxon_edit():
         if taxon != otu.ottol_name:
             ## response.flash="record updated"
             otu.update_record(ottol_name=taxon)
+            otu.snode.update(ottol_name=taxon)
         return dict(form=None, cancel=None, a=taxon_link(otu))
 
     cancel = A("Cancel",

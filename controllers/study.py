@@ -323,7 +323,8 @@ def create():
     ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ottol.label = 'Focal clade'
     t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.name, id_field=db.ottol_name.id)
+        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
+        limitby=(0,20), orderby=db.ottol_name.unique_name)
     t.uploaded.readable = False
     form = crud.create(t, next="view/[id]")
     return dict(form=form)
@@ -373,7 +374,7 @@ def tag():
     t.study.default = rec.id
     t.tag.widget = SQLFORM.widgets.autocomplete(request, t.tag)
     form = SQLFORM(t)
-    if form.process().accepted:
+    if form.process(message_onsuccess=None).accepted:
         tags = db(t.study==rec.id).select(orderby=t.tag)
     v = []
     for t in tags:
