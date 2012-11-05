@@ -5,11 +5,14 @@ Adds to the interactive IPython/pylab environment
 """
 import sys, os, re
 import ivy
+from ivy.vis import symbols
 
-def readtree(data): return ivy.tree.read(data)
+def readtree(data, *args, **kwargs): return ivy.tree.read(data, *args, **kwargs)
+
+def readaln(data, *args, **kwargs): return ivy.align.read(data, *args, **kwargs)
 
 def treefig(*args, **kwargs):
-    from ivy.vis.matplot import TreeFigure, MultiTreeFigure
+    from ivy.vis import TreeFigure, MultiTreeFigure
     if len(args) == 1:
         fig = TreeFigure(args[0], **kwargs)
     else:
@@ -19,6 +22,10 @@ def treefig(*args, **kwargs):
             fig.add(arg)
     fig.show()
     return fig
+
+def alnfig(*args, **kwargs):
+    from ivy.vis import AlignmentFigure
+    return AlignmentFigure(*args, **kwargs)
 
 def __maketree(self, s):
     import os, IPython
@@ -98,6 +105,7 @@ try:
             )
 except:
     sys.stderr.write("Cannot expose magic commands and completers\n")
+    sys.stderr.write("(Support for IPython 0.11 not finished yet...)\n")
     
 ## if __name__ == "__main__":
 ##     if len(sys.argv) > 1:

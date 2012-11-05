@@ -73,8 +73,7 @@ def parse_chars(e, otus):
 
 def parse_trees(e, otus):
     "e is a nexml document parsed by etree"
-    from ..ivy.tree import Node
-    #from tree import Node
+    from tree import Node
     v = []
     for tb in e.findall(NEXML+"trees"):
         for te in tb.findall(NEXML+"tree"):
@@ -146,7 +145,9 @@ def parse_nexml(doc):
                 meta[key] = val
             
     otus = parse_otus(doc)
-    return Storage(meta = meta, otus = otus,
+
+    return Storage(meta = meta,
+                   otus = otus,
                    chars = parse_chars(doc, otus),
                    trees = parse_trees(doc, otus))
 

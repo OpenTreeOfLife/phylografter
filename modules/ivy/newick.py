@@ -4,10 +4,15 @@ Parse newick strings.
 The function of interest is `parse`, which returns the root node of
 the parsed tree.
 """
-import string, sys
-from shlex import shlex
-import types
+import string, sys, re, shlex, types, itertools
+import numpy
+import nexus
 from cStringIO import StringIO
+from pprint import pprint
+import pyparsing
+pyparsing.ParserElement.enablePackrat()
+from pyparsing import Word, Literal, QuotedString, CaselessKeyword, \
+     OneOrMore, Group, Optional, Suppress, Regex, Dict
 
 ## def read(s):
 ##     try:
@@ -18,16 +23,19 @@ from cStringIO import StringIO
 ##         except:
 ##             pass
 ##     return parse(s)
-"""
-class Tokenizer(shlex):
+
+class Tokenizer(shlex.shlex):
     """Provides tokens for parsing newick strings."""
     def __init__(self, infile):
-        shlex.__init__(self, infile)
+        shlex.shlex.__init__(self, infile, posix=False)
         self.commenters = ''
         self.wordchars = self.wordchars+"-.|"
         self.quotes = "'"
 
-    def parse_comment(self):
+    def parse_embedded_comment(self):
+        ws = self.whitespace
+        self.whitespace = ""
+        v = []
         while 1:
             token = self.get_token()
             if token == '':
@@ -36,10 +44,13 @@ class Tokenizer(shlex):
             elif token == ']':
                 break
             elif token == '[':
-                self.parse_comment()
+                self.parse_embedded_comment()
             else:
-                pass
-"""
+                v.append(token)
+        self.whitespace = ws
+        return "".join(v)
+        ## print "comment:", v
+
 def parse(data, ttable=None, treename=None):
     """
     Parse a newick string.
@@ -69,7 +80,7 @@ def parse(data, ttable=None, treename=None):
     while 1:
         token = tokens.get_token()
         #print token,
-        if token == ';' or token == '':
+        if token == ';' or token == tokens.eof:
             assert lp == rp, \
                    "unbalanced parentheses in tree description: (%s, %s)" \
                    % (lp, rp)
@@ -83,28 +94,37 @@ def parse(data, ttable=None, treename=None):
             newnode.isleaf = False
             newnode.treename = treename
             if node:
+                if node.children: newnode.left = node.children[-1].right+1
+                else: newnode.left = node.left+1
                 node.add_child(newnode)
+            else:
+                newnode.left = 1; newnode.right = 2
+            newnode.right = newnode.left+1
             node = newnode
 
         elif token == ')':
             rp = rp+1
             node = node.parent
+            if node.children:
+                node.right = node.children[-1].right + 1
             
         elif token == ',':
             node = node.parent
+            if node.children:
+                node.right = node.children[-1].right + 1
             
         # branch length
         elif token == ':':
             token = tokens.get_token()
             if token == '[':
-                tokens.parse_comment()
+                node.length_comment = tokens.parse_embedded_comment()
                 token = tokens.get_token()
 
             if not (token == ''):
-                try:
-                    brlen = float(token)
+                try: brlen = float(token)
                 except ValueError:
-                    raise ValueError, "invalid literal for branch length, '%s'" % token
+                    raise ValueError, ("invalid literal for branch length, "
+                                       "'%s'" % token)
             else:
                 raise 'NewickError', \
                       'unexpected end-of-file (expecting branch length)'
@@ -112,14 +132,15 @@ def parse(data, ttable=None, treename=None):
             node.length = brlen
         # comment
         elif token == '[':
-            tokens.parse_comment()
+            node.comment = tokens.parse_embedded_comment()
 
         # leaf node or internal node label
         else:
             if previous != ')': # leaf node
                 if ttable:
                     try:
-                        ttoken = ttable.get(int(token))
+                        ttoken = (ttable.get(int(token)) or
+                                  ttable.get(token))
                     except ValueError:
                         ttoken = ttable.get(token)
                     if ttoken:
@@ -128,6 +149,9 @@ def parse(data, ttable=None, treename=None):
                 newnode.id = i; i += 1
                 newnode.label = "_".join(token.split()).replace("'", "")
                 newnode.isleaf = True
+                if node.children: newnode.left = node.children[-1].right+1
+                else: newnode.left = node.left+1
+                newnode.right = newnode.left+1
                 newnode.treename = treename
                 node.add_child(newnode)
                 node = newnode
@@ -141,27 +165,145 @@ def parse(data, ttable=None, treename=None):
     node.isroot = True
     return node
 
-def string(node, length_fmt=":%s", end=True, newline=True):
-    "Recursively create a newick string from node."
-    if not node.isleaf:
-        node_str = "(%s)%s" % \
-                   (",".join([ string(child, length_fmt, False, newline) \
-                               for child in node.children ]),
-                    node.label or ""
-                    )
-    else:
-        node_str = "%s" % node.label
+## def string(node, length_fmt=":%s", end=True, newline=True):
+##     "Recursively create a newick string from node."
+##     if not node.isleaf:
+##         node_str = "(%s)%s" % \
+##                    (",".join([ string(child, length_fmt, False, newline) \
+##                                for child in node.children ]),
+##                     node.label or ""
+##                     )
+##     else:
+##         node_str = "%s" % node.label
 
-    if node.length is not None:
-        length_str = length_fmt % node.length
-    else:
-        length_str = ""
+##     if node.length is not None:
+##         length_str = length_fmt % node.length
+##     else:
+##         length_str = ""
 
-    semicolon = ""
-    if end:
-        if not newline:
-            semicolon = ";"
+##     semicolon = ""
+##     if end:
+##         if not newline:
+##             semicolon = ";"
+##         else:
+##             semicolon = ";\n"
+##     s = "%s%s%s" % (node_str, length_str, semicolon)
+##     return s
+
+## def from_nexus(infile, bufsize=None):
+##     bufsize = bufsize or 1024*5000
+##     TTABLE = re.compile(r'\btranslate\s+([^;]+);', re.I | re.M)
+##     TREE = re.compile(r'\btree\s+([_.\w]+)\s*=[^(]+(\([^;]+;)', re.I | re.M)
+##     s = infile.read(bufsize)
+##     ttable = TTABLE.findall(s) or None
+##     if ttable:
+##         items = [ shlex.split(line) for line in ttable[0].split(",") ]
+##         ttable = dict([ (k, v.replace(" ", "_")) for k, v in items ])
+##     trees = TREE.findall(s)
+##     ## for i, t in enumerate(trees):
+##     ##     t = list(t)
+##     ##     if ttable:
+##     ##         t[1] = "".join(
+##     ##             [ ttable.get(x, "_".join(x.split()).replace("'", ""))
+##     ##               for x in shlex.shlex(t[1]) ]
+##     ##             )
+##     ##     trees[i] = t
+##     ## return trees
+##     return ttable, trees
+    
+def parse_ampersand_comment(s):
+    word = Word(string.letters+string.digits+"%_")
+    key = word.setResultsName("key") + Suppress("=")
+    single_value = (Word(string.letters+string.digits+"-.") |
+                    QuotedString("'") |
+                    QuotedString('"'))
+    range_value = Group(Suppress("{") +
+                        single_value.setResultsName("min") +
+                        Suppress(",") +
+                        single_value.setResultsName("max") +
+                        Suppress("}"))
+    pair = (key + (single_value | range_value).setResultsName("value"))
+    g = OneOrMore(pair)
+    d = []
+    for x in g.searchString(s):
+        v = x.value
+        if type(v) == str:
+            try: v = float(v)
+            except ValueError: pass
         else:
-            semicolon = ";\n"
-    s = "%s%s%s" % (node_str, length_str, semicolon)
-    return s
+            try: v = map(float, v.asList())
+            except ValueError: pass
+        d.append((x.key, v))
+    return d
+             
+def nexus_iter(infile):
+    ## beginblock = Suppress(CaselessKeyword("begin") +
+    ##                       CaselessKeyword("trees") + ";")
+    ## endblock = Suppress((CaselessKeyword("end") |
+    ##                      CaselessKeyword("endblock")) + ";")
+    comment = Optional(Suppress("[&") + Regex(r'[^]]+') + Suppress("]"))
+    ## translate = CaselessKeyword("translate").suppress()
+    name = Word(string.letters+string.digits+"_") | QuotedString("'")
+    ## ttrec = Group(Word(string.digits).setResultsName("number") +
+    ##               name.setResultsName("name") +
+    ##               Optional(",").suppress())
+    ## ttable = Group(translate + OneOrMore(ttrec) + Suppress(";"))
+    newick = Regex(r'[^;]+;')
+    tree = (CaselessKeyword("tree").suppress() +
+            Optional("*").suppress() +
+            name.setResultsName("tree_name") +
+            comment.setResultsName("tree_comment") +
+            Suppress("=") +
+            comment.setResultsName("root_comment") +
+            newick.setResultsName("newick"))
+    ## treesblock = Group(beginblock +
+    ##                    Optional(ttable.setResultsName("ttable")) +
+    ##                    Group(OneOrMore(tree)) +
+    ##                    endblock)
+
+    def not_begin(s): return s.strip().lower() != "begin trees;"
+    def not_end(s): return s.strip().lower() not in ("end;", "endblock;")
+    def parse_ttable(f):
+        ttable = {}
+        while True:
+            s = f.next().strip()
+            if s.lower() == ";": break
+            if s[-1] in ",;": s = s[:-1]
+            k, v = s.split()
+            ttable[k] = v
+            if s[-1] == ";": break
+        return ttable
+            
+    # read lines between "begin trees;" and "end;"
+    f = itertools.takewhile(not_end, itertools.dropwhile(not_begin, infile))
+    s = f.next().strip().lower()
+    if s != "begin trees;":
+        print sys.stderr, "Expecting 'begin trees;', got %s" % s
+        raise StopIteration
+    ttable = {}
+    while True:
+        try: s = f.next().strip()
+        except StopIteration: break
+        if s.lower() == "translate":
+            ttable = parse_ttable(f)
+            print "ttable: %s" % len(ttable)
+        else:
+            match = tree.parseString(s)
+            yield nexus.Newick(match, ttable)
+
+## def test():
+##     with open("/home/rree/Dropbox/pedic-comm-amnat/phylo/beast-results/"
+##               "simple_stigma.trees.log") as f:
+##         for rec in nexus_iter(f):
+##             r = parse(rec.newick, ttable=rec.ttable)
+##             for x in r: print x, x.comments
+
+def test_parse_comment():
+    v = (("height_median=1.1368683772161603E-13,height=9.188229043880098E-14,"
+          "height_95%_HPD={5.6843418860808015E-14,1.7053025658242404E-13},"
+          "height_range={0.0,2.8421709430404007E-13}"),
+         "R", "lnP=-154.27154502342688,lnP=-24657.14341301901",
+         'states="T-lateral"')
+    for s in v:
+        print "input:", s
+        print dict(parse_ampersand_comment(s))

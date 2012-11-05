@@ -5,12 +5,12 @@ etc.
 ivy does not have a Tree class per se, as most functions operate
 directly on Node objects.
 """
-import os, types, string, sys
+import os, types
 from storage import Storage
 from copy import copy as _copy
 from matrix import vcv
-from shlex import shlex
-from cStringIO import StringIO
+import newick
+from itertools import izip_longest
 
 ## class Tree(object):
 ##     """
@@ -30,33 +30,19 @@ from cStringIO import StringIO
 ##         except AttributeError:
 ##             return object.__getattribute__(self, a)
         
-class Tokenizer(shlex):
-    """Provides tokens for parsing newick strings."""
-    def __init__(self, infile):
-        shlex.__init__(self, infile)
-        self.commenters = ''
-        self.wordchars = self.wordchars+"-.|"
-        self.quotes = "'"
-
-    def parse_comment(self):
-        while 1:
-            token = self.get_token()
-            if token == '':
-                sys.stdout.write('EOF encountered mid-comment!\n')
-                break
-            elif token == ']':
-                break
-            elif token == '[':
-                self.parse_comment()
-            else:
-                pass
+def traverse(node):
+    "recursive preorder iterator based solely on .children attribute"
+    yield node
+    for child in node.children:
+        for descendant in traverse(child):
+            yield descendant
 
 class Node(object):
     """
     A basic Node class with attributes and references to child nodes
     ('children', a list) and 'parent'.
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.id = None
         self.isroot = False
         self.isleaf = False
@@ -67,16 +53,15 @@ class Node(object):
         self.parent = None
         self.children = []
         self.nchildren = 0
-        self.descendantCount = 0
-        self.descendantTipCount = 0
-        self.treename = None
-        self.depth = None
-        self.next = None
-        self.back = None
-        self.stree = None
-        self.snode = None
-        self.taxon = None
-        self.meta = dict( )
+        self.left = None
+        self.right = None
+        self.treename = ""
+        self.comment = ""
+        self.length_comment = ""
+        self.label_comment = ""
+        if kwargs:
+            for k, v in kwargs.items():
+                setattr(self, k, v)
 
     def __copy__(self):
         return self.copy()
@@ -122,10 +107,10 @@ class Node(object):
         for n in self:
             i += 1
         return i
-            
+
     def __nonzero__(self):
         return True
-
+            
     def __getitem__(self, x):
         """
         x is a Node, Node.id (int) or a Node.label (string)
@@ -205,16 +190,16 @@ class Node(object):
         nodes = map(f, nodes)
         assert all(filter(lambda x: isinstance(x, Node), nodes))
 
-        v = [ list(n.rootpath()) for n in nodes if n in self ]
+        #v = [ list(n.rootpath()) for n in nodes if n in self ]
+        v = [ list(x) for x in izip_longest(*[ reversed(list(n.rootpath()))
+                                               for n in nodes if n in self ]) ]
         if len(v) == 1:
             return v[0][0]
         anc = None
-        while 1:
-            s = set([ x.pop() for x in v if x ])
-            if len(s) == 1:
-                anc = list(s)[0]
-            else:
-                break
+        for x in v:
+            s = set(x)
+            if len(s) == 1: anc = list(s)[0]
+            else: break
         return anc
 
     def ismono(self, *leaves):
@@ -272,8 +257,13 @@ class Node(object):
     def labeled(self):
         return [ n for n in self if n.label ]
 
-    def leaves(self):
+    def leaves(self, f=None):
+        if f:
+            return [ n for n in self if (n.isleaf and f(n)) ]
         return [ n for n in self if n.isleaf ]
+
+    def clades(self):
+        return [ n for n in self if not n.isleaf ]
 
     def iternodes(self, f=None):
         """
@@ -322,7 +312,11 @@ class Node(object):
         """
         Return the first node found by node.find()
         """
-        return self.find(f, *args, **kwargs).next()
+        v = self.find(f, *args, **kwargs)
+        try:
+            return v.next()
+        except StopIteration:
+            return None
 
     def grep(self, s, ignorecase=True):
         """
@@ -386,42 +380,59 @@ class Node(object):
         n.add_child(node)
         parent.add_child(n)
 
-    def leaf_distances(self, store=None, measure="length"):
-        """
-        for each internal node, calculate the distance to each leaf,
-        measured in branch length or internodes
-        """
-        if store is None:
-            store = {}
-        leaf2len = {}
-        if self.children:
-            for child in self.children:
-                if measure == "length":
-                    dist = child.length
-                elif measure == "nodes":
-                    dist = 1
-                child.leaf_distances(store, measure)
-                if child.isleaf:
-                    leaf2len[child] = dist
-                else:
-                    for k, v in store[child].items():
-                        leaf2len[k] = v + dist
-        else:
-            leaf2len[self] = {self: 0}
-        store[self] = leaf2len
+    ## def leaf_distances(self, store=None, measure="length"):
+    ##     """
+    ##     for each internal node, calculate the distance to each leaf,
+    ##     measured in branch length or internodes
+    ##     """
+    ##     if store is None:
+    ##         store = {}
+    ##     leaf2len = {}
+    ##     if self.children:
+    ##         for child in self.children:
+    ##             if measure == "length":
+    ##                 dist = child.length
+    ##             elif measure == "nodes":
+    ##                 dist = 1
+    ##             child.leaf_distances(store, measure)
+    ##             if child.isleaf:
+    ##                 leaf2len[child] = dist
+    ##             else:
+    ##                 for k, v in store[child].items():
+    ##                     leaf2len[k] = v + dist
+    ##     else:
+    ##         leaf2len[self] = {self: 0}
+    ##     store[self] = leaf2len
+    ##     return store
+
+    def leaf_distances(self, measure="length"):
+        from collections import defaultdict
+        store = defaultdict(lambda:defaultdict(lambda:0))
+        nodes = [ x for x in self if x.children ]
+        for lf in self.leaves():
+            x = lf.length
+            for n in lf.rootpath(self):
+                store[n][lf] = x
+                x += (n.length or 0)
         return store
 
-    def rootpath(self, end=None):
+    def rootpath(self, end=None, stop=None):
         """
         Iterate over parent nodes toward the root, or node *end* if
         encountered.
         """
-        n = self
+        n = self.parent
         while 1:
+            if n is None: raise StopIteration
             yield n
-            if n.isroot or (end and n == end): break
-            if n.parent: n = n.parent
-            else: break
+            if n.isroot or (end and n == end) or (stop and stop(n)):
+                raise StopIteration
+            n = n.parent
+
+    def rootpath_length(self, end=None):
+        v = [self.length]+[ x.length for x in self.rootpath(end) if x.parent ]
+        assert None not in v
+        return sum(v)
 
     def subtree_mapping(self, labels, clean=False):
         """
@@ -490,7 +501,7 @@ class Node(object):
             
         return d
 
-    def reroot(self, newroot):
+    def reroot_orig(self, newroot):
         assert newroot in self
         self.isroot = False
         newroot.isroot = True
@@ -509,22 +520,41 @@ class Node(object):
             cp.length = node.length
         return newroot
 
-    def write(self, outfile=None, format="newick", length_fmt=":%g"):
+    def reroot(self, newroot):
+        newroot = self[newroot]
+        assert newroot in self
+        self.isroot = False
+        n = newroot
+        v = list(n.rootpath())
+        v.reverse()
+        for node in (v+[n])[1:]:
+            # node is current node; cp is current parent
+            cp = node.parent
+            cp.remove_child(node)
+            node.add_child(cp)
+            cp.length = node.length
+            cp.label = node.label
+        newroot.isroot = True
+        return newroot
+
+    def write(self, outfile=None, format="newick", length_fmt=":%g", end=True):
         if format=="newick":
-            return write_newick(self, outfile, length_fmt, end=True)
-    
+            s = write_newick(self, outfile, length_fmt, True)
+            if not outfile:
+                return s
+
 
 reroot = Node.reroot
 
-def index(node, n=1):
+def index(node, n=1, d=0):
     """
-    recursively attach 'next', 'back', 'isleaf', and 'depth' attributes to nodes
+    recursively attach 'next', 'back', and 'depth' attributes to nodes
     """
     node.next = n
     if not node.parent:
-        node.depth = 0
+        node.depth = d
     else:
-        node.depth = node.parent.depth
+        node.depth = node.parent.depth + 1
     n += 1
     for i, c in enumerate(node.children):
         if i > 0:
@@ -533,10 +563,8 @@ def index(node, n=1):
 
     if node.children:
         node.back = node.children[-1].back + 1
-        node.isleaf = False
     else:
         node.back = n
-        node.isleaf = True
     return node.back
 
 def remove_singletons(root, add=True):
@@ -566,8 +594,12 @@ def clade_sizes(node, results={}):
     return results
 
 def write(node, outfile=None, format="newick", length_fmt=":%g"):
-    if format=="newick":
-        return write_newick(node, outfile, length_fmt, end=True)
+    if format=="newick" or ((type(outfile) in types.StringTypes) and
+                            (outfile.endswith(".newick") or
+                             outfile.endswith(".new"))):
+        s = write_newick(node, outfile, length_fmt, True)
+        if not outfile:
+            return s
     
 def write_newick(node, outfile=None, length_fmt=":%g", end=False):
     if not node.isleaf:
@@ -599,7 +631,7 @@ def write_newick(node, outfile=None, length_fmt=":%g", end=False):
             outfile.close()
     return s
     
-def read(data, format="newick", treename=None, ttable=None):
+def read(data, format=None, treename=None, ttable=None):
     """
     Read a single tree from *data*, which can be a Newick string, a
     file name, or a file-like object with `tell` and 'read`
@@ -608,160 +640,96 @@ def read(data, format="newick", treename=None, ttable=None):
 
     Returns: *root*, the root node.
     """
-    #import newick
+    import newick
+    StringTypes = types.StringTypes
     
     def strip(s):
         fname = os.path.split(s)[-1]
         head, tail = os.path.splitext(fname)
-        if tail in (".nwk", ".tre", ".tree", ".newick"):
+        tail = tail.lower()
+        if tail in (".nwk", ".tre", ".tree", ".newick", ".nex"):
             return head
         else:
             return fname
 
+    if (not format):
+        if (type(data) in StringTypes) and os.path.isfile(data):
+            s = data.lower()
+            for tail in ".nex", ".nexus", ".tre":
+                if s.endswith(tail):
+                    format="nexus"
+                    break
+
+    if (not format):
+        format = "newick"
+
     if format == "newick":
-        if type(data) in types.StringTypes:
+        if type(data) in StringTypes:
             if os.path.isfile(data):
                 treename = strip(data)
-                return parse(file(data), treename=treename,
+                return newick.parse(file(data), treename=treename,
                                     ttable=ttable)
             else:
-                return parse(data, ttable=ttable)
+                return newick.parse(data, ttable=ttable)
 
         elif (hasattr(data, "tell") and hasattr(data, "read")):
             treename = strip(getattr(data, "name", None))
-            return parse(data, treename=treename, ttable=ttable)
+            return newick.parse(data, treename=treename, ttable=ttable)
+    elif format == "nexus-dendropy":
+        import dendropy
+        if type(data) in StringTypes:
+            if os.path.isfile(data):
+                treename = strip(data)
+                return newick.parse(
+                    str(dendropy.Tree.get_from_path(data, "nexus")),
+                    treename=treename
+                    )
+            else:
+                return newick.parse(
+                    str(dendropy.Tree.get_from_string(data, "nexus"))
+                    )
+
+        elif (hasattr(data, "tell") and hasattr(data, "read")):
+            treename = strip(getattr(data, "name", None))
+            return newick.parse(
+                str(dendropy.Tree.get_from_stream(data, "nexus")),
+                treename=treename
+                )
+        else:
+            pass
+
+    elif format == "nexus":
+        if type(data) in StringTypes:
+            if os.path.isfile(data):
+                with open(data) as infile:
+                    rec = newick.nexus_iter(infile).next()
+                    if rec: return rec.parse()
+            else:
+                rec = newick.nexus_iter(StringIO(data)).next()
+                if rec: return rec.parse()
+        else:
+            rec = newick.nexus_iter(data).next()
+            if rec: return rec.parse()
     else:
         # implement other tree formats here (nexus, nexml etc.)
         raise IOError, "format '%s' not implemented yet" % format
 
     raise IOError, "unable to read tree from '%s'" % data
 
-def readmulti(data, format="newick"):
+def readmany(data, format="newick"):
     "Iterate over trees from a source."
-    pass
-
-def parse(data, ttable=None, treename=None):
-    """
-    Parse a newick string.
-
-    *data* is any file-like object that can be coerced into shlex, or
-    a string (converted to StringIO)
-
-    *ttable* is a dictionary mapping node labels in the newick string
-     to other values.
-
-    Returns: the root node.
-    """
-    #from tree import Node
-    
     if type(data) in types.StringTypes:
-        data = StringIO(data)
+        if os.path.isfile(data):
+            data = open(data)
+        else:
+            data = StringIO(data)
     
-    start_pos = data.tell()
-    tokens = Tokenizer(data)
-
-    node = None; root = None
-    lp=0; rp=0; rooted=1
-
-    previous = None
-
-    i = 1 # node id counter
-    while 1:
-        token = tokens.get_token()
-        #print token,
-        if token == ';' or token == '':
-            assert lp == rp, \
-                   "unbalanced parentheses in tree description: (%s, %s)" \
-                   % (lp, rp)
-            break
-
-        # internal node
-        elif token == '(':
-            lp = lp+1
-            newnode = Node()
-            newnode.id = i; i += 1
-            newnode.isleaf = False
-            newnode.treename = treename
-            if node:
-                node.add_child(newnode)
-            node = newnode
-
-        elif token == ')':
-            rp = rp+1
-            node = node.parent
-            
-        elif token == ',':
-            node = node.parent
-            
-        # branch length
-        elif token == ':':
-            token = tokens.get_token()
-            if token == '[':
-                tokens.parse_comment()
-                token = tokens.get_token()
-
-            if not (token == ''):
-                try:
-                    brlen = float(token)
-                except ValueError:
-                    raise ValueError, "invalid literal for branch length, '%s'" % token
-            else:
-                raise 'NewickError', \
-                      'unexpected end-of-file (expecting branch length)'
-
-            node.length = brlen
-        # comment
-        elif token == '[':
-            tokens.parse_comment()
-
-        # leaf node or internal node label
-        else:
-            if previous != ')': # leaf node
-                if ttable:
-                    try:
-                        ttoken = ttable.get(int(token))
-                    except ValueError:
-                        ttoken = ttable.get(token)
-                    if ttoken:
-                        token = ttoken
-                newnode = Node()
-                newnode.id = i; i += 1
-                newnode.label = "_".join(token.split()).replace("'", "")
-                newnode.isleaf = True
-                newnode.treename = treename
-                node.add_child(newnode)
-                node = newnode
-            else: # label
-                if ttable:
-                    node.label = ttable.get(token, token)
-                else:
-                    node.label = token
-
-        previous = token
-    node.isroot = True
-    return node
-
-def string(node, length_fmt=":%s", end=True, newline=True):
-    "Recursively create a newick string from node."
-    if not node.isleaf:
-        node_str = "(%s)%s" % \
-                   (",".join([ string(child, length_fmt, False, newline) \
-                               for child in node.children ]),
-                    node.label or ""
-                    )
+    if format == "newick":
+        for line in data:
+            yield newick.parse(line)
+    elif format == "nexus":
+        for rec in newick.nexus_iter(data):
+            yield rec.parse()
     else:
-        node_str = "%s" % node.label
-
-    if node.length is not None:
-        length_str = length_fmt % node.length
-    else:
-        length_str = ""
-
-    semicolon = ""
-    if end:
-        if not newline:
-            semicolon = ";"
-        else:
-            semicolon = ";\n"
-    s = "%s%s%s" % (node_str, length_str, semicolon)
-    return s
+        raise Exception, "format '%s' not recognized" % format
+    data.close()
