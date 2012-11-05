@@ -29,14 +29,6 @@ def updateUrl():
     return response.json( dict( treeId = session.TreeViewer.treeId, treeType = session.TreeViewer.treeType ) )
 
 
-def getRecentlyCreatedGTree():
-
-    tree = build.tree( db, session.recentlyCreatedGTreeId, session.TreeViewer.type )
-
-    util.autoCollapse( tree, session, db, 'cladogram', [ ] )
-
-    return util.getRenderResponse( response, session, tree )
-
 
 def getPreEditClade():
 

@@ -16,7 +16,7 @@ def handleViewerInstantiation( request, response, session, db ):
     """
 
     instanceParams = dict( containerId = request.cid, treeType = session.TreeViewer.treeType )
-    instanceParams['treeId'] = session.TreeViewer.treeId = request.vars.treeId
+    instanceParams['treeId'] = session.TreeViewer.treeId = int( request.vars.treeId )
 
     session.TreeViewer.viewInfo = common.evaluate( request.vars.viewInfo )
 
@@ -52,8 +52,8 @@ def addThingsToSession( session, db ):
 
     initializeTreeConfig( session )
 
-    session.TreeViewer.config.update( session.TreeViewer.treeConfig[ session.TreeViewer.treeId ] )
-
+    session.TreeViewer.config.update( session.TreeViewer.treeConfig[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ] )
+    
     initializeTreeState( session, db )
 
 
@@ -81,11 +81,13 @@ def initializeViewerConfig( session ):
 def initializeTreeConfig( session ):
 
     if 'treeConfig' not in session.TreeViewer:
-        session.TreeViewer.treeConfig = Storage()
+        session.TreeViewer.treeConfig = Storage( source = Storage(), grafted = Storage() )
 
-    if session.TreeViewer.treeId not in session.TreeViewer.treeConfig:
-        session.TreeViewer.treeConfig[ session.TreeViewer.treeId ] = \
+    if( session.TreeViewer.treeId not in session.TreeViewer.treeConfig[ session.TreeViewer.treeType ] ) :
+
+        session.TreeViewer.treeConfig[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ] = \
             globals()[ ''.join( [ 'initialize', session.TreeViewer.viewInfo[ 'type' ].capitalize(), 'TreeConfig' ] ) ]()
+
 
 def initializePhylogramTreeConfig():
 
@@ -115,7 +117,8 @@ def initializeTreeState( session, db ):
     if not 'treeState' in session.TreeViewer:
         session.TreeViewer.treeState = Storage( source = Storage(), grafted = Storage() )
 
-    if( not session.TreeViewer.treeId in session.TreeViewer.treeState[ session.TreeViewer.treeType ] ):
+    if( session.TreeViewer.treeId not in session.TreeViewer.treeState[ session.TreeViewer.treeType ] ):
+
         session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ] = \
             globals()[ ''.join( [ 'initialize', session.TreeViewer.viewInfo[ 'type' ].capitalize(), 'TreeState' ] ) ]( session, db )
 
@@ -125,7 +128,7 @@ def initializePhylogramTreeState( session, db ):
     rootNodeRowInfo = db.executesql( \
         ''.join( [ 'SELECT id, back FROM ',
                    session.TreeViewer.strNodeTable,
-                   ' WHERE tree = ', session.TreeViewer.treeId, ' AND next = 1' ] ) )[0]
+                   ' WHERE tree = ', str( session.TreeViewer.treeId ), ' AND next = 1' ] ) )[0]
 
     session.TreeViewer.rootNodeId = rootNodeRowInfo[ 0 ]
 

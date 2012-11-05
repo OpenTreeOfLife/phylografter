@@ -6,9 +6,11 @@ def getTree( db, session, request ):
 
     response = [ ]
 
-    for index in range( len( session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ].columns ) ):
+    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
+
+    for index in range( len( treeState.columns ) ):
        
-        columnInfo = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ].columns[ index ]
+        columnInfo = treeState.columns[ index ]
 
         response.append( \
             getRenderResponse( \
@@ -130,7 +132,7 @@ def verticallyExpandNode( db, session, request ):
 
     treeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
 
-    session.TreeViewer.treeConfig[ session.TreeViewer.treeId ].maxTips.value = session.TreeViewer.config.maxTips.value = \
+    session.TreeViewer.treeConfig[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ].maxTips.value = session.TreeViewer.config.maxTips.value = \
         session.TreeViewer.config.maxTips.value * 1.5
 
     treeState.columns[ columnIndex ].keepVisibleNodeStorage[ expandingNodeId ] = True
@@ -892,13 +894,8 @@ def uncollapseNodes( db, session, request ):
 
         for ( collapsedNodeId, collapsedNodeData ) in columnInfo.collapsedNodeStorage.items():
 
-            if( index < columnCount - 1 ):
-                print "collapsed node id:", str( type( collapsedNodeId ) )
-                print "next column root node id:", str( type( treeState.columns[ index + 1 ].rootNodeId ) )
-
             if( ( index == ( columnCount - 1 ) ) or \
                 ( ( index < columnCount - 1 ) and ( treeState.columns[ index + 1 ].rootNodeId != collapsedNodeId ) ) ):
-                print 'keepVisible :', str( collapsedNodeId )
                 columnInfo.keepVisibleNodeStorage[ collapsedNodeId ] = True
 
             if collapsedNodeId not in treeState.formerlyCollapsedNodeStorage:

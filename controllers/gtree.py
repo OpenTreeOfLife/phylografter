@@ -109,5 +109,5 @@ def backbone():
     else:
         session.TreeViewer.treeType = 'source'
         session.TreeViewer.strNodeTable = 'snode'
-
+    
     return dict()

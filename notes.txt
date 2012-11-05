@@ -248,3 +248,8 @@ minimum tips per column needed
 
 scale collapsed node ui with size of font ?
 hidden hover border is on top of view descendant labels - this shouldn't be the case
+
+
+11/5/12 :
+
+testing prune node - prune entire column for source and gtree
