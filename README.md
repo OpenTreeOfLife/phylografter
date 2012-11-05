@@ -67,18 +67,20 @@ To load a SQL dump: launch the mysql daemon with large packet sizes:
 mysqld_safe --max_allowed_pack=32M
 </pre>
 
-[JAR: the special flag to mysqld_safe wasn't necessary in my setup,
-but doing 'sudo' was]
+[JAR: the max_allowed_pack special flag to mysqld_safe wasn't
+necessary in my setup, but doing 'sudo' was]
 
 <pre>
-mysql -u root -p < phylografter.sql
+mysql -u root -p &lt; phylografter.sql
 </pre>
 
-(9) Launch web2py (you can use -a <recycle> to re-use the admin password:
+
+(9) Launch web2py (you can use -a &lt;recycle&gt; to re-use the admin password:
 
 <pre>
-python web2py.py --nogui -a '<recycle>'
-</recycle>
+python web2py.py --nogui -a '&lt;recycle&gt;'
+</pre>
+
 
 (10) Direct a browser to http://127.0.0.1:8000/phylografterv2/stree/index
 (should display a "Source trees" table).
