@@ -336,7 +336,8 @@ def view():
     ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ottol.label = 'Focal clade'
     t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.name, id_field=db.ottol_name.id)
+        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
+        limitby=(0,20), orderby=db.ottol_name.unique_name)
     form = SQLFORM(t, rec, deletable=False, readonly=readonly,
                    fields = ["citation", "year_published", "doi", "label",
                              "focal_clade_ottol", "treebase_id",
