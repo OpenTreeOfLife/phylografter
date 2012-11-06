@@ -144,7 +144,11 @@ def verticallyExpandNode( db, session, request ):
     if( expandingNodeId not in treeState.formerlyCollapsedNodeStorage ):
         treeState.formerlyCollapsedNodeStorage[ expandingNodeId ] = treeState.columns[ columnIndex ].collapsedNodeStorage[ expandingNodeId ]
 
-    del treeState.columns[ columnIndex ].collapsedNodeStorage[ expandingNodeId ]
+    # sometimes this throws a KeyError, so I'm wrapping it in a try [RR]
+    try:
+        del treeState.columns[ columnIndex ].collapsedNodeStorage[ expandingNodeId ]
+    except KeyError:
+        pass
 
     if( ( ( len( treeState.columns ) - 1 ) > columnIndex ) and ( treeState.columns[ columnIndex + 1 ].rootNodeId == expandingNodeId ) ):
         while( ( len( treeState.columns ) - 1 ) > columnIndex ):

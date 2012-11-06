@@ -436,7 +436,8 @@ def tbimport2():
     ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ottol.label = 'Focal clade'
     t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.name, id_field=db.ottol_name.id)
+        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
+        limitby=(0,20), orderby=db.ottol_name.unique_name)
     t.uploaded.readable=False
     key = "uploaded_nexml_%s" % auth.user.id
     nexml = cache.ram(key, lambda:None, time_expire=10000)
@@ -509,15 +510,15 @@ def tbimport_otus():
     left = db.ottol_name.on(db.otu.ottol_name==db.ottol_name.id)
     rows = db(db.otu.study==rec.id).select(db.otu.ALL, db.ottol_name.ALL,
                                            left=left)
-    d = dict([ (x.ottol_name.tb_taxid, x.otu.id)
-               for x in rows if x.ottol_name and x.ottol_name.tb_taxid ])
+    d = dict([ (x.ottol_name.treebase_taxid, x.otu.id)
+               for x in rows if x.ottol_name and x.ottol_name.treebase_taxid ])
     d.update(dict([ (x.otu.label, x.otu) for x in rows ]))
     d.update(dict([ (x.otu.tb_nexml_id, x.otu) for x in rows ]))
-    existing = [ not ((v.tb_taxid in d) or (v.label in d) or (v.id in d))
+    existing = [ not ((v.treebase_taxid in d) or (v.label in d) or (v.id in d))
                  for k, v in otus ]
     for k, v in otus:
         o = nexml.otus[k]
-        o.otu = d.get(v.id) or d.get(v.label) or d.get(v.tb_taxid)
+        o.otu = d.get(v.id) or d.get(v.label) or d.get(v.treebase_taxid)
 
     colnames = ["Nexml id", "Label", "NCBI taxid", "NameBank id",
                 "Taxon match?", "New?"]
@@ -557,18 +558,18 @@ def tbimport_otus():
             n = 0
             for k in v:
                 x = Storage(nexml.otus[k])
-                ## t = (new_tb_taxids.get(x.tb_taxid) or
+                ## t = (new_tb_taxids.get(x.treebase_taxid) or
                 ##      new_ncbi_taxids.get(x.ncbi_taxid) or
                 ##      new_labels.get(x.label))
                 t = matches.get(x.label) or matches.get(x.ncbi_taxid)
                 if t:
                     r = db.ottol_name[t]
-                    if not r.tb_taxid and x.tb_taxid:
-                        r.update_record(tb_taxid=x.tb_taxid)
+                    if not r.treebase_taxid and x.treebase_taxid:
+                        r.update_record(treebase_taxid=x.treebase_taxid)
                     if not r.ncbi_taxid and x.ncbi_taxid:
                         r.update_record(ncbi_taxid=x.ncbi_taxid)
-                    if not r.namebank_id and x.namebank_id:
-                        r.update_record(namebank_id=x.namebank_id)
+                    if not r.namebank_taxid and x.namebank_taxid:
+                        r.update_record(namebank_taxid=x.namebank_taxid)
                 i = db.otu.insert(study=rec.id, label=x.label, ottol_name=t,
                                   tb_nexml_id=x.id)
                 if i:

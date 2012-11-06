@@ -1,0 +1,12 @@
+<h4>Tags</h4>
+<div style="padding-left:0.25em">
+{{for t in tags:}}
+<div>{{=t}}</div>
+{{pass}}
+
+<div style="padding-top:0.25em">
+{{=form.custom.begin}}
+{{=form.custom.widget.tag}}
+{{=form.custom.end}}
+</div>
+</div>
