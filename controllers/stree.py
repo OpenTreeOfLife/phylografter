@@ -351,7 +351,7 @@ def edit():
     form = SQLFORM(db.stree, int(rec), fields=fields, showid=False,
                    deletable=False, submit_button="Update record",
                    readonly=readonly)
-    form.vars.study = rec.id
+    form.vars.study = rec.study
     if form.accepts(request.vars, session):
         response.flash = "record updated"
     return dict(form=form, rec=rec)
