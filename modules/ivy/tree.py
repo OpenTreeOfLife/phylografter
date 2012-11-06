@@ -565,6 +565,11 @@ def index(node, n=1, d=0):
         node.back = node.children[-1].back + 1
     else:
         node.back = n
+<<<<<<< HEAD
+=======
+        node.isleaf = True
+
+>>>>>>> master
     return node.back
 
 def remove_singletons(root, add=True):

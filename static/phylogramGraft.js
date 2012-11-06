@@ -384,12 +384,10 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showPruneEditStatus 
 
     if( ( this.viewer.treeType == 'source' ) ) {
 
-        successFunctions = successFunctions.concat( [ $.proxy( this.viewer.updateUrl, this.viewer ), $.proxy( this.getTreeAfterEdit, this ) ] );
-
-    } else {
-
-        successFunctions.push( $.proxy( this.getColumnAfterEdit, this ) );
+        successFunctions.push( $.proxy( this.viewer.updateUrl, this.viewer ) );
     }
+    
+    successFunctions.push( $.proxy( this.getTreeAfterEdit, this ) );
 
     BioSync.Common.dotDotDotText( {
         content: content,
@@ -397,22 +395,6 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showPruneEditStatus 
         stopTrigger: 'editSuccess',
         stopText: 'Pruned',
         stopFunction: successFunctions } );
-}
-
-BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getColumnAfterEdit = function() {
-
-    var content = this.make( 'div' ).attr( { 'class': 'treeEditStatus' } ).append( this.make( 'span' ).text( 'Getting updated column' ) );
-
-    BioSync.ModalBox.contentContainer.append( content );
-    
-    BioSync.Common.dotDotDotText( {
-        content: content,
-        minimumTime: 2000,
-        stopTrigger: 'getCladeSuccess',
-        stopFunction: new Array( BioSync.ModalBox.closeBox ),
-        stopText: 'Received Column' } );
-
-    this.refreshColumn( { column: this.prunedColumn } );
 }
 
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getTreeAfterEdit = function() {
