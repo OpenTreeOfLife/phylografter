@@ -9,10 +9,6 @@ import numpy
 import nexus
 from cStringIO import StringIO
 from pprint import pprint
-import pyparsing
-pyparsing.ParserElement.enablePackrat()
-from pyparsing import Word, Literal, QuotedString, CaselessKeyword, \
-     OneOrMore, Group, Optional, Suppress, Regex, Dict
 
 ## def read(s):
 ##     try:
@@ -24,12 +20,20 @@ from pyparsing import Word, Literal, QuotedString, CaselessKeyword, \
 ##             pass
 ##     return parse(s)
 
+LABELCHARS = '-.|'
+META = re.compile(r'([^,=\s]+)\s*=\s*(\{[^=}]*\}|"[^"]*"|[^,]+)?')
+
+def add_label_chars(chars):
+    global LABELCHARS
+    LABELCHARS += chars
+
 class Tokenizer(shlex.shlex):
     """Provides tokens for parsing newick strings."""
     def __init__(self, infile):
+        global LABELCHARS
         shlex.shlex.__init__(self, infile, posix=False)
         self.commenters = ''
-        self.wordchars = self.wordchars+"-.|"
+        self.wordchars = self.wordchars+LABELCHARS 
         self.quotes = "'"
 
     def parse_embedded_comment(self):
@@ -76,7 +80,10 @@ def parse(data, ttable=None, treename=None):
 
     previous = None
 
-    i = 1 # node id counter
+    ni = 0 # node id counter (preorder) - zero-based indexing
+    li = 0 # leaf index counter
+    ii = 0 # internal node index counter
+    pi = 0 # postorder sequence
     while 1:
         token = tokens.get_token()
         #print token,
@@ -90,8 +97,9 @@ def parse(data, ttable=None, treename=None):
         elif token == '(':
             lp = lp+1
             newnode = Node()
-            newnode.id = i; i += 1
+            newnode.ni = ni; ni += 1
             newnode.isleaf = False
+            newnode.ii = ii; ii += 1
             newnode.treename = treename
             if node:
                 if node.children: newnode.left = node.children[-1].right+1
@@ -105,6 +113,7 @@ def parse(data, ttable=None, treename=None):
         elif token == ')':
             rp = rp+1
             node = node.parent
+            node.pi = pi; pi += 1
             if node.children:
                 node.right = node.children[-1].right + 1
             
@@ -133,6 +142,14 @@ def parse(data, ttable=None, treename=None):
         # comment
         elif token == '[':
             node.comment = tokens.parse_embedded_comment()
+            if node.comment[0] == '&':
+                # metadata
+                meta = META.findall(node.comment[1:])
+                if meta:
+                    node.meta = {}
+                    for k, v in meta:
+                        v = eval(v.replace('{','(').replace('}',')'))
+                        node.meta[k] = v
 
         # leaf node or internal node label
         else:
@@ -146,9 +163,11 @@ def parse(data, ttable=None, treename=None):
                     if ttoken:
                         token = ttoken
                 newnode = Node()
-                newnode.id = i; i += 1
+                newnode.ni = ni; ni += 1
+                newnode.pi = pi; pi += 1
                 newnode.label = "_".join(token.split()).replace("'", "")
                 newnode.isleaf = True
+                newnode.li = li; li += 1
                 if node.children: newnode.left = node.children[-1].right+1
                 else: newnode.left = node.left+1
                 newnode.right = newnode.left+1
@@ -212,6 +231,10 @@ def parse(data, ttable=None, treename=None):
 ##     return ttable, trees
     
 def parse_ampersand_comment(s):
+    import pyparsing
+    pyparsing.ParserElement.enablePackrat()
+    from pyparsing import Word, Literal, QuotedString, CaselessKeyword, \
+         OneOrMore, Group, Optional, Suppress, Regex, Dict
     word = Word(string.letters+string.digits+"%_")
     key = word.setResultsName("key") + Suppress("=")
     single_value = (Word(string.letters+string.digits+"-.") |
@@ -237,6 +260,10 @@ def parse_ampersand_comment(s):
     return d
              
 def nexus_iter(infile):
+    import pyparsing
+    pyparsing.ParserElement.enablePackrat()
+    from pyparsing import Word, Literal, QuotedString, CaselessKeyword, \
+         OneOrMore, Group, Optional, Suppress, Regex, Dict
     ## beginblock = Suppress(CaselessKeyword("begin") +
     ##                       CaselessKeyword("trees") + ";")
     ## endblock = Suppress((CaselessKeyword("end") |

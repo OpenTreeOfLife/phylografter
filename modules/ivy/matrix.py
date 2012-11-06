@@ -2,6 +2,7 @@
 Functions for dealing with trees as matrices.
 """
 from collections import defaultdict
+import numpy as np
 
 def vcv(root):
     "leaf variances and covariances"
@@ -22,6 +23,17 @@ def vcv(root):
                         var[k] = v
                         cov[k] = c
     return var, cov
+
+def vcv(root):
+    leaves = root.leaves()
+    d = defaultdict(set)
+    for i, lf in enumerate(leaves):
+        lf.preleafi = i
+        for n in lf.rootpath(): d[n].add(i)
+        
+    N = len(leaves)
+    a = np.zeros((N,N))
+    return d
 
 ## def vcv(root, labels=None):
 ##     """

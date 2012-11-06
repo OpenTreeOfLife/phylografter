@@ -34,5 +34,6 @@ try:
 except ImportError:
     pass
 
-## import vis, chars, align, sequtil
 import chars, align, sequtil
+## try: import vis
+## except RuntimeError: pass

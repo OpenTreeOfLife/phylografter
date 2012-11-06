@@ -90,12 +90,42 @@ def fetch_aclist(aclist):
         h.close()
     return results
 
+def fetch_gilist(gilist, batchsize=1000):
+    global email
+    assert email, "set email!"
+    Entrez.email = email
+    results = {}
+    for v in batch(gilist, batchsize):
+        v = map(str, v)
+        h = Entrez.epost(db="nucleotide", id=",".join(v), usehistory="y")
+        d = Entrez.read(h)
+        h.close()
+        h = Entrez.efetch(db="nucleotide", rettype="gb", retmax=len(v),
+                          webenv=d["WebEnv"], query_key=d["QueryKey"])
+        seqs = SeqIO.parse(h, "genbank")
+        for s in seqs:
+            try:
+                gi = s.annotations["gi"]
+                if gi in v:
+                    s.id = organism_id(s)
+                    results[gi] = s
+            except:
+                pass
+        h.close()
+    return results
+
+def organism_id(s):
+    org = (s.annotations.get('organism') or '').replace('.', '')
+    return '%s_%s' % (org.replace(' ','_'), s.id.split('.')[0])
+
 def fetchseq(gi):
     global email
     assert email, "set email!"
     Entrez.email = email
     h = Entrez.efetch(db="nucleotide", id=str(gi), rettype="gb")
-    return SeqIO.read(h, 'genbank')
+    s = SeqIO.read(h, 'genbank')
+    s.id = organism_id(s)
+    return s
     
 def create_fastas(data, genes):
     fastas = dict([ (g, file(g+".fasta", "w")) for g in genes ])
@@ -150,7 +180,7 @@ def merge_fastas(fnames, name="merged"):
         i += n
     parts.close()
 
-def blast_closest(fasta, e=1e-10):
+def blast_closest(fasta, e=10):
     f = NCBIWWW.qblast("blastn", "nr", fasta, expect=e, hitlist_size=1)
     rec = NCBIXML.read(f)
     d = rec.descriptions[0]
@@ -161,6 +191,21 @@ def blast_closest(fasta, e=1e-10):
     if ac: result.ac = ac[0].split(".")[0]
     result.title = d.title.split("|")[-1].strip()
     return result
+
+def blast(query, e=10, n=100, entrez_query=""):
+    f = NCBIWWW.qblast("blastn", "nr", query, expect=e, hitlist_size=n,
+                       entrez_query=entrez_query)
+    rec = NCBIXML.read(f)
+    v = []
+    for d in rec.descriptions:
+        result = Storage()
+        gi = re.findall(r'gi[|]([0-9]+)', d.title) or None
+        if gi: result.gi = int(gi[0])
+        ac = re.findall(r'gb[|]([^|]+)', d.title) or None
+        if ac: result.ac = ac[0].split(".")[0]
+        result.title = d.title.split("|")[-1].strip()
+        v.append(result)
+    return v
 
 def start_codons(seq):
     i = seq.find('ATG')
@@ -183,3 +228,11 @@ def fetchtax(taxid):
     r = Entrez.read(h)[0]
     return r
 
+__FIRST = re.compile('[^-]')
+__LAST = re.compile('[-]*$')
+def trimpos(rec):
+    'return the positions of the first and last ungapped base'
+    s = rec.seq.tostring()
+    first = __FIRST.search(s).start()
+    last = __LAST.search(s).start()-1
+    return (first, last)

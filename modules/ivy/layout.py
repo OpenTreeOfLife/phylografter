@@ -116,7 +116,7 @@ def calc_node_positions(node, width, height,
 nodepos = calc_node_positions
 
 def cartesian(node, xscale=1.0, leafspace=None, scaled=True, n2coords=None,
-              smooth=0, array=numpy.array, ones=numpy.ones):
+              smooth=0, array=numpy.array, ones=numpy.ones, yunit=None):
     
     if n2coords is None:
         n2coords = {}
@@ -134,7 +134,8 @@ def cartesian(node, xscale=1.0, leafspace=None, scaled=True, n2coords=None,
     
     maxdepth = max([ n2coords[lf].depth for lf in leaves ])
     depth = maxdepth * xscale
-    yunit = 1.0/nleaves
+    if not yunit: yunit = 1.0/nleaves
+    ## yunit = 1.0
 
     if scaled:
         maxlen = max([ n2coords[lf].length_to_root for lf in leaves ])

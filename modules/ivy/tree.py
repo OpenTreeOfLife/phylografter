@@ -44,6 +44,7 @@ class Node(object):
     """
     def __init__(self, **kwargs):
         self.id = None
+        self.li = None # leaf index
         self.isroot = False
         self.isleaf = False
         self.label = None
@@ -79,9 +80,9 @@ class Node(object):
         s = ", ".join(v)
 
         if s:
-            s = "Node(%s, %s)" % (self.id, s)
+            s = "Node(%s, %s)" % (self.ni, s)
         else:
-            s = "Node(%s)" % self.id
+            s = "Node(%s)" % self.ni
         return s
 
     def __contains__(self, other):
@@ -116,7 +117,7 @@ class Node(object):
         x is a Node, Node.id (int) or a Node.label (string)
         """
         for n in self:
-            if n==x or n.id==x or (n.label and n.label==x):
+            if n==x or n.id==x or n.ni == x or (n.label and n.label==x):
                 return n
         raise IndexError(str(x))
 
@@ -176,31 +177,50 @@ class Node(object):
         Find most recent common ancestor of *nodes*
         """
         if len(nodes) == 1:
-            nodes = list(nodes[0])
+            nodes = tuple(nodes[0])
         if len(nodes) == 1:
             return nodes[0]
-        ## assert len(nodes) > 1, (
-        ##     "Need more than one node for mrca(), got %s" % nodes
-        ##     )
-        def f(x):
-            if isinstance(x, Node):
-                return x
-            elif type(x) in types.StringTypes:
-                return self.find(x)
-        nodes = map(f, nodes)
-        assert all(filter(lambda x: isinstance(x, Node), nodes))
+        nodes = set([ self[n] for n in nodes ])
+        anc = []
+        def f(n):
+            seen = set()
+            for c in n.children: seen.update(f(c))
+            if n in nodes: seen.add(n)
+            if seen == nodes and (not anc): anc.append(n)
+            return seen
+        f(self)
+        return anc[0]
 
-        #v = [ list(n.rootpath()) for n in nodes if n in self ]
-        v = [ list(x) for x in izip_longest(*[ reversed(list(n.rootpath()))
-                                               for n in nodes if n in self ]) ]
-        if len(v) == 1:
-            return v[0][0]
-        anc = None
-        for x in v:
-            s = set(x)
-            if len(s) == 1: anc = list(s)[0]
-            else: break
-        return anc
+    ## def mrca(self, *nodes):
+    ##     """
+    ##     Find most recent common ancestor of *nodes*
+    ##     """
+    ##     if len(nodes) == 1:
+    ##         nodes = tuple(nodes[0])
+    ##     if len(nodes) == 1:
+    ##         return nodes[0]
+    ##     ## assert len(nodes) > 1, (
+    ##     ##     "Need more than one node for mrca(), got %s" % nodes
+    ##     ##     )
+    ##     def f(x):
+    ##         if isinstance(x, Node):
+    ##             return x
+    ##         elif type(x) in types.StringTypes:
+    ##             return self.find(x)
+    ##     nodes = map(f, nodes)
+    ##     assert all(filter(lambda x: isinstance(x, Node), nodes))
+
+    ##     #v = [ list(n.rootpath()) for n in nodes if n in self ]
+    ##     v = [ list(x) for x in izip_longest(*[ reversed(list(n.rootpath()))
+    ##                                            for n in nodes if n in self ]) ]
+    ##     if len(v) == 1:
+    ##         return v[0][0]
+    ##     anc = None
+    ##     for x in v:
+    ##         s = set(x)
+    ##         if len(s) == 1: anc = list(s)[0]
+    ##         else: break
+    ##     return anc
 
     def ismono(self, *leaves):
         "Test if leaf descendants are monophyletic"
@@ -258,9 +278,12 @@ class Node(object):
         return [ n for n in self if n.label ]
 
     def leaves(self, f=None):
-        if f:
-            return [ n for n in self if (n.isleaf and f(n)) ]
+        if f: return [ n for n in self if (n.isleaf and f(n)) ]
         return [ n for n in self if n.isleaf ]
+
+    def internals(self, f=None):
+        if f: return [ n for n in self if (n.children and f(n)) ]
+        return [ n for n in self if n.children ]
 
     def clades(self):
         return [ n for n in self if not n.isleaf ]
@@ -434,6 +457,15 @@ class Node(object):
         assert None not in v
         return sum(v)
 
+    def max_tippath(self, first=True):
+        v = 0
+        if self.children:
+            v = max([ c.max_tippath(False) for c in self.children ])
+        if not first:
+            if self.length is None: v += 1
+            else: v += self.length
+        return v
+
     def subtree_mapping(self, labels, clean=False):
         """
         Find the set of nodes in 'labels', and create a new tree
@@ -537,24 +569,26 @@ class Node(object):
         newroot.isroot = True
         return newroot
 
-    def write(self, outfile=None, format="newick", length_fmt=":%g", end=True):
+    def write(self, outfile=None, format="newick", length_fmt=":%g", end=True,
+              clobber=False):
         if format=="newick":
-            s = write_newick(self, outfile, length_fmt, True)
+            s = write_newick(self, outfile, length_fmt, True, clobber)
             if not outfile:
                 return s
 
 
 reroot = Node.reroot
 
-def index(node, n=1, d=0):
+def index(node, n=0, d=0):
     """
-    recursively attach 'next', 'back', and 'depth' attributes to nodes
+    recursively attach 'next', 'back', (and 'left', 'right'), 'ni',
+    'ii', 'pi', and 'node_depth' attributes to nodes
     """
-    node.next = n
+    node.next = node.left = n
     if not node.parent:
-        node.depth = d
+        node.node_depth = d
     else:
-        node.depth = node.parent.depth + 1
+        node.node_depth = node.parent.node_depth + 1
     n += 1
     for i, c in enumerate(node.children):
         if i > 0:
@@ -562,10 +596,9 @@ def index(node, n=1, d=0):
         index(c, n)
 
     if node.children:
-        node.back = node.children[-1].back + 1
+        node.back = node.right = node.children[-1].back + 1
     else:
-        node.back = n
-        node.isleaf = True
+        node.back = node.right = n
     return node.back
 
 def remove_singletons(root, add=True):
@@ -581,7 +614,7 @@ def cls(root):
         if node.isleaf:
             results[node] = 1
         else:
-            results[node] = sum(results[child] for child in root.children)
+            results[node] = sum(results[child] for child in node.children)
     return results
 
 def clade_sizes(node, results={}):
@@ -594,18 +627,21 @@ def clade_sizes(node, results={}):
     results[node] = size
     return results
 
-def write(node, outfile=None, format="newick", length_fmt=":%g"):
+def write(node, outfile=None, format="newick", length_fmt=":%g",
+          clobber=False):
     if format=="newick" or ((type(outfile) in types.StringTypes) and
                             (outfile.endswith(".newick") or
                              outfile.endswith(".new"))):
-        s = write_newick(node, outfile, length_fmt, True)
+        s = write_newick(node, outfile, length_fmt, True, clobber)
         if not outfile:
             return s
     
-def write_newick(node, outfile=None, length_fmt=":%g", end=False):
+def write_newick(node, outfile=None, length_fmt=":%g", end=False,
+                 clobber=False):
     if not node.isleaf:
         node_str = "(%s)%s" % \
-                   (",".join([ write_newick(child, outfile, length_fmt, False)
+                   (",".join([ write_newick(child, outfile, length_fmt,
+                                            False, clobber)
                                for child in node.children ]),
                     (node.label or "")
                     )
@@ -624,7 +660,8 @@ def write_newick(node, outfile=None, length_fmt=":%g", end=False):
     if end and outfile:
         flag = False
         if type(outfile) in types.StringTypes:
-            assert not os.path.isfile(outfile), "File '%s' exists!" % outfile
+            if not clobber:
+                assert not os.path.isfile(outfile), "File '%s' exists! (Set clobber=True to overwrite)" % outfile
             flag = True
             outfile = file(outfile, "w")
         outfile.write(s)
@@ -734,3 +771,42 @@ def readmany(data, format="newick"):
     else:
         raise Exception, "format '%s' not recognized" % format
     data.close()
+
+def randomly_resolve(n):
+    assert len(n.children)>2
+    
+## def leaf_mrcas(root):
+##     from itertools import product, izip, tee
+##     from collections import OrderedDict
+##     from numpy import empty
+##     mrca = OrderedDict()
+##     def pairwise(iterable, tee=tee, izip=izip):
+##         a, b = tee(iterable)
+##         next(b, None)
+##         return izip(a, b)
+##     def f(n):
+##         if n.isleaf:
+##             od = OrderedDict(); od[n] = n.length
+##             return od
+##         d = [ f(c) for c in n.children ]
+##         for i, j in pairwise(xrange(len(d))):
+##             di = d[i]; dj =d[j]
+##             for ni, niv in di.iteritems():
+##                 for nj, njv in dj.iteritems():
+##                     mrca[(ni,nj)] = n
+##             d[j].update(di)
+##         return d[j]
+##     f(root)
+##     return mrca
+        
+def C(leaves, internals):
+    from scipy.sparse import lil_matrix
+    m = lil_matrix((len(internals), len(leaves)))
+    for lf in leaves:
+        v = lf.length if lf.length is not None else 1
+        for n in lf.rootpath():
+            m[n.ii,lf.li] = v
+            v += n.length if n.length is not None else 1
+    return m.tocsc()
+    
+        
