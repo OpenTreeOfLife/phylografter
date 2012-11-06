@@ -60,7 +60,7 @@ ln -s /full/path/to/phylografterv2 .
 
 
 (8) Bootstrap the DB tables for phylografter. Download new mysql dump from
-https://dl.dropbox.com/u/1939917/phylografter.sql.gz 
+http://reelab.net/~rree/phylografter.sql.gz 
 To load a SQL dump: launch the mysql daemon with large packet sizes:
 
 <pre>
