@@ -459,7 +459,7 @@ BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype = {
 
     refreshColumn: function( p ) {
 
-        var successHandlers = new Array( $.proxy( p.column.renderReceivedClade, p.column ) );
+        var successHandlers = new Array( $.proxy( this.getCladeSuccess, this ), $.proxy( p.column.renderReceivedClade, p.column ) );
 
         if( p.onSuccess ) { successHandlers = successHandlers.concat( p.onSuccess ); }
 

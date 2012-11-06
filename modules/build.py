@@ -4,6 +4,7 @@ module for building trees of ivy.tree.Nodes from database tables
 from ivy.tree import Node
 from collections import defaultdict
 
+#the tree viewer does not use this function
 def node2tree( db, session, nodeId ):
     if session.TreeViewer.treeType == 'source':
         return sourceClade( db, session, nodeId, session.collapsedNodeStorage[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ] )
@@ -112,6 +113,8 @@ def getNodeFromRowData( row ):
     return node
 
 
+# chris baron - I don't think we need these anymore - at least not for the tree viewer #
+"""
 def root_snode(db, tree):
     "return the root snode record for stree id 'tree'"
     t = db.snode
@@ -143,10 +146,6 @@ def stree(db, i, lim=0, maxdepth=None):
     return root
 
 def snode2tree(db, i, q=None, lim=0, maxdepth=None):
-    """
-    build a tree of ivy.tree.Nodes from root db.snode.id==i,
-    filtered by query q
-    """
     t = db.snode
     r = t[int(i)]
     if q: q &= (t.tree==r.tree)
@@ -157,10 +156,6 @@ def snode2tree(db, i, q=None, lim=0, maxdepth=None):
     return root
 
 def gnode2tree(db, i, q=None, lim=0, maxdepth=None):
-    """
-    build a tree of ivy.tree.Nodes from root db.snode.id==i,
-    filtered by query q
-    """
     t = db.gnode
     r = t[int(i)]
     if q: q &= (t.tree==r.tree)
@@ -183,10 +178,6 @@ def ncbi2tree(db, i, lim=0, maxdepth=None):
     return root
 
 def nextbacktree(t, i, q=None, lim=0, maxdepth=None):
-    """
-    create a tree of ivy.tree.Nodes from table t, with
-    records having fields next, back, parent, and depth
-    """
     db = t._db
     r = t[int(i)]
     limits = dict(orderby=t.next)
@@ -212,10 +203,6 @@ def nextbacktree(t, i, q=None, lim=0, maxdepth=None):
     return root
 
 def nextbackgtree(t, i, q=None, lim=0, maxdepth=None):
-    """
-    create a tree of ivy.tree.Nodes from table t, with
-    records having fields next, back, parent, and depth
-    """
     db = t._db
     r = t[int(i)]
     limits = dict(orderby=t.next)
@@ -247,10 +234,6 @@ def nextbackgtree(t, i, q=None, lim=0, maxdepth=None):
     return root
 
 def add_child(t, parent, child):
-    """
-    'parent' and 'child' are assumed to be ivy.tree.Nodes with 'rec'
-    attributes
-    """
     db = t._db
     
     child_next = parent.back
@@ -258,17 +241,12 @@ def add_child(t, parent, child):
     pass
 
 def prune(t, rec):
-    "for a tree table with next, back and parent fields, prune a subtree"
     db = t._db
     assert rec.parent
     parent = t[rec.parent]
     ## children = db(t.parent==parent.id).select(orderby=t.next)
 
 def recurse(table, rec, d=None):
-    """
-    recursively create a tree of ivy.tree.Nodes from table, with root
-    rec, using parent references only
-    """
     db = table._db
     isroot = False
     if not d:
@@ -346,4 +324,4 @@ def rootpath(t, r, q=None, d=None):
 ##         if not x.children:
 ##             x.isleaf = True
 ##     return n
-
+"""

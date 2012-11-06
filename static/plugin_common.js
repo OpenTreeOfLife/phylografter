@@ -333,7 +333,7 @@ BioSync.Common.stopDotDotDotText = function() {
         
         var difference = this.minimumTime - ( time - this.startTime );
       
-        if( difference > 0 ) {
+        if( difference > 100 ) {
             
             setTimeout( $.proxy( BioSync.Common.actuallyStopDotDotDotText, BioSync.Common.dotInfo ), difference );
 
@@ -356,6 +356,11 @@ BioSync.Common.actuallyStopDotDotDotText = function() {
             this.stopFunction[i]();
         }
     } 
+
+    if( this.stopText ) {
+
+        this.content.text( this.stopText );
+    }
 }
 
 BioSync.Common.closeNotifyBox = function() {

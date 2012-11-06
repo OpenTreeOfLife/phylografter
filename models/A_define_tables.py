@@ -209,7 +209,8 @@ def define_tables(db, migrate=False):
         "study", # study data
         ## Field("focal_clade", db.taxon, ondelete="NO ACTION",
         ##       requires=IS_EMPTY_OR(IS_IN_DB(db, 'taxon.id', '%(name)s'))),
-        Field("focal_clade_ottol", db.ottol_name, ondelete="NO ACTION"),
+        Field("focal_clade_ottol", db.ottol_name, ondelete="NO ACTION",
+              requires=IS_EMPTY_OR(IS_IN_DB(db, 'ottol_name.id', '%(name)s'))),
         Field("citation", "text", required=True, notnull=True),
         Field("doi", "string"),
         Field("label", "string"),
