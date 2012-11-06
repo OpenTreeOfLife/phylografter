@@ -1,5 +1,8 @@
-import build
+import build, ivy
 from py2neo import neo4j, cypher, gremlin
+from sets import ImmutableSet
+from collections import defaultdict
+
 INCOMING = neo4j.Direction.INCOMING
 OUTGOING = neo4j.Direction.OUTGOING
 
@@ -26,8 +29,21 @@ def bulbs_connect(uri='http://localhost:7474/db/data'):
     G = Graph(config)
     return G
 
+gid2name = {}
+def getname(gid):
+    s = gid2name.get(gid)
+    if s: return s
+    n = G.get_node(gid)
+    s = filter(lambda x:x['name_class']=='scientific name',
+               n.get_related_nodes(INCOMING, 'NAME_OF'))[0]['name']
+    
+    s = s.replace(' ', '_')
+    gid2name[gid] = s
+    return s
+    
 rec = db.stree(3)
 root = build.stree(db, rec.id)
+
 for n in root.leaves():
     node = None
     if n.rec.ottol_name:
@@ -52,6 +68,16 @@ for n in root.leaves():
             print len(v), 'synonyms of label', name
         else: print 'label', name, 'not found'
     n.ncbi_node = node
+    n.label = getname(n.ncbi_node.id)
+
+for n in root.postiter():
+    if n.isleaf:
+        n.leaf_gids = ImmutableSet([n.ncbi_node.id])
+    else:
+        if len(n.children)==1: n.leaf_gids = n.children[0].leaf_gids
+        else: n.leaf_gids = reduce(
+            lambda a,b:a|b, [ x.leaf_gids for x in n.children ])
+
 nodes = [ n.ncbi_node for n in root.leaves() ]
 
 ## life = ncbi_node_idx.get('taxid','1')[0]
@@ -62,13 +88,6 @@ nodes = [ n.ncbi_node for n in root.leaves() ]
 ## rows, meta = cypher.execute(G, q, params={
 ##     'root': life.id,
 ##     'leaf': [ x.id for x in nodes ]})
-
-def getname(gid):
-    n = G.get_node(gid)
-    s = filter(lambda x:x['name_class']=='scientific name',
-               n.get_related_nodes(INCOMING, 'NAME_OF'))[0]['name']
-    return s.replace(' ', '_')
-    
 
 q = """
 leaves = %s
@@ -100,13 +119,36 @@ def update(gleaves):
             gleaves[child] = crows
         del gleaves[gnode]
 while any(resp): update(gleaves)
+
+for i, n in enumerate(groot): n.id = i
+
+leafgids = defaultdict(list)
 for n in groot.postiter():
     n.ncbi_node = G.get_node(n.gid)
-    if n.isleaf: n.leaf_gids = set([n.gid])
+    if n.isleaf:
+        n.leaf_gids = ImmutableSet([n.gid])
     else:
-        if len(n.children)==1:
-            n.leaf_gids = n.children[0].leaf_gids
-        elif len(n.children)>1:
-            n.leaf_gids = reduce(lambda a,b:a.leaf_gids|b.leaf_gids, n.children)
-        else:
-            print '!!!'
+        if len(n.children)==1: n.leaf_gids = n.children[0].leaf_gids
+        else: n.leaf_gids = reduce(
+            lambda a,b:a|b, [ x.leaf_gids for x in n.children ])
+    leafgids[n.leaf_gids].append(n)
+    ## print n.label, n.leaf_gids, leafgids[n.leaf_gids]
+
+nodes = list(root.postiter())
+for n in nodes:
+    v = leafgids.get(n.leaf_gids)
+    if v:
+        gnode = v[0]
+        n.gid = gnode.gid
+        n.label = getname(n.gid)
+        ref = n
+        for gnode in v[1:]:
+            newnode = build.Node(gid=gnode.gid, label=getname(gnode.gid),
+                                 leaf_gids=ref.leaf_gids)
+            p = ref.prune()
+            newnode.add_child(ref)
+            p.add_child(newnode)
+            ref = newnode
+    else:
+        #print 'no leafgids for', n, map(getname, sorted(n.leaf_gids))
+        pass
