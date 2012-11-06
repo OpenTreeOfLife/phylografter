@@ -22,7 +22,7 @@ Create an SQL database called something ('phylografter' in our example) <br/>
 Give the user privileges to modify the database
 
 <pre>
- $ mysql -u root --password=sqluserspassword
+ $ /usr/local/mysql/bin/mysql -u root --password=sqluserspassword
 mysql> CREATE USER 'tester'@'localhost' IDENTIFIED BY 'abc123' ;
 mysql> CREATE database phylografter ;
 mysql> GRANT ALL ON phylografter.* to 'tester'@'localhost' ;
@@ -49,14 +49,16 @@ pip install lxml
 (6) Download and unpack the source code version of web2py from 
 http://www.web2py.com/examples/default/download .  I used Version 1.99.7
 
+
 (7) Register phylografter as a web2py app by creating a symbolic link
 
 <pre>
 cd web2py/applications
-ln -s /full/path/to/phylografterv2 .
+ln -s /full/path/to/phylografter .
 </pre>
 
-(or maybe web2py/web2py.app/Contents/Resources/applications/ )
+where the phylografter directory above is the one where you found this
+README file.
 
 
 (8) Bootstrap the DB tables for phylografter. Download new mysql dump from
@@ -64,15 +66,14 @@ https://dl.dropbox.com/u/1939917/phylografter.sql.gz
 To load a SQL dump: launch the mysql daemon with large packet sizes:
 
 <pre>
-mysqld_safe --max_allowed_pack=32M
+sudo /usr/local/mysql/bin/mysqld_safe --max_allowed_pack=32M
+
+curl "http://reelab.net/~rree/phylografter.sql.gz" >phylografter.sql.gz
+gunzip -c phylografter.sql.gz | \
+  /usr/local/mysql/bin/mysql --user=tester --password=abc123 --max_allowed_packet=300M --connect_timeout=6000 phylografter
 </pre>
 
-[JAR: the max_allowed_pack special flag to mysqld_safe wasn't
-necessary in my setup, but doing 'sudo' was]
-
-<pre>
-mysql -u root -p &lt; phylografter.sql
-</pre>
+This took 900 seconds (15 minutes) when I [JAR] did it on a 2011 MacBook Air.
 
 
 (9) Launch web2py (you can use -a &lt;recycle&gt; to re-use the admin password:
@@ -82,7 +83,7 @@ python web2py.py --nogui -a '&lt;recycle&gt;'
 </pre>
 
 
-(10) Direct a browser to http://127.0.0.1:8000/phylografterv2/stree/index
+(10) Direct a browser to http://127.0.0.1:8000/phylografter/stree/index
 (should display a "Source trees" table).
 
     
