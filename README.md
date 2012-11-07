@@ -11,7 +11,7 @@ done
 
 (2) Install MySQL.
 
-I'm assuming below that it is installed in /usr/local/mysql 
+I'm assuming below that it is installed in /usr/local/mysql.
 I used MySQL-5.5.27
 
 (3) Configure SQL.
@@ -76,7 +76,7 @@ gunzip -c phylografter.sql.gz | \
 This took 900 seconds (15 minutes) when I [JAR] did it on a 2011 MacBook Air.
 
 
-(9) Launch web2py (you can use -a &lt;recycle&gt; to re-use the admin password:
+(9) Launch web2py (you can use -a &lt;recycle&gt; to re-use the admin password):
 
 <pre>
 python web2py.py --nogui -a '&lt;recycle&gt;'
