@@ -60,7 +60,7 @@ def getMatchingDescendantLabels():
 def updateConfig():
     """This function updates the tree viewer configuration on the server."""
 
-    treeConfig = session.TreeViewer.treeConfig[ session.TreeViewer.treeId ]
+    treeConfig = session.TreeViewer.treeConfig[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
 
     names = request.vars.names.split(',')
     values = request.vars.vals.split(',')
