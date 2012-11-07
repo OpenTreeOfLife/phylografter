@@ -1,6 +1,5 @@
 import build, ivy
 from py2neo import neo4j, cypher, gremlin
-from sets import ImmutableSet
 from collections import defaultdict
 
 INCOMING = neo4j.Direction.INCOMING
@@ -58,6 +57,7 @@ for n in root.leaves():
                 node = v[0].get_single_related_node(OUTGOING, 'NAME_OF')
             elif len(v)>1:
                 print len(v), 'synonyms of ottol_name', name
+                print [ (x['unique_name'], x['taxid']) for x in v ]
             else: print 'ottol_name', name, 'not found'
     else:
         name = n.rec.label
@@ -72,7 +72,7 @@ for n in root.leaves():
 
 for n in root.postiter():
     if n.isleaf:
-        n.leaf_gids = ImmutableSet([n.ncbi_node.id])
+        n.leaf_gids = frozenset([n.ncbi_node.id])
     else:
         if len(n.children)==1: n.leaf_gids = n.children[0].leaf_gids
         else: n.leaf_gids = reduce(
@@ -126,7 +126,7 @@ leafgids = defaultdict(list)
 for n in groot.postiter():
     n.ncbi_node = G.get_node(n.gid)
     if n.isleaf:
-        n.leaf_gids = ImmutableSet([n.gid])
+        n.leaf_gids = frozenset([n.gid])
     else:
         if len(n.children)==1: n.leaf_gids = n.children[0].leaf_gids
         else: n.leaf_gids = reduce(
