@@ -2,11 +2,18 @@ import build, ivy
 from py2neo import neo4j, cypher, gremlin
 from collections import defaultdict
 
+DB_URI = 'http://localhost:7474/db/data'
+
+import bulbs.neo4jserver, bulbs.config
+B_config = bulbs.config.Config(DB_URI)
+B_config.autoindex = False
+B = bulbs.neo4jserver.Graph(B_config)
+
 INCOMING = neo4j.Direction.INCOMING
 OUTGOING = neo4j.Direction.OUTGOING
 
 try:
-    G = neo4j.GraphDatabaseService('http://localhost:7474/db/data')
+    G = neo4j.GraphDatabaseService(DB_URI)
     refnode = G.get_reference_node()
     ncbi_node_idx = G.get_or_create_index(
         neo4j.Node, 'ncbi_node', config={'type':'exact'})
@@ -19,14 +26,6 @@ try:
     ##     stree_ref = G.create({}, (refnode, 'STREE_REF', 0))[0]
 except Exception as e:
     print 'neo4j server not found:', e
-
-def bulbs_connect(uri='http://localhost:7474/db/data'):
-    from bulbs.neo4jserver import Graph
-    from bulbs.config import Config
-    config = Config(uri)
-    config.autoindex = False
-    G = Graph(config)
-    return G
 
 def get_ncbi_node(leaf):
     label = rec.label
