@@ -44,6 +44,7 @@ class Node(object):
     """
     def __init__(self, **kwargs):
         self.id = None
+        self.ni = None # node index
         self.li = None # leaf index
         self.isroot = False
         self.isleaf = False
@@ -63,6 +64,7 @@ class Node(object):
         if kwargs:
             for k, v in kwargs.items():
                 setattr(self, k, v)
+        if self.id is None: self.id = id(self)
 
     def __copy__(self):
         return self.copy()
@@ -79,11 +81,14 @@ class Node(object):
 
         s = ", ".join(v)
 
+        nid = ((self.id if (self.id is not None) else self.ni) or
+               '<%s>' % id(self))
         if s:
-            s = "Node(%s, %s)" % (self.ni, s)
+            s = "Node(%s, %s)" % (nid, s)
         else:
-            s = "Node(%s)" % self.ni
+            s = "Node(%s)" % nid
         return s
+        
 
     def __contains__(self, other):
         otype = type(other)
