@@ -30,11 +30,20 @@ root = build.stree(db, rec.id)
 for lf in root.leaves(): lf.ncbi_node = get_ncbi_node(lf)
 
 q = """
+ncbi_node_idx = g.idx('ncbi_node')
+root = ncbi_node_idx.get('taxid',1).next()
+root.in('CHILD_OF').loop(1){it.loops<3}.tree.cap
+"""
+
+q = """
+ncbi_node_idx = g.idx('ncbi_node')
+root = ncbi_node_idx.get('taxid',1).next()
 v = []
 leafids.each() {
     leaf -> v.add(g.v(leaf).out('CHILD_OF').loop(1){true}{true}*.id)
 }
-v
+v = v[1..-1].inject(v[0]) {a,b -> (a as Set)+(b as Set)}
+root.as('x').in('CHILD_OF').filter{it.id in v}.gather.scatter.loop('x'){true}{true}
 """
 leafids = [ x.ncbi_node.eid for x in root.leaves() if x.ncbi_node ]
 resp = G.gremlin.execute(q, dict(leafids=leafids)).content
