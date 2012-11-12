@@ -1,7 +1,13 @@
+import os
 from lxml import etree, objectify
 from urllib2 import urlopen
+from urllib import urlencode
 from base64 import b64decode
 from ivy.storage import Storage
+
+WSURL = "http://www.ubio.org/webservices/service.php"
+try: KEY = os.environ['UBIOKEY']
+except KeyError: KEY = None
 
 NCBI = 100
 
@@ -16,13 +22,13 @@ def serialize(e):
             d[x.tag] = s
     return d
 
-def search_namebank(term, keycode):
+def search_namebank(term, keycode=KEY):
+    assert keycode, "set parameter 'keycode' or os.environ['UBIOKEY']"
     params = dict(function="namebank_search",
                   searchName=term,
                   sci=1,
                   keyCode=keycode)
-    url = ("http://www.ubio.org/webservices/service.php" + "?" +
-           "&".join("%s=%s" % (k,v) for k, v in params.items()))
+    url = (WSURL + "?" + "&".join("%s=%s" % (k,v) for k, v in params.items()))
     
     e = etree.parse(url)
     v = []
@@ -36,33 +42,33 @@ def search_namebank(term, keycode):
         v.append(d)
     return v
 
-def fetch_name(namebank_id, keycode):
+def fetch_name(namebank_id, keycode=KEY):
+    assert keycode, "set parameter 'keycode' or os.environ['UBIOKEY']"
     params = dict(function="namebank_object",
                   namebankID=namebank_id,
                   keyCode=keycode)
-    url = ("http://www.ubio.org/webservices/service.php" + "?" +
-           "&".join("%s=%s" % (k,v) for k, v in params.items()))
+    url = (WSURL + "?" + "&".join("%s=%s" % (k,v) for k, v in params.items()))
     e = etree.parse(url)
     return e
 
-def search_classification(namebank_id, keycode, class_id=None):
+def search_classification(namebank_id, keycode=KEY, class_id=None):
+    assert keycode, "set parameter 'keycode' or os.environ['UBIOKEY']"
     params = dict(function="classificationbank_search",
                   namebankID=namebank_id,
                   keyCode=keycode)
     if class_id:
         params["classificationTitleID"] = class_id
         
-    url = ("http://www.ubio.org/webservices/service.php" + "?" +
-           "&".join("%s=%s" % (k,v) for k, v in params.items()))
+    url = (WSURL + "?" + "&".join("%s=%s" % (k,v) for k, v in params.items()))
     
     e = etree.parse(url)
     return e
     
-def fetch_classification(classificationbank_id, keycode):
+def fetch_classification(classificationbank_id, keycode=KEY):
+    assert keycode, "set parameter 'keycode' or os.environ['UBIOKEY']"
     params = dict(function="classificationbank_object",
                   hierarchiesID=classificationbank_id,
                   keyCode=keycode)
-    url = ("http://www.ubio.org/webservices/service.php" + "?" +
-           "&".join("%s=%s" % (k,v) for k, v in params.items()))
+    url = (WSURL + "?" + "&".join("%s=%s" % (k,v) for k, v in params.items()))
     e = etree.parse(url)
     return e

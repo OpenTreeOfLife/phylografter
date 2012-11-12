@@ -12,3 +12,8 @@ leafids.each() { lf ->
 }
 c2p
 """
+
+rootpath = """
+g.v(n).out('NCBI_CHILD_OF').loop(1) {
+    it.object.id != anc } { it.object.id==anc }.id
+"""
