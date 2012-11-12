@@ -332,7 +332,7 @@ def create():
         response.flash ="accepted"
         session.contributor = form.vars.contributor
         i = _insert_stree(study, form.vars)
-        redirect(URL("v", args=[i]))
+        redirect(URL("svgView", args=[i]))
 
     return dict(form=form)
     
