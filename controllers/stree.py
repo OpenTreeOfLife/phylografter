@@ -258,7 +258,7 @@ def _insert_stree(study, data):
                 otu = db.otu.insert(study=study, label=label, ottol_name=taxid)
 
         i = db.snode.insert(label=n.label, isleaf=n.isleaf, otu=otu,
-                            next=n.next, back=n.back, depth=n.depth,
+                            next=n.next, back=n.back, depth=n.node_depth,
                             length=n.length, tree=stree, ottol_name=taxid,
                             pruned=False)
         n.id = i
