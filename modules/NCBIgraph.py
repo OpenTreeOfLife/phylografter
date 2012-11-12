@@ -494,7 +494,7 @@ def radial_traverse(sg):
                 for x in vertex.in_neighbours(): traverse(x)
             if vertex not in found and vertex.in_degree()==0:
                 found.append(vertex)
-                print vertex, sg.sgv2vtx[vertex].get('name')
+                ## print vertex, sg.sgv2vtx[vertex].get('name')
             seen.add(vertex)
     traverse(sg.root.sgv)
     return found
@@ -561,6 +561,11 @@ def draw_stree_subgraph(sg, stree_colors=None):
     ##                     ## theta=1.2,
     ##                     pin=sg.stree)#,
     ##                     ## pos=p1)
+
+    for v in sg.vertices():
+        if v.in_degree() == v.out_degree():
+            sg.vtext[v] = ''
+
     sg.set_reversed(True)
     gt.graph_draw(sg,
                   pos=p1,
@@ -576,7 +581,7 @@ def draw_stree_subgraph(sg, stree_colors=None):
     sg.set_vertex_filter(None)
     sg.set_edge_filter(None)
 
-def draw_stree(G, stree_id):
+def draw_stree(G, stree_id, color='green'):
     import math
     from ivy import layout, layout_polar
     sg = stree_subgraph(G, stree_id)
@@ -616,10 +621,9 @@ def draw_stree(G, stree_id):
         ewidth[e] = 1
 
     seen = set()
-    c = 'green'
     for n in root:
         if n.sgv not in seen:
-            vcolor[n.sgv] = c
+            vcolor[n.sgv] = color
             seen.add(n.sgv)
         else:
             vcolor[n.sgv] = sg.snode_overlap_color
@@ -627,7 +631,7 @@ def draw_stree(G, stree_id):
             vcolor[n.sgv] = sg.ncbi_color
         if n.parent:
             if n.sge not in seen:
-                ecolor[n.sge] = c
+                ecolor[n.sge] = color
                 ewidth[n.sge] = 4
                 seen.add(n.sge)
             
@@ -669,7 +673,7 @@ G = connect()
 ## root = build.stree(db, rec.id)
 ## map_taxonomy(G, root)
 ## newnodes, newedges = insert_mapped_stree(G, root)
-#sg = stree_subgraph(G, 1)
-#sg = stree_subgraph(G, 3, sg)
-#draw_stree_subgraph(sg, {1:'green',3:'purple'})
+## sg = stree_subgraph(G, 3)
+## sg = stree_subgraph(G, 212, sg)
+## draw_stree_subgraph(sg, {212:'green',3:'purple'})
 #g = new Neo4jGraph('/home/rree/ncbitax/phylografter.db')
