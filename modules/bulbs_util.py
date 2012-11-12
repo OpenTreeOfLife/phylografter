@@ -1,43 +1,51 @@
 import build
-from bulbs.neo4jserver import Graph, VertexIndexProxy, ExactIndex
-from bulbs.config import Config
 
-config = Config('http://localhost:7474/db/data/')
-config.autoindex = False
-try:
+def connect(uri='http://localhost:7474/db/data/'):
+    from bulbs.neo4jserver import Graph, VertexIndexProxy, ExactIndex
+    from bulbs.config import Config
+    config = Config(uri)
+    config.autoindex = False
     G = Graph(config)
     exact_node_indexes = VertexIndexProxy(ExactIndex, G.client)
-    ncbi_node_idx = exact_node_indexes.get('ncbi_node')
-    ncbi_name_idx = exact_node_indexes.get('ncbi_name')
-except Exception as e:
-    print 'neo4j server not found:', e
+    G.ncbi_node_idx = exact_node_indexes.get('ncbi_node')
+    G.ncbi_name_idx = exact_node_indexes.get('ncbi_name')
+    return G
 
-def get_ncbi_node(leaf):
+def get_ncbi_node(G, leaf):
     label = leaf.rec.label
     if leaf.rec.ottol_name:
         if leaf.rec.ottol_name.ncbi_taxid:
             taxid = str(leaf.rec.ottol_name.ncbi_taxid)
-            return ncbi_node_idx.lookup(taxid=taxid).next()
+            return G.ncbi_node_idx.lookup(taxid=taxid).next()
         else:
             label = leaf.rec.ottol_name.name
     name = label.replace('_', ' ')
-    v = list(ncbi_name_idx.lookup(name=name))
+    v = list(G.ncbi_name_idx.lookup(name=name))
     if len(v)==1:
         return v[0].outV('NAME_OF').next()
+
+def ncbi_subtree(G, leafids):
+    from ivy.tree import Node
+    q = """
+    c2p = [:]
+    leafids.each() { lf -> 
+        c = g.v(lf); p = c.out('CHILD_OF').next()
+        c2p[c.id] = p.id
+        c.out('CHILD_OF').loop(1){!(it.object.id in c2p)}{true}.each() { n ->
+            p = n.out('CHILD_OF')
+            if (p) { c2p[n.id] = p.next().id }
+        }
+    }
+    c2n
+    """
+    d = G.gremlin.execute(q, dict(leafids=leafids)).content
+    nodes = dict([ (x, Node(isleaf=True, gid=x)) for x in leafids ])
+    
 
 rec = db.stree(3)
 root = build.stree(db, rec.id)
 for lf in root.leaves(): lf.ncbi_node = get_ncbi_node(lf)
 leafids = [ x.ncbi_node.eid for x in root.leaves() if x.ncbi_node ]
 
-q = """
-ncbi_node_idx = g.idx('ncbi_node')
-root = ncbi_node_idx.get('taxid',1).next()
-v = []
-leafids.each() {
-    leaf -> v.add([leaf]+g.v(leaf).out('CHILD_OF').loop(1){true}{true}*.id)
-}
-v = v[1..-1].inject(v[0]){a,b -> (a as Set)+(b as Set)}
-root.as('x').in('CHILD_OF').filter{it.id in v}.loop('x'){true}{true}.property('name')
-"""
-G.gremlin.execute(q, dict(leafids=leafids)).content
+
+#g = new Neo4jGraph('/home/rree/ncbitax/phylografter.db')
