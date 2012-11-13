@@ -1,6 +1,6 @@
 import plugin_treeViewer as util
 from ivy.tree import *
-import datetime, sys, math
+import datetime, sys, math, copy
 import build as build
 
 
@@ -186,6 +186,10 @@ def updateSessionForPrunedSourceTree( session, columnRootNodeIds, collapsedNodeI
     session.TreeViewer.treeType = 'grafted'
     session.TreeViewer.strNodeTable = 'gnode'
 
+    session.TreeViewer.treeConfig[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ] = \
+        session.TreeViewer.treeConfig[ 'source' ][ session.TreeViewer.recentlyEditedSourceTreeId ]
+
+
     oldTreeState = session.TreeViewer.treeState[ 'source' ][ session.TreeViewer.recentlyEditedSourceTreeId ]
     newTreeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ] = \
                    Storage( columns = [ ], formerlyCollapsedNodeStorage = Storage() )
@@ -202,7 +206,7 @@ def updateSessionForPrunedSourceTree( session, columnRootNodeIds, collapsedNodeI
            
             if collapsedNodeIds[ collapsedNodeId ] is None: break
 
-            newCollapsedNodeStorage[ collapsedNodeIds[ collapsedNodeId ].nodeId ] = collapsedNodeData
+            newCollapsedNodeStorage[ collapsedNodeIds[ collapsedNodeId ].nodeId ] = copy.copy( collapsedNodeData )
             newCollapsedNodeStorage[ collapsedNodeIds[ collapsedNodeId ].nodeId ]['next'] = collapsedNodeIds[ collapsedNodeId ]['next']
             newCollapsedNodeStorage[ collapsedNodeIds[ collapsedNodeId ].nodeId ]['back'] = collapsedNodeIds[ collapsedNodeId ]['back']
 
@@ -293,7 +297,7 @@ def updateSessionForPrunedGraftedTree( session, updatedNextBackValues, prunedNod
 
             if( collapsedNodeId == prunedNodeRow.id ):
 
-                while( ( len( treeState.columns - 1 ) ) > index ):
+                while( ( len( treeState.columns ) - 1 ) > index ):
                     treeState.columns.pop()
 
                 del column.collapsedNodeStorage[ collapsedNodeId ]
