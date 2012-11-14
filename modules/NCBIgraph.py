@@ -19,6 +19,9 @@ def connect(uri='http://localhost:7474/db/data/'):
     G.stree = stree
     return G
 
+def stree_inserted(G, stree_id):
+    return G.edges.index.count(stree=stree_id) > 0
+
 def fetch_stree_root(G, stree_id):
     q = "g.v(n).outE.and(_().has('stree', T.eq, i)).outV"
     x = G.gremlin.query(q, dict(n=G.stree.eid, i=stree_id))
