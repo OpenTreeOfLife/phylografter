@@ -8,9 +8,12 @@ def getTree( db, session, request ):
 
     treeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
 
+    print "\nnew tree : \n"
     for index in range( len( treeState.columns ) ):
-       
+
         columnInfo = treeState.columns[ index ]
+        
+        print "\ncolumn info : ", str( columnInfo ), "\n"
 
         response.append( \
             getRenderResponse( \
@@ -80,6 +83,7 @@ def removeColumns( db, session, request ):
         
 
 def removeColumn( treeState, i ):
+
     for nodeId, collapsedNodeData in treeState.columns[ i ].collapsedNodeStorage.items():
         if nodeId not in treeState.formerlyCollapsedNodeStorage:
             treeState.formerlyCollapsedNodeStorage[ nodeId ] = collapsedNodeData
