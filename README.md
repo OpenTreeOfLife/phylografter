@@ -91,8 +91,9 @@ Authorizing users to upload
 --------------
 
 You can authorize users to upload trees as follows:
+
 1. From http://127.0.0.1:8000/admin/default/site
 1. Under phylografter click 'Edit'
 1. Under Models click 'database administration'
-1. Under db.auth_membership click 'insert new auth_membership'
+1. Under db.auth\_membership click 'insert new auth\_membership'
 1. Choose your user and the 'contributor' group (id 3) and click submit
