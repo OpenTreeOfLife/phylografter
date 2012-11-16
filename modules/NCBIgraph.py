@@ -414,7 +414,9 @@ def snode_bfs(sg, vertices, seen=None, iterations=1):
         found = set()
         for x in vertices:
             for e in ifilter(lambda edge:sg.snode_edge[edge], x.in_edges()):
-                e.source(), e.target()
+                inv = e.source()
+                found.add(inv)
+                stree_counts[sg.edge2stree[e]] += 1
                 
 
 def draw_stree_subgraph(sg, stree_colors=None):
