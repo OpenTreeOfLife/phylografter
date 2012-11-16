@@ -2,9 +2,26 @@ import build
 import graph_tool.all as gt
 import NCBIscripts as scripts
 from collections import defaultdict, Counter
-from itertools import ifilter
+from itertools import ifilter, combinations
 from bulbs.neo4jserver import Graph, Vertex, ExactIndex
 from pprint import pprint
+
+class LeashedBFS(gt.BFSVisitor):
+    def __init__(self, depth):
+        self.depth = depth
+        self.counter = Counter()
+        self.edges = set()
+        self.vertices = set()
+
+    def tree_edge(self, e):
+        s = e.source(); t = e.target()
+        if self.counter[s]==self.depth:
+            raise gt.StopSearch()
+        self.edges.add(e)
+        self.counter[t] = self.counter[s] + 1
+
+    def discover_vertex(self, v):
+        self.vertices.add(v)
 
 def connect(uri='http://localhost:7474/db/data/'):
     from bulbs.config import Config
@@ -238,8 +255,13 @@ def stree_subgraph(G):
     sg.eid2leaf = {} # map G vertex eids to stree leaves
     sg.stree = {} # map stree_id to root (ivy) node
     sg.sgv2vtx = {} # map sg vertices to G vertices
+    sg.name2sgv = {} # map names to sg vertices
     sg.ncbi_color = 'blue'
     sg.snode_overlap_color = 'yellow'
+    sg.stree_edgecounts = Counter()
+    sg.se_created = set()
+    sg.vtx_leaves = []
+    sg.root = None
     sg.vtext = sg.new_vertex_property("string")
     sg.isleaf = sg.new_vertex_property("bool")
     sg.snode = sg.new_vertex_property("bool")
@@ -247,9 +269,6 @@ def stree_subgraph(G):
     sg.ncbi_node = sg.new_vertex_property("bool")
     sg.ncbi_edge = sg.new_edge_property("bool")
     sg.edge2stree = sg.new_edge_property("int")
-    sg.se_created = set()
-    sg.vtx_leaves = []
-    sg.root = None
 
     def add(stree_id):
         c2p = {}
@@ -275,13 +294,17 @@ def stree_subgraph(G):
             sg.ncbi_node[isgv] = 0
 
             # get/fetch+store G vertices
-            ovtx = sg.eid2vtx.get(e._outV) or e.outV()
-            sg.vtext[osgv] = ovtx.get('name') or ''
+            ovtx = sg.eid2vtx.get(e._outV) or e.outV() # child
+            name = ovtx.get('name') or ''
+            sg.vtext[osgv] = name
+            if name: sg.name2sgv[name] = osgv
             sg.isleaf[osgv] = 0
             sg.eid2vtx[e._outV] = ovtx
             sg.sgv2vtx[osgv] = ovtx
-            ivtx = sg.eid2vtx.get(e._inV) or e.inV()
-            sg.vtext[isgv] = ivtx.get('name') or ''
+            ivtx = sg.eid2vtx.get(e._inV) or e.inV() # parent
+            name = ivtx.get('name') or ''
+            sg.vtext[isgv] = name
+            if name: sg.name2sgv[name] = isgv
             sg.isleaf[isgv] = 0
             sg.eid2vtx[e._inV] = ivtx
             sg.sgv2vtx[isgv] = ivtx
@@ -294,13 +317,15 @@ def stree_subgraph(G):
                 sg.eid2leaf[stree_id][e._outV] = osgv
 
             # create subgraph edges
-            se = sg.add_edge(osgv, isgv)
-            sg.se_created.add((ovtx.eid, ivtx.eid))
+            # NOTE reversed direction (parent-->child)
+            se = sg.add_edge(isgv, osgv)
+            sg.se_created.add((ivtx.eid, ovtx.eid))
             sg.eid2sge[e.eid] = se
             sg.snode_edge[se] = 1
             sg.ncbi_edge[se] = 0
             assert not sg.edge2stree[se]
             sg.edge2stree[se] = stree_id
+            sg.stree_edgecounts[stree_id] += 1
 
             c = (sg.eid2n[stree_id].get(ovtx.eid) or
                  build.Node(vtx=ovtx, sgv=osgv))
@@ -354,8 +379,8 @@ def stree_subgraph(G):
 
                 if not (n.eid, n.parent.eid) in sg.se_created:
                 ## if not n.edge_eid in sg.eid2sge:
-                    se = sg.add_edge(osgv, isgv)
-                    sg.se_created.add((n.eid, n.parent.eid))
+                    se = sg.add_edge(isgv, osgv)
+                    sg.se_created.add((n.parent.eid, n.eid))
                     sg.eid2sge[n.edge_eid] = se
                     sg.ncbi_edge[se] = 1
                     sg.snode_edge[se] = 0
@@ -393,6 +418,42 @@ def stree_subgraph(G):
     sg.trim = trim
     return sg
 
+def find_loops(sg):
+    def rootpath(sgv, stree):
+        path = []
+        while 1:
+            if sgv.in_degree()==0: break
+            it = ifilter(lambda x:sg.edge2stree[x]==stree, sgv.in_edges())
+            e = it.next()
+            sgv = e.source()
+            path.append(sgv)
+        return path
+
+    def find_anc(rp1, rp2):
+        found = None
+        if len(rp2)>1:
+            for i, n1 in enumerate(rp1):
+                for j, n2 in enumerate(rp2[i+1:]):
+                    if n1==n2:
+                        found = (n1, i, 
+                        break
+                if found: break
+        return found
+        
+    seen = set()
+    for sgv in sg.vertices():
+        if sgv.in_degree() > 1:
+            edges = sgv.in_edges()
+            strees = sorted(set([ sg.edge2stree[e] for e in edges ]))
+            if len(strees) > 1:
+                print 'found', sg.vtext[sgv] or sgv, strees
+                ## rootpaths = []
+                ## for stree in strees:
+                ##     rp = rootpath(sgv, stree)
+                ##     rootpaths.append(rp)
+                
+                    
+
 def radial_traverse(sg):
     found = []
     seen = set()
@@ -419,10 +480,22 @@ def snode_bfs(sg, vertices, seen=None, iterations=1):
                 stree_counts[sg.edge2stree[e]] += 1
                 
 
-def draw_stree_subgraph(sg, stree_colors=None):
-    import math
+def iterative_layout(sg):
     sg.set_vertex_filter(sg.snode)
     sg.set_edge_filter(sg.snode_edge)
+    leash = LeashedBFS(5)
+    gt.bfs_search(sg, sg.root.sgv, leash)
+    vfilt = sg.new_vertex_property('bool')
+    for v in leash.vertices: vfilt[v] = 1
+    efilt = sg.new_edge_property('bool')
+    for e in leash.edges: efilt[e] = 1
+    sg.set_vertex_filter(vfilt)
+    sg.set_edge_filter(efilt)
+
+def draw_stree_subgraph(sg, stree_colors=None):
+    import math
+    ## sg.set_vertex_filter(sg.snode)
+    ## sg.set_edge_filter(sg.snode_edge)
 
     ## pos = sg.new_vertex_property('vector<double>')
     ## pin = sg.new_vertex_property('bool')
@@ -471,8 +544,9 @@ def draw_stree_subgraph(sg, stree_colors=None):
             
     pin = pos = None
     p1 = gt.sfdp_layout(sg,
-                        C=0.001,
-                        gamma=2.0,
+                        K=1.0,
+                        ## C=0.001,
+                        ## gamma=2.0,
                         pin=pin,
                         pos=pos)
 
@@ -480,7 +554,6 @@ def draw_stree_subgraph(sg, stree_colors=None):
         if len(set(v.in_neighbours()))==1 and len(set(v.out_neighbours()))==1:
             sg.vtext[v] = ''
 
-    sg.set_reversed(True)
     gt.graph_draw(sg,
                   pos=p1,
                   vertex_fill_color=vcolor,
@@ -584,9 +657,23 @@ def draw_stree(G, stree_id, color='green'):
 
 g = connect()
 sg = stree_subgraph(g)
-for i in 2, 3, 4, 9: sg.add(i)
+for i in 2, 3, 4, 9, 10: sg.add(i)
+
+## sg.set_vertex_filter(sg.snode)
+## sg.set_edge_filter(sg.snode_edge)
+## leash = LeashedBFS(5)
+## gt.bfs_search(sg, sg.root.sgv, leash)
+## vfilt = sg.new_vertex_property('bool')
+## for v in leash.vertices: vfilt[v] = 1
+## efilt = sg.new_edge_property('bool')
+## for e in leash.edges: efilt[e] = 1
+## sg.set_vertex_filter(vfilt)
+## sg.set_edge_filter(efilt)
+
 sg.trim()
-draw_stree_subgraph(sg, {2:'green',3:'purple',4:'orange',9:'blue'})
+sg.set_vertex_filter(sg.snode)
+sg.set_edge_filter(sg.snode_edge)
+#draw_stree_subgraph(sg, {2:'green',3:'purple',4:'orange',9:'brown',10:'cyan'})
 
 ## rec = db.stree(3)
 ## root = build.stree(db, rec.id)
