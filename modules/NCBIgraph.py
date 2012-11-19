@@ -269,6 +269,7 @@ def stree_subgraph(G):
     sg.ncbi_node = sg.new_vertex_property("bool")
     sg.ncbi_edge = sg.new_edge_property("bool")
     sg.edge2stree = sg.new_edge_property("int")
+    sg.eweight = sg.new_edge_property("double")
 
     def add(stree_id):
         c2p = {}
@@ -326,6 +327,7 @@ def stree_subgraph(G):
             assert not sg.edge2stree[se]
             sg.edge2stree[se] = stree_id
             sg.stree_edgecounts[stree_id] += 1
+            sg.eweight[se] = 1.0
 
             c = (sg.eid2n[stree_id].get(ovtx.eid) or
                  build.Node(vtx=ovtx, sgv=osgv))
@@ -384,6 +386,7 @@ def stree_subgraph(G):
                     sg.eid2sge[n.edge_eid] = se
                     sg.ncbi_edge[se] = 1
                     sg.snode_edge[se] = 0
+                    sg.eweight[se] = 1.0
 
         return sg
 
@@ -393,21 +396,21 @@ def stree_subgraph(G):
 
         def collect_leaves():
             leaves = []
-            for x in ifilter(lambda x:x.in_degree()==0, sg.vertices()):
-                y = list(set(x.out_neighbours()))
+            for x in ifilter(lambda x:x.out_degree()==0, sg.vertices()):
+                y = list(set(x.in_neighbours()))
                 if (len(y)==1 and
                     len(set(y[0].out_neighbours()))==1 and
                     len(set(y[0].in_neighbours()))==1 and
-                    sg.sgv2vtx[y[0]].get('name')) :
+                    sg.sgv2vtx[y[0]].get('name')):
                     leaves.append(x)
             return leaves
 
         leaves = collect_leaves()
         while leaves:
             for x in leaves:
-                y = x.out_neighbours().next()
+                y = x.in_neighbours().next()
                 vtx = sg.sgv2vtx[x]
-                print 'trimming', vtx.name, 'to', sg.sgv2vtx[y].name
+                ## print 'trimming', vtx.name, 'to', sg.sgv2vtx[y].name
                 sg.snode[x] = 0
                 sg.isleaf[x] = 0
                 sg.isleaf[y] = 1
@@ -418,55 +421,24 @@ def stree_subgraph(G):
     sg.trim = trim
     return sg
 
-def find_loops(sg):
-    def rootpath(sgv, stree):
-        path = []
-        while 1:
-            if sgv.in_degree()==0: break
-            it = ifilter(lambda x:sg.edge2stree[x]==stree, sgv.in_edges())
-            e = it.next()
-            sgv = e.source()
-            path.append(sgv)
-        return path
-
-    def find_anc(rp1, rp2):
-        found = None
-        if len(rp2)>1:
-            for i, n1 in enumerate(rp1):
-                for j, n2 in enumerate(rp2[i+1:]):
-                    if n1==n2:
-                        found = (n1, i, 
-                        break
-                if found: break
-        return found
-        
-    seen = set()
-    for sgv in sg.vertices():
-        if sgv.in_degree() > 1:
-            edges = sgv.in_edges()
-            strees = sorted(set([ sg.edge2stree[e] for e in edges ]))
-            if len(strees) > 1:
-                print 'found', sg.vtext[sgv] or sgv, strees
-                ## rootpaths = []
-                ## for stree in strees:
-                ##     rp = rootpath(sgv, stree)
-                ##     rootpaths.append(rp)
-                
-                    
-
-def radial_traverse(sg):
-    found = []
-    seen = set()
+def named_bfs(sg, vertex, nodemap=None, edgemap=None):
+    # sg assumed to be filtered for snode nodes and edges
+    if not nodemap: nodemap = sg.new_vertex_property('bool')
+    if not edgemap: edgemap = sg.new_edge_property('bool')
     def traverse(vertex):
-        if sg.snode[vertex]:
-            if vertex not in seen:
-                for x in vertex.in_neighbours(): traverse(x)
-            if vertex not in found and vertex.in_degree()==0:
-                found.append(vertex)
-                ## print vertex, sg.sgv2vtx[vertex].get('name')
-            seen.add(vertex)
-    traverse(sg.root.sgv)
-    return found
+        name = sg.sgv2vtx[vertex].get('name')
+        if not name:
+            for e in vertex.out_edges():
+                edgemap[e] = 1
+                if sg.snode_edge[e]: traverse(e.target())
+        ## else:
+        ##     print name
+        nodemap[vertex] = 1
+    nodemap[vertex] = 1
+    for e in vertex.out_edges():
+        edgemap[e] = 1
+        if sg.snode_edge[e]: traverse(e.target())
+    return nodemap, edgemap
 
 def snode_bfs(sg, vertices, seen=None, iterations=1):
     stree_counts = Counter()
@@ -491,6 +463,49 @@ def iterative_layout(sg):
     for e in leash.edges: efilt[e] = 1
     sg.set_vertex_filter(vfilt)
     sg.set_edge_filter(efilt)
+
+def rootpath(sg, node, stree):
+    path = []
+    while 1:
+        if node.in_degree()==0: break
+        edges = node.in_edges()
+        #print sg.vtext[node] or node
+        it = ifilter(lambda x:sg.edge2stree[x]==stree, edges)
+        try: edge = it.next()
+        except StopIteration: break
+        path.append(edge)
+        node = edge.source()
+    return path
+
+def iter_rootpaths(sg, node):
+    for e in node.in_edges():
+        t = sg.edge2stree[e]
+        yield (t, rootpath(sg, node, t))
+
+def relax_loops(sg, factor=0.1):
+    def ancpaths(rp1, rp2):
+        assert (len(rp1) > 1) or (len(rp2) > 1)
+        p1 = []; p2 = []
+        for e1 in rp1:
+            v = []
+            p1.append(e1)
+            for e2 in rp2:
+                v.append(e2)
+                if e1.source()==e2.source():
+                    p2 = v
+                    break
+            if p2: break
+        return p1, p2
+
+    for sgv in ifilter(lambda x:x.in_degree()>1, sg.vertices()):
+        edges = sgv.in_edges()
+        rpaths = [ rootpath(sg, sgv, sg.edge2stree[e]) for e in edges ]
+        f = lambda (a, b): a[0].source() != b[0].source()
+        for p1, p2 in ifilter(f, combinations(rpaths, 2)):
+            l1 = len(p1); l2 = len(p2)
+            if l1 != l2:
+                shorter = p1 if l1 < l2 else p2
+                for e in shorter: sg.eweight[e] *= factor
 
 def draw_stree_subgraph(sg, stree_colors=None):
     import math
@@ -519,7 +534,6 @@ def draw_stree_subgraph(sg, stree_colors=None):
     vcolor = sg.new_vertex_property("string")
     ecolor = sg.new_edge_property("string")
     ewidth = sg.new_edge_property("int")
-    eweight = sg.new_edge_property("double")
     for v in sg.vertices():
         vcolor[v] = 'red' if sg.ncbi_node[v] else 'gray'
     for e in sg.edges():
@@ -541,14 +555,35 @@ def draw_stree_subgraph(sg, stree_colors=None):
                     ecolor[n.sge] = c
                     ewidth[n.sge] = 4
                     seen.add(n.sge)
-            
-    pin = pos = None
+
+    ## # layout left to right
+    ## ipos = sg.new_vertex_property('vector<double>')
+    ## pin = sg.new_vertex_property('bool')
+    ## for x in sg.vertices(): ipos[x] = [0.5, 0.5]
+    ## root = [ x for x in sg.vertices() if x.in_degree()==0 ][0]
+    ## ipos[root] = [0.0, 0.5]; pin[root] = 1
+    ## leaves = [ x for x in sg.vertices() if x.out_degree()==0 ]
+    ## plens = []
+    ## for lf in leaves:
+    ##     paths = [ x[1] for x in iter_rootpaths(sg, lf)
+    ##               if x[1][-1].source()==root ]
+    ##     plens.append(sum([ len(x) for x in paths ])/float(len(paths)))
+    ## assert len(plens)==len(leaves)
+    ## y = 0.0; unit = 1.0/(len(leaves)-1)
+    ## for plen, lf in sorted(zip(plens, leaves)):
+    ##     ipos[lf] = [1.0, y]; pin[lf] = 1
+    ##     y += unit
+
     p1 = gt.sfdp_layout(sg,
-                        K=1.0,
-                        ## C=0.001,
-                        ## gamma=2.0,
-                        pin=pin,
-                        pos=pos)
+                        C=0.01,
+                        ## p=5.0,
+                        gamma=5.0,
+                        ## epsilon=0.01,
+                        ## pos=ipos,
+                        ## pin=pin,
+                        eweight=sg.eweight)
+
+    ## p1 = gt.fruchterman_reingold_layout(sg)
 
     for v in sg.vertices():
         if len(set(v.in_neighbours()))==1 and len(set(v.out_neighbours()))==1:
@@ -562,8 +597,7 @@ def draw_stree_subgraph(sg, stree_colors=None):
                   ## vertex_halo=sg.halo,
                   ## vertex_halo_color='green',
                   edge_color=ecolor,
-                  edge_pen_width=ewidth,
-                  ## eweight=sg.eweight
+                  edge_pen_width=ewidth
                   )
     sg.set_vertex_filter(None)
     sg.set_edge_filter(None)
@@ -674,6 +708,18 @@ sg.trim()
 sg.set_vertex_filter(sg.snode)
 sg.set_edge_filter(sg.snode_edge)
 #draw_stree_subgraph(sg, {2:'green',3:'purple',4:'orange',9:'brown',10:'cyan'})
+## n, e = named_bfs(sg, sg.root.sgv)
+## sg.set_vertex_filter(n)
+## sg.set_edge_filter(e)
+## relax_loops(sg)
+## draw_stree_subgraph(sg, {2:'green',3:'purple',4:'orange',9:'brown',10:'cyan'})
+## named_bfs(sg, sg.name2sgv['Magnoliophyta'], n, e)
+## n, e = named_bfs(sg, sg.name2sgv['Spermatophyta'])
+n, e = named_bfs(sg, sg.name2sgv['Magnoliophyta'])
+sg.set_vertex_filter(n)
+sg.set_edge_filter(e)
+## relax_loops(sg, 0.9)
+draw_stree_subgraph(sg, {2:'green',3:'purple',4:'orange',9:'brown',10:'cyan'})
 
 ## rec = db.stree(3)
 ## root = build.stree(db, rec.id)
