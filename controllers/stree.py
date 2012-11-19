@@ -303,13 +303,20 @@ def _insert_stree(study, data):
 #@auth.requires_membership('contributor')
 @auth.requires_login()
 def create():
+    t = db.stree
     study = db.study(request.args(0)) or redirect(URL("index"))
-    def w(f,v):
-        u = URL(c="study",f="view",args=[study.id])
-        return A(_study_rep(study), _href=u)
-    db.stree.study.widget = w
-    
-    fields = ["study", "contributor", "newick",
+    ## def w(f,v):
+    ##     u = URL(c="study",f="view",args=[study.id])
+    ##     return A(_study_rep(study), _href=u)
+    ## t.study.widget = w
+    t.author_contributed.comment = (
+        'Was this tree provided by the author (not downloaded from a public '
+        'repository or regenerated from the data)?')
+    t.type.comment = ('Optional. What kind of tree is it? Examples: '
+                      '50% majority-rule bootstrap consensus, Bayesian MCC, '
+                      'etc. This field will probably be deprecated in favor '
+                      'of tags')
+    fields = ["contributor", "newick",
               "author_contributed",
               "type",
               "clade_labels_represent", "clade_labels_comment",

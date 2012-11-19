@@ -322,9 +322,20 @@ def create():
     t.contributor.default=name
     ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ottol.label = 'Focal clade'
+    t.focal_clade_ottol.comment = 'Optional. Name of ingroup clade, if any'
     t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
         request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
         limitby=(0,20), orderby=db.ottol_name.unique_name)
+    t.citation.comment = ('Author surnames and publication titles '
+                          'spelled out in full, to facilitate searching')
+    t.doi.comment = 'Optional'
+    t.label.comment = ('Optional short descriptive phrase, e.g. '
+                       '"Supertree of mammals". '
+                       '(Perhaps should be deprecated in favor of tags.)')
+    t.year_published.comment = '4-digit number'
+    t.comment.label = 'Comments'
+    t.comment.comment = 'Optional. Any miscellaneous notes'
+    t.treebase_id.comment = 'Optional. Integer value'
     t.uploaded.readable = False
     form = crud.create(t, next="view/[id]")
     return dict(form=form)
@@ -349,14 +360,15 @@ def view():
         response.flash = "record updated"
     label = _study_rep(rec)
     trees = db(db.stree.study==rec.id).select()
-    for f in "study", "source", "data", "uploaded", "contributor", "comment":
+    for f in ("study", "source", "data", "uploaded", "contributor",
+              "filename"):#, "comment":
         db.study_file[f].readable=False
         db.study_file[f].writable=False
-    db.study_file.file.label = "Download"
-    db.study_file.id.label = ""
-    db.study_file.id.represent = lambda v: ""
+    db.study_file.file.label = ""
+    db.study_file.id.label = "File"
+    db.study_file.id.represent = lambda v: v.description
     if auth.has_membership(role="contributor"):
-        r = lambda v: A("edit", _href=URL(c="study",f="editfile",args=[v]))
+        r = lambda v: A("[Edit file info]", _href=URL(c="study",f="editfile",args=[v]))
         db.study_file.id.represent = r
     files = crud.select(db.study_file, db.study_file.study==rec, truncate=64)
     return dict(form=form, label=label, trees=trees, files=files, rec=rec)
