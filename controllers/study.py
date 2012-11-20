@@ -366,7 +366,7 @@ def view():
         db.study_file[f].writable=False
     db.study_file.file.label = ""
     db.study_file.id.label = "File"
-    db.study_file.id.represent = lambda v: v.description
+    ## db.study_file.id.represent = lambda v: v.description
     if auth.has_membership(role="contributor"):
         r = lambda v: A("[Edit file info]", _href=URL(c="study",f="editfile",args=[v]))
         db.study_file.id.represent = r
