@@ -2,6 +2,11 @@ import os, uuid
 from cStringIO import StringIO
 from gluon.custom_import import track_changes
 from gluon.storage import Storage
+
+from cStringIO import StringIO
+import requests
+import json
+
 track_changes()
 ivy = local_import('ivy')
 treebase = ivy.treebase
@@ -636,3 +641,117 @@ def tbimport_trees():
             tree.importform = A("Imported", _href=URL('stree','svgView',args=stree.id))
             
     return dict(rec=rec, trees=nexml.trees)
+
+def ref_from_doi():
+    """
+    This controller is expecting two arguments (because DOI's contain /
+    Try 
+        DOMAIN_NAME/phylografter/study/ref_from_doi/10.1111/j.1463-6409.2009.00419.x.json
+    It returns a JSON procite object with "citation" and "year" fields added
+    
+    The intention is for this to be called by the study/create view when the user
+    wants to try to fill in fields based on the DOI.  It seems to be better to
+    wrap this call to an external service here so that the jQuery won't be concerned about
+    cross-site scripting in the AJAX code for updating the create form.
+    """
+    def normalize_doi_for_url(raw):
+        if raw.startswith('doi:'):
+            raw = raw[4:]
+        elif raw.startswith('doi'):
+            raw = raw[3:]
+        if raw.endswith('.json'):
+            raw = raw[:-5]
+        return raw
+    def format_citation(d):
+        '''
+        Parses the output of the procite (vnd.citationstyles.csl+json) format
+        into a citation and year (as string)
+        '''
+        o = StringIO()
+        authors_written = False
+        for n, author in enumerate(d.get("author", [])):
+            if n != 0:
+                o.write(", ")
+            given_name = author.get("given", "") 
+            family_name = author.get("family", "")
+            if family_name:
+                if given_name:
+                    o.write("%s %s" % (given_name, family_name))
+                else:
+                    o.write("%s" % (family_name))
+            elif given_name:
+                o.write("%s" % (give_name))
+            authors_written = True
+        if authors_written:
+            o.write(". ")
+        # issue["date-parts"] is as list of [year, month] objects, I think...
+        year = str(d.get("issued",{}).get("date-parts",[[""],])[0][0])
+        if year:
+            o.write(year + ". ")
+        title = d.get("title", "")
+        if title:
+            o.write('"%s" ' % title)
+        journal = d.get("container-title", "")
+        if journal:
+            o.write(journal)
+            o.write(". ")
+        volume = d.get("volume", "")
+        if volume:
+            o.write(volume)
+        issue = d.get("issue", "")
+        if issue:
+            o.write("(" + issue + ")")
+        if issue or volume:
+            o.write(". ")
+        page = d.get("page", "")
+        if page:
+            o.write(page)
+            o.write(".")
+        return o.getvalue(), year
+
+    raw = '/'.join([request.args(0), request.args(1)])
+    DOMAIN = 'http://dx.doi.org'
+    doi = normalize_doi_for_url(raw)
+    sys.stderr.write('About look up reference for the doi "%s"\n' % doi)
+    RETURNS_OBJECT = True
+    SUBMIT_URI = DOMAIN + '/' + doi
+    payload = {
+    }
+    headers = {
+    }
+    if RETURNS_OBJECT:
+        headers['content-type'] = 'application/json'
+        headers['Accept'] = 'application/vnd.citationstyles.csl+json, application/rdf+json'
+        requested_formats = "JSON citeproc or RDF"
+    else:
+        headers['content-type'] = 'application/tex'
+        headers['Accept'] = 'text/x-bibliography; style=apa'
+        requested_formats = "Bibliographic citation (text; style=APA)"
+    #sys.stderr.write('Sending GET to "%s"\n' % (SUBMIT_URI))
+    resp = requests.get(SUBMIT_URI,
+                        params=payload,
+                        headers=headers,
+                        allow_redirects=True)
+    #sys.stderr.write('Sent GET to %s\n' %(resp.url))
+    if resp.status_code == 404:
+        sys.stderr.write('Requested DOI, "%s", does not exist\n' % doi)
+        sys.exit(1)
+    if resp.status_code == 406:
+        sys.stderr.write('DOI found, but unavailable in the requested format(s): %s\n' % requested_formats)
+        sys.exit(2)
+    if resp.status_code == 204:
+        sys.stderr.write('DOI found, but no bibliographic information was available')
+        sys.exit(3)
+    resp.raise_for_status()
+    if RETURNS_OBJECT:
+        results = resp.json
+        sys.stderr.write('%s\n' % json.dumps(results, sort_keys=True, indent=4))
+        sys.stderr.write('%s\n' % str(dict(results)))
+        d = dict(results)
+        citation, year = format_citation(d)
+        d['citation'] = citation
+        d['year'] = year
+        return d
+    else:
+        print resp.text
+
