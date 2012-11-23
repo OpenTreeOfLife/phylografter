@@ -319,7 +319,7 @@ def record():
 def create():
     t = db.study
     name = "%s %s" % (auth.user.first_name, auth.user.last_name)
-    t.contributor.default=name
+    t.contributor.default = name
     ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ottol.label = 'Focal clade'
     t.focal_clade_ottol.comment = 'Optional. Name of ingroup clade, if any'
