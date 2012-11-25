@@ -5,5 +5,34 @@
 (trees, files, and tags added later)
 </h4>
 
+<script>
+$(document).ready(function(){
+	$("#populate_from_doi").click(function() {
+		var study_doi_url = '/phylografter/study/ref_from_doi/' + $("#study_doi").val() + '.json' ;
+		$.ajax({
+			url : study_doi_url,
+			dataType : 'json',
+//			headers : {
+//				Accept : 'application/vnd.citationstyles.csl+json, application/rdf+json',
+//			},
+			contentType : 'application/json',
+			success : function(data, textStatus, jqXHR) {
+				$("#study_citation").val(data.citation);
+				$("#study_year_published").val(data.year);
+			},
+			error : function(jqXHR, textStatus, errorThrown) {
+				$("#flash").val("DOI lookup error: " + textStatus);
+			}
+		});
+	});
+	$("#study_doi").keyup(function() {
+		var study_doi_empty = $("#study_doi").val() == "";
+		$("#populate_from_doi").attr('disabled', study_doi_empty);
+	});
+});
+</script>
+<p>Populate field from DOI:
+    <input type="button" disabled="true" id="populate_from_doi" name="populate_from_doi" value="Give it a Shot!		 "/><br/>
+</p>
 {{=form}}
 
