@@ -13,7 +13,39 @@ leafids.each() { lf ->
 c2p
 """
 
-rootpath = """
+ncbi_rootpath = """
 g.v(n).out('NCBI_CHILD_OF').loop(1) {
-    it.object.id != anc } { it.object.id==anc }.id
+    it.object.id != anc } { true }.id
+"""
+
+stree_rootpath = """
+g.v(lf).as('x').out('SNODE_CHILD_OF').filter{i in it.stree}.loop('x'){it.object.id!=r}{true}
+"""
+
+named_neighborhood = """
+v = []
+root = g.v(n)
+root_strees = root.stree.toList()
+for (lf in root.as('root').inE('SNODE_CHILD_OF').outV.loop('root'){!it.object.has('type','ncbi_node')}.dedup()) {
+    for (anc in lf.as('lf').outE('SNODE_CHILD_OF').inV.loop('lf'){it.object!=root}{true}) {
+        for (e in anc.inE('SNODE_CHILD_OF')) {
+            //strees = e.stree.toList()
+            //strees.retainAll(root_strees)
+            //if (strees) v.add(e)
+            v.add(e)
+        }
+    }
+}
+v._().dedup()
+"""
+
+named_neighborhood_leaves = """
+g.v(n).as('root').inE('SNODE_CHILD_OF').outV.loop('root'){!it.object.has('type','ncbi_node')}.dedup()
+"""
+
+q = """
+start lf=node({n}), root=node({r})
+match lf-[edges:SNODE_CHILD_OF*]->root
+where all(e in edges where {i} in e.stree)
+return edges
 """
