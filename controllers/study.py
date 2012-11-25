@@ -2,6 +2,11 @@ import os, uuid
 from cStringIO import StringIO
 from gluon.custom_import import track_changes
 from gluon.storage import Storage
+
+from cStringIO import StringIO
+import requests
+import json
+
 track_changes()
 ivy = local_import('ivy')
 treebase = ivy.treebase
@@ -319,12 +324,24 @@ def record():
 def create():
     t = db.study
     name = "%s %s" % (auth.user.first_name, auth.user.last_name)
-    t.contributor.default=name
+    t.contributor.default = name
     ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ottol.label = 'Focal clade'
+    t.focal_clade_ottol.comment = 'Optional. Name of ingroup clade, if any'
     t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
         request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
         limitby=(0,20), orderby=db.ottol_name.unique_name)
+    t.citation.comment = ('Author surnames and publication titles '
+                          'spelled out in full, to facilitate searching')
+    t.doi.comment = SPAN(INPUT(_id="populate_from_doi", _type="button", _name="populate_from_doi", _value="Populate fields from DOI"), SPAN(_id="doi_ajax_spinner", _class="qq-upload-spinner", _hidden="true"))
+
+    t.label.comment = ('Optional short descriptive phrase, e.g. '
+                       '"Supertree of mammals". '
+                       '(Perhaps should be deprecated in favor of tags.)')
+    t.year_published.comment = '4-digit number'
+    t.comment.label = 'Comments'
+    t.comment.comment = 'Optional. Any miscellaneous notes'
+    t.treebase_id.comment = 'Optional. Integer value'
     t.uploaded.readable = False
     form = crud.create(t, next="view/[id]")
     return dict(form=form)
@@ -349,14 +366,15 @@ def view():
         response.flash = "record updated"
     label = _study_rep(rec)
     trees = db(db.stree.study==rec.id).select()
-    for f in "study", "source", "data", "uploaded", "contributor", "comment":
+    for f in ("study", "source", "data", "uploaded", "contributor",
+              "filename"):#, "comment":
         db.study_file[f].readable=False
         db.study_file[f].writable=False
-    db.study_file.file.label = "Download"
-    db.study_file.id.label = ""
-    db.study_file.id.represent = lambda v: ""
+    db.study_file.file.label = ""
+    db.study_file.id.label = "File"
+    ## db.study_file.id.represent = lambda v: v.description
     if auth.has_membership(role="contributor"):
-        r = lambda v: A("edit", _href=URL(c="study",f="editfile",args=[v]))
+        r = lambda v: A("[Edit file info]", _href=URL(c="study",f="editfile",args=[v]))
         db.study_file.id.represent = r
     files = crud.select(db.study_file, db.study_file.study==rec, truncate=64)
     return dict(form=form, label=label, trees=trees, files=files, rec=rec)
@@ -624,3 +642,124 @@ def tbimport_trees():
             tree.importform = A("Imported", _href=URL('stree','svgView',args=stree.id))
             
     return dict(rec=rec, trees=nexml.trees)
+
+def ref_from_doi():
+    """
+    This controller is expecting two arguments (because DOI's contain /
+    Try 
+        DOMAIN_NAME/phylografter/study/ref_from_doi/10.1111/j.1463-6409.2009.00419.x.json
+    It returns a JSON procite object with "citation" and "year" fields added
+    
+    The intention is for this to be called by the study/create view when the user
+    wants to try to fill in fields based on the DOI.  It seems to be better to
+    wrap this call to an external service here so that the jQuery won't be concerned about
+    cross-site scripting in the AJAX code for updating the create form.
+    """
+    def normalize_doi_for_url(raw):
+        if raw.startswith('doi:'):
+            raw = raw[4:]
+        elif raw.startswith('doi'):
+            raw = raw[3:]
+        if raw.endswith('.json'):
+            raw = raw[:-5]
+        return raw
+    def format_citation(d):
+        '''
+        Parses the output of the procite (vnd.citationstyles.csl+json) format
+        into a citation and year (as string)
+        '''
+        o = StringIO()
+        authors_written = False
+        for n, author in enumerate(d.get("author", [])):
+            if n != 0:
+                o.write(", ")
+            given_name = author.get("given", "") 
+            family_name = author.get("family", "")
+            if family_name:
+                if given_name:
+                    o.write("%s %s" % (given_name, family_name))
+                else:
+                    o.write("%s" % (family_name))
+            elif given_name:
+                o.write("%s" % (give_name))
+            authors_written = True
+        if authors_written:
+            o.write(". ")
+        # issue["date-parts"] is as list of [year, month] objects, I think...
+        year = str(d.get("issued",{}).get("date-parts",[[""],])[0][0])
+        if year:
+            o.write(year + ". ")
+        title = d.get("title", "")
+        if title:
+            o.write('"%s" ' % title)
+        journal = d.get("container-title", "")
+        if journal:
+            o.write(journal)
+            o.write(". ")
+        volume = d.get("volume", "")
+        if volume:
+            o.write(volume)
+        issue = d.get("issue", "")
+        if issue:
+            o.write("(" + issue + ")")
+        if issue or volume:
+            o.write(". ")
+        page = d.get("page", "")
+        if page:
+            o.write(page)
+            o.write(".")
+        return o.getvalue(), year
+
+    if len(request.args) != 2:
+        response.status = 404
+        response.write('Execting a DOI with one / in it')
+        return
+    raw = '/'.join([request.args(0), request.args(1)])
+    DOMAIN = 'http://dx.doi.org'
+    doi = normalize_doi_for_url(raw)
+    sys.stderr.write('About look up reference for the doi "%s"\n' % doi)
+    RETURNS_OBJECT = True
+    SUBMIT_URI = DOMAIN + '/' + doi
+    payload = {
+    }
+    headers = {
+    }
+    if RETURNS_OBJECT:
+        headers['content-type'] = 'application/json'
+        headers['Accept'] = 'application/vnd.citationstyles.csl+json, application/rdf+json'
+        requested_formats = "JSON citeproc or RDF"
+    else:
+        headers['content-type'] = 'application/tex'
+        headers['Accept'] = 'text/x-bibliography; style=apa'
+        requested_formats = "Bibliographic citation (text; style=APA)"
+    #sys.stderr.write('Sending GET to "%s"\n' % (SUBMIT_URI))
+    resp = requests.get(SUBMIT_URI,
+                        params=payload,
+                        headers=headers,
+                        allow_redirects=True)
+    #sys.stderr.write('Sent GET to %s\n' %(resp.url))
+    if resp.status_code == 404:
+        sys.stderr.write('Requested DOI, "%s", does not exist\n' % doi)
+        response.status = 404
+        return
+    if resp.status_code == 406:
+        sys.stderr.write('DOI found, but unavailable in the requested format(s): %s\n' % requested_formats)
+        response.status = 406
+        return
+    if resp.status_code == 204:
+        sys.stderr.write('DOI found, but no bibliographic information was available')
+        response.status = 204
+        return
+    resp.raise_for_status()
+    if RETURNS_OBJECT:
+        results = resp.json
+        sys.stderr.write('%s\n' % json.dumps(results, sort_keys=True, indent=4))
+        sys.stderr.write('%s\n' % str(dict(results)))
+        d = dict(results)
+        citation, year = format_citation(d)
+        d['citation'] = citation
+        d['year'] = year
+        return d
+    else:
+        print resp.text
+

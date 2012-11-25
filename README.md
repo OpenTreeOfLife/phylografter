@@ -3,7 +3,7 @@ Below here are notes on installing phylografter on installing phylografter on Ma
 (1) Install Ivy. You can get pip from http://www.pip-installer.org/en/latest/
 
 <pre>
-for module in matplotlib scipy numpy biopython pyparsing ipython lxml PIL ivy-phylo
+for module in matplotlib scipy numpy biopython pyparsing ipython lxml PIL ivy-phylo requests
 do
     pip install --upgrade "$module" 
 done
@@ -87,5 +87,13 @@ python web2py.py --nogui -a '&lt;recycle&gt;'
 (should display a "Source trees" table).
 
     
+Authorizing users to upload
+--------------
 
+You can authorize users to upload trees as follows:
 
+1. From http://127.0.0.1:8000/admin/default/site
+1. Under phylografter click 'Edit'
+1. Under Models click 'database administration'
+1. Under db.auth\_membership click 'insert new auth\_membership'
+1. Choose your user and the 'contributor' group (id 3) and click submit
