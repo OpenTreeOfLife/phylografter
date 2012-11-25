@@ -333,7 +333,8 @@ def create():
         limitby=(0,20), orderby=db.ottol_name.unique_name)
     t.citation.comment = ('Author surnames and publication titles '
                           'spelled out in full, to facilitate searching')
-    t.doi.comment = 'Optional'
+    t.doi.comment = SPAN(INPUT(_id="populate_from_doi", _type="button", _name="populate_from_doi", _value="Populate fields from DOI"), SPAN(_id="doi_ajax_spinner", _class="qq-upload-spinner", _hidden="true"))
+
     t.label.comment = ('Optional short descriptive phrase, e.g. '
                        '"Supertree of mammals". '
                        '(Perhaps should be deprecated in favor of tags.)')
