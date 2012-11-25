@@ -50,17 +50,10 @@ Trees derived from this data set:
 </table>
 </div>
 
-{{block right_sidebar}} 
-{{=A('Edit OTUs', _class='button', _href=URL('otu','study',args=rec.id))}}
-{{if rec.treebase_id:}}
-{{
-    a = A("Import from TreeBASE", _class="button",
-          _href=URL('study','tbimport',args=rec.treebase_id))
-    #b = A("Download from TreeBASE", _class="button",
-    #      _href=URL('study','fetch_treebase_nexml',args=rec.treebase_id))
-}}
-{{=DIV(a)}}
-{{#=DIV(b)}}
+{{block right_sidebar}}
+<h5>OTUs: {{=rec.otu.count()}}</h5>
+<h5>OTUs mapped to taxa: {{=rec.otu(db.otu.ottol_name!=None).count()}}</h5>
+{{=A('Map OTUs to Taxa', _class='button', _href=URL('otu','study',args=rec.id), _style="margin-top:0.5em")}}
 {{pass}}
 
 {{=LOAD('study', 'tag.load', args=[rec.id], ajax=True)}}
