@@ -709,6 +709,10 @@ def ref_from_doi():
             o.write(".")
         return o.getvalue(), year
 
+    if len(request.args) != 2:
+        response.status = 404
+        response.write('Execting a DOI with one / in it')
+        return
     raw = '/'.join([request.args(0), request.args(1)])
     DOMAIN = 'http://dx.doi.org'
     doi = normalize_doi_for_url(raw)
