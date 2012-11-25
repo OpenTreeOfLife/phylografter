@@ -740,13 +740,16 @@ def ref_from_doi():
     #sys.stderr.write('Sent GET to %s\n' %(resp.url))
     if resp.status_code == 404:
         sys.stderr.write('Requested DOI, "%s", does not exist\n' % doi)
-        sys.exit(1)
+        response.status = 404
+        return
     if resp.status_code == 406:
         sys.stderr.write('DOI found, but unavailable in the requested format(s): %s\n' % requested_formats)
-        sys.exit(2)
+        response.status = 406
+        return
     if resp.status_code == 204:
         sys.stderr.write('DOI found, but no bibliographic information was available')
-        sys.exit(3)
+        response.status = 204
+        return
     resp.raise_for_status()
     if RETURNS_OBJECT:
         results = resp.json
