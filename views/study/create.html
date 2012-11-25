@@ -5,10 +5,12 @@
 (trees, files, and tags added later)
 </h4>
 
-<script>
+<script type="text/javascript">
 $(document).ready(function(){
+    $('#doi_ajax_spinner').hide();
 	$("#populate_from_doi").click(function() {
-		var study_doi_url = '/phylografter/study/ref_from_doi/' + $("#study_doi").val() + '.json' ;
+		var study_doi_url = "{{=URL(request.controller, 'ref_from_doi')}}" + "/" + $("#study_doi").val() + ".json" ;
+        $("#doi_ajax_spinner").show();
 		$.ajax({
 			url : study_doi_url,
 			dataType : 'json',
@@ -19,20 +21,29 @@ $(document).ready(function(){
 			success : function(data, textStatus, jqXHR) {
 				$("#study_citation").val(data.citation);
 				$("#study_year_published").val(data.year);
+				$("#doi_ajax_spinner").hide();
 			},
 			error : function(jqXHR, textStatus, errorThrown) {
-				$("#flash").val("DOI lookup error: " + textStatus);
+				$(".flash").html("DOI lookup error: " + jqXHR.statusText).slideDown();
+				$("#doi_ajax_spinner").hide();
 			}
 		});
 	});
+    $('#populate_from_doi').hide();
 	$("#study_doi").keyup(function() {
-		var study_doi_empty = $("#study_doi").val() == "";
-		$("#populate_from_doi").attr('disabled', study_doi_empty);
+		//var study_doi_empty = $("#study_doi").val() == "";
+		//$("#populate_from_doi").attr('disabled', study_doi_empty);
+		if ($("#study_doi").val() == "") {
+		    $("#populate_from_doi").hide();
+		}
+		else {
+		    $("#populate_from_doi").show();
+		}
 	});
 });
 </script>
-<p>Populate field from DOI:
-    <input type="button" disabled="true" id="populate_from_doi" name="populate_from_doi" value="Give it a Shot!		 "/><br/>
+<p><input type="button" id="populate_from_doi" name="populate_from_doi" value="Populate fields from DOI"><span id="doi_ajax_spinner" class="qq-upload-spinner" hidden="true"></span></input>
+    <br/>
 </p>
 {{=form}}
 
