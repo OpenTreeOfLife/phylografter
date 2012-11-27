@@ -454,6 +454,7 @@ def n4jedges2graph(edges, root_eid=None):
     sg = gt.Graph()
     sg.sgv2vtx = {}
     sg.eid2sgv = {}
+    ## sg.sgv2eid = {}
     sg.eid2vtx = {}
     sg.edge2stree = {}
     sg.eweight = sg.new_edge_property('double')
@@ -854,7 +855,7 @@ def draw_fan(sg):
                   edge_color=ecolor,
                   edge_pen_width=ewidth)
 
-G = connect()
+## G = connect()
 ## rec = db.stree(3)
 ## root = build.stree(db, rec.id)
 ## map_taxonomy(G, root)
@@ -922,23 +923,10 @@ G = connect()
 ##                 node.snode = snv
 ##                 node.save()
 
-cmap = {2:'green',3:'purple',4:'orange',9:'brown',10:'cyan',
-        212:'magenta'}
-n = G.ncbi_node_idx.get_unique(name='core eudicotyledons')
-n = G.ncbi_node_idx.get_unique(name='rosids')
-sg = named_neighborhood_subgraph(G, n.eid)
-sg.stree_colors = cmap
-draw_fan(sg)
-## vcolor = sg.new_vertex_property('string')
-## for v in sg.vertices():
-##     if sg.sgv2vtx[v].type=='ncbi_node': vcolor[v] = 'blue'
-##     else: vcolor[v] = 'gray'
-## ecolor = sg.new_edge_property('string')
-## for e in sg.edges():
-##     i = sg.edge2stree[e]
-##     ecolor[e] = stree_colors[i]
-## gt.graph_draw(sg,
-##               vertex_fill_color=vcolor,
-##               vertex_text=sg.vtext,
-##               vertex_text_position=3.1415,
-##               edge_color=ecolor)
+## cmap = {2:'green',3:'purple',4:'orange',9:'brown',10:'cyan',
+##         212:'magenta'}
+## n = G.ncbi_node_idx.get_unique(name='core eudicotyledons')
+## n = G.ncbi_node_idx.get_unique(name='rosids')
+## sg = named_neighborhood_subgraph(G, n.eid)
+## sg.stree_colors = cmap
+## draw_fan(sg)

@@ -1,0 +1,14 @@
+{{extend 'layout221.html'}}
+
+<div id="canvas" style="border-color:gray;border-style:solid;border-width:1px">
+</div>
+
+<script src="{{=URL('static','raphael.js')}}"></script>
+
+<script src="{{=URL('static','ncbigraph.js')}}"></script>
+
+<script type="text/javascript">
+$(document).ready(function() {
+    draw_canvas("canvas", 1000, 800);
+})
+</script>
