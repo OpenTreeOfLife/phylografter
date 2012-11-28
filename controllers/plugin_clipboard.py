@@ -1,9 +1,5 @@
 import datetime
 
-
-def addToClipboard():
-    return dict( instanceParams = response.json( dict( containerId = request.vars.containerId ) ) )
-
 def viewAndGraft():
     return dict( instanceParams = response.json( dict( containerId = request.vars.containerId, clipboard = getClipboard() ) ) )
 
@@ -16,44 +12,52 @@ def default():
 
 
 def getClipboard():
+
+    queryStringList = [ \
+        'SELECT ',
+            'clipboard.id, ',
+            'clipboard.nodeId, ',
+            'clipboard.name, ',
+            'clipboard.creationDate, ',
+            'snode.next, ',
+            'snode.back, ',
+            'study.id, ',
+            'study.citation, ',
+            'snode.tree, ',
+            'snode.id ',
+        'FROM clipboard JOIN snode ON ( snode.id = clipboard.nodeId AND clipboard.treeType = "source" ) ',
+                       'JOIN stree ON stree.id = snode.tree ',
+                       'JOIN study ON study.id = stree.study ' ]
        
-    rv = \
-        db( ( db.clipboard.id > 0 ) &
-               ( db.clipboard.treeType == 'source' ) &
-               ( db.clipboard.nodeId == db.snode.id ) &
-               ( db.snode.tree == db.stree.id ) &
-               ( db.stree.study == db.study.id ) ) \
-            .select( db.clipboard.id,
-                     db.clipboard.treeType,
-                     db.clipboard.nodeId,
-                     db.clipboard.name,
-                     db.clipboard.creationDate,
-                     db.snode.next,
-                     db.snode.back,
-                     db.study.citation ).as_list()
+    sourceList = db.executesql( ''.join( queryStringList ) )
+
+    queryStringList = [ \
+        'SELECT ',
+            'clipboard.id, ',
+            'clipboard.nodeId, ',
+            'clipboard.name, ',
+            'clipboard.creationDate, ',
+            'gnode.next, ',
+            'gnode.back, ',
+            'gtree.id, ',
+            'gtree.title ',
+        'FROM clipboard JOIN gnode ON ( gnode.id = clipboard.nodeId AND clipboard.treeType = "grafted" ) ',
+                       'JOIN gtree ON gtree.id = gnode.tree ' ]
+
+    graftedList = db.executesql( ''.join( queryStringList ) )
+        
+    return response.json( dict( sourceList = sourceList, graftedList = graftedList ) )
 
 
-    rv.extend( \
-        db( ( db.clipboard.id > 0 ) &
-           ( db.clipboard.treeType == 'grafted' ) &
-           ( db.clipboard.nodeId == db.gnode.id ) &
-           ( db.gnode.tree == db.gtree.id ) )
-        .select( db.clipboard.id,
-                 db.clipboard.treeType,
-                 db.clipboard.nodeId,
-                 db.clipboard.name,
-                 db.clipboard.creationDate,
-                 db.gnode.next,
-                 db.gnode.back,
-                 db.gtree.title ).as_list() )
+def addItemToClipboard():
+    row = db.clipboard.insert( \
+        name = request.vars.name,
+        treeType = session.TreeViewer.treeType,
+        creationDate = datetime.datetime.now(),
+        user = auth.user.id,
+        nodeId = request.vars.nodeId )
 
-    return rv
-
-
-def addItem():
-    row = db.clipboard.insert( name = request.vars.name, treeType = request.vars.treeType, creationDate = datetime.datetime.now(), nodeId = request.vars.nodeId )
-    return response.json( dict( trigger = request.vars.trigger,
-                                data = dict( id = row.id, name = row.name, creationDate = row.creationDate, nodeId = row.nodeId, async = True ) ) )
+    return response.json( dict() )
 
 
 def delete():

@@ -134,22 +134,22 @@ def postGraftDBUpdate( db, session, auth):
     sys.stdout.write( "\n" )
 
 
-def replaceClade( tree, cladeToBeReplacedId, newClade ):
+def replaceClade( tree, replacedNodeId, replacingClade ):
 
-    cladeToReplace = util.getNodeById( tree, cladeToBeReplacedId )
-    parentClade = cladeToReplace.parent
+    cladeToReplace = util.getNodeById( tree, replacedNodeId )
+    parentOfReplaced = cladeToReplace.parent
 
     parentClade.remove_child( cladeToReplace )
-    parentClade.add_child( newClade )
+    parentClade.add_child( replacingClade )
 
 
-def postReplaceDBUpdate( db, session, auth, tree, treeType, replacedCladeId, newCladeId, requestVars ):    
-    
+def postReplaceDBUpdate( db, session, request, auth, tree, replacedCladeRow ):    
+  
+    treeType = session.TreeViewer.treeType
+
     if treeType == 'source':
 
-        replacedNode = db( db.snode.id == replacedCladeId ).select()[0]
-        
-        gtreeId = createGTreeRecord( db, auth, requestVars.treeName, requestVars.treeDescription )
+        gtreeId = createGTreeRecord( db, auth, request.vars.treeName, request.vars.treeDescription )
         
         index( tree )
 

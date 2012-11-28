@@ -5,5 +5,6 @@
           menuInfo = dict( options = [ dict( name = 'branchLength' ), dict( name = 'search' ), dict( name = 'treeSize' ) ] ),
           eventInfo = dict( nodeRightClick = dict( handler = 'showNodeContextMenu',
                                                    options = [ dict( handler = 'handleCollapseCladeOptionClick', text = 'Collapse Clade' ),
+                                                               dict( handler = 'handleReplaceCladeOptionClick', text = 'Replace Clade' ),
                                                                dict( handler = 'handlePruneCladeOptionClick', text = 'Prune Clade' ) ] ) ),
           viewInfo = dict( type = 'phylogram', mode = 'navigate' ) ) ) }}

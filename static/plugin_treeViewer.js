@@ -46,6 +46,7 @@ BioSync.TreeViewer.viewer.prototype = {
         this.totalNodes = p.totalNodes;
         
         this.isPreProcessed = p.isTreePreprocessed;
+        this.isLoggedIn = p.isLoggedIn;
 
         this.make = BioSync.Common.makeEl;
 
@@ -195,6 +196,10 @@ BioSync.TreeViewer.viewer.prototype = {
         }
 
         this.requestAuxilliaryPlugins( this.auxPlugins );
+       
+        this.windowWidth = $( window ).width();
+        this.windowHeight = $( window ).height();
+
     },
 
     getTree: function() {

@@ -15,12 +15,16 @@ def treeGrafter():
     a response to the client
     """
     
-    return util.handleViewerInstantiation( request, response, session, db )
+    return util.handleViewerInstantiation( request, response, session, db, auth )
 
 
 def pruneClade():
 
     return response.json( util.getRenderModule( request, session, 'Graft' ).pruneClade( db, session, request, auth ) )
+
+def replaceClade():
+
+    return response.json( util.getRenderModule( request, session, 'Graft' ).replaceClade( db, session, request, auth ) )
 
 
 

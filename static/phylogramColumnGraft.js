@@ -15,3 +15,10 @@ BioSync.TreeGrafter.RenderUtil.Column.prototype.handlePruneCladeOptionClick = fu
 
     this.renderObj.pruneClade( { column: this, nodeId: this.nodeIdToPrune } );
 }
+
+BioSync.TreeGrafter.RenderUtil.Column.prototype.handleReplaceCladeOptionClick = function() {
+
+    this.nodeIdToReplace = this.closestNodeToMouse.id;
+
+    this.renderObj.getClipboardForCladeReplace( { column: this, nodeId: this.nodeIdToReplace } );
+}

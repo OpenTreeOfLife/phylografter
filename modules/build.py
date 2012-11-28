@@ -12,14 +12,12 @@ def node2tree( db, session, nodeId ):
         return graftedClade( db, session, nodeId, session.collapsedNodeStorage[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ] )
 
    
-def getRootRecord( db, session, rootNodeId ):
+def getRootRecord( db, strNodeTable, rootNodeId ):
 
-    return db( db[ session.TreeViewer.strNodeTable ].id == rootNodeId ).select()[0]
+    return db( db[ strNodeTable ].id == rootNodeId ).select()[0]
 
 
-def getCladeSqlString( session, rootRec, collapsedNodeStorage ):
-
-    nodeTable = session.TreeViewer.strNodeTable
+def getCladeSqlString( nodeTable, rootRec, collapsedNodeStorage ):
 
     joinString = notPruned = ''
 
@@ -85,20 +83,20 @@ def getIvyTreeFromNodeList( resultList ):
     return cladeRoot
 
 
-def graftedClade( db, session, rootNodeId, collapsedNodeStorage ):
+def graftedClade( db, rootNodeId, collapsedNodeStorage ):
 
-    rootRec = getRootRecord( db, session, rootNodeId )
+    rootRec = getRootRecord( db, 'gnode', rootNodeId )
 
-    resultList = db.executesql( getCladeSqlString( session, rootRec, collapsedNodeStorage ) )
+    resultList = db.executesql( getCladeSqlString( 'gnode', rootRec, collapsedNodeStorage ) )
 
     return getIvyTreeFromNodeList( resultList )
 
 
-def sourceClade( db, session, rootNodeId, collapsedNodeStorage ):
+def sourceClade( db, rootNodeId, collapsedNodeStorage ):
 
-    rootRec = getRootRecord( db, session, rootNodeId )
+    rootRec = getRootRecord( db, 'snode', rootNodeId )
 
-    resultList = db.executesql( getCladeSqlString( session, rootRec, collapsedNodeStorage ) )
+    resultList = db.executesql( getCladeSqlString( 'snode', rootRec, collapsedNodeStorage ) )
    
     return getIvyTreeFromNodeList( resultList )
 

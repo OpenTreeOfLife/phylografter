@@ -85,7 +85,7 @@ BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype = {
                 BioSync.ModalBox.makeBasicActionRow( {
                     submitText: 'Submit',
                     submitArgs: { trigger: 'clipboardItemAdded',
-                                  submitUrl: BioSync.Common.makeUrl( { controller: 'plugin_treeViewer', argList: ['addItemToClipboard'] } ) } } ) );
+                                  submitUrl: BioSync.Common.makeUrl( { controller: 'plugin_clipboard', argList: ['addItemToClipboard'] } ) } } ) );
 
         BioSync.ModalBox.showModalBox( { content: content, title: 'Give this clipboard item a name' } );   
 

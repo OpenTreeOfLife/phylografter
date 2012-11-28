@@ -368,13 +368,25 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getPostEditClade = f
 }
 
 
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showReplaceEditStatus = function() {
+    
+    this.showTreeEditStatus( { preSuccessText: 'Replacing clade, updating database',
+                               successText: 'Replaced' } );
+}
+
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showPruneEditStatus = function() {
+
+    this.showTreeEditStatus( { preSuccessText: 'Pruning tree, updating database',
+                               successText: 'Pruned' } );
+}
+
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showTreeEditStatus = function( p ) {
 
     var modal = BioSync.ModalBox;
 
     var content =
         this.make( 'div' ).attr( { 'class': 'treeEditStatus' } ).append(
-            this.make( 'span' ).text( 'Pruning tree, updating database' ) );
+            this.make( 'span' ).text( p.preSuccessText ) );
 
     var myDoc = $(document);
 
@@ -393,7 +405,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showPruneEditStatus 
         content: content,
         minimumTime: 2000,
         stopTrigger: 'editSuccess',
-        stopText: 'Pruned',
+        stopText: p.successText,
         stopFunction: successFunctions } );
 }
 
@@ -521,6 +533,192 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.handleMovingClipboar
     }
 }
 
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getClipboardForCladeReplace = function( p ) {
+
+    this.replacingColumn = p.column;
+    this.replacedNodeId = p.nodeId;
+
+    this.highlightClade( { column: p.column, nodeId: p.nodeId } );
+
+    $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_clipboard', argList: [ 'getClipboard' ] } ),
+              type: "GET", data: { },
+              success: new Array( $.proxy( this.showModalClipboardForCladeReplace, this ) ) } );
+}
+
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardForCladeReplace = function( response ) {
+
+    var clipboardInfo = eval( '(' + response + ')' );
+    
+    var modal = BioSync.ModalBox;
+
+    var clipboardItems = this.make('div');
+
+    var css = { 'float': 'left', 'text-align': 'center', margin: '5px 0px', 'font-weight': 'bold' };
+
+    var modalBoxWidth = this.viewer.windowWidth * .75;
+
+    this.replaceButton = this.make('span').text( 'Replace' ).css( { 'color': 'grey' } ).attr( { 'active': 'no' } );
+
+    $('#modalBoxForm').append(
+        this.make( 'div' ).append(
+            this.make( 'div' ).append(
+                BioSync.ModalBox.makeBasicTextRow( { text: "Here are your clipboard items.  Click on an item to select it.  To replace the clade in the tree with an item in this list, click the 'Replace' button below." } ),
+                this.make('div').css( { 'text-align': 'center',
+                                        'font-size': '20px',
+                                        'color': 'steelBlue',
+                                        'margin-bottom': '10px',
+                                        'padding': '10px' } ).text( 'Source Tree Clipboard Items' ),
+                this.make( 'div' ).css( { 'border': '1px solid black',
+                                          'padding': '10px',
+                                          'border-radius': '5px' } ).append( 
+                    this.make( 'div' ).width( modalBoxWidth * .25 ).css( css ).text( 'Name' ),
+                    this.make( 'div' ).width( modalBoxWidth * .10 ).css( css ).text( 'Descendants' ),
+                    this.make( 'div' ).width( modalBoxWidth * .15 ).css( css ).text( 'Date Created' ),
+                    this.make( 'div' ).width( modalBoxWidth * .45 ).css( css ).text( 'Study' ),
+                    this.make( 'div' ).css( { 'clear': 'both' } ),
+                    clipboardItems
+                ),
+                this.make( 'div' ).attr( { 'class': 'actionRow' } ).css( { 'padding-bottom': '10px' } ).append(
+                    this.make('div').attr( { 'class': 'twoOpt modalBoxSubmit' } )
+                                    .css( { 'float': 'left' } ).append(
+                        this.replaceButton ),
+                    this.make('div').attr( { 'class': 'twoOpt modalBoxCancel' } )
+                                    .css( { 'float': 'left', 'color': 'steelBlue' } ).append(
+                        this.make('span').hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                        .text( 'Cancel' )
+                                        .bind( 'click', { }, BioSync.ModalBox.closeBox )
+                                        .bind( 'click', { }, $.proxy( this.unHighlightClade, this ) ) ) )
+            )
+        )
+    );
+
+    delete css['font-weight'];
+    delete css['font-size'];
+
+    this.clipboardItems = { };
+
+    for( var i = 0, ii = clipboardInfo.sourceList.length; i < ii; i++ ) {
+
+        var item = clipboardInfo.sourceList[ i ];
+
+        this.clipboardItems[ item[0] ] = { tree: item[7], type: 'source', id: item[8] }; 
+
+        clipboardItems.append(
+            this.make( 'div' ).attr( { 'clipboardId': item[0] } )
+                              .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                              .hover( $.proxy( this.giveGreyBackground, this ), $.proxy( this.removeGreyBackground, this ) )
+                              .bind( 'click', { }, $.proxy( this.selectClipboardItem, this ) ).append(
+                this.make('div').width( modalBoxWidth * .25 )
+                                .css( css )
+                                .text( item[2] )
+                                .attr( { 'title': item[2] } )
+                                .css( { 'white-space': 'nowrap', 'overflow': 'hidden', 'text-overflow': 'ellipsis' } ),
+                this.make('div').width( modalBoxWidth * .10 ).css( css ).text( ( Math.floor( ( item[5] - item[4] - 1 ) / 2 ) ) ),
+                this.make('div').width( modalBoxWidth * .15 ).css( css ).text( item[3] ),
+                this.make('div').width( modalBoxWidth * .45 ).css( css )
+                       .css( { 'white-space': 'nowrap', 'overflow': 'hidden', 'text-overflow': 'ellipsis' } ).append(
+                    this.make( 'span' ).text( item[7] /*.substr( 0, 50 ) */ ).attr( { 'title': item[7] } )
+                                       .width( modalBoxWidth * .45 )
+                                       .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                                       .bind( 'click', { studyId: item[6] }, $.proxy( this.openNewStudyWindow, this ) )
+                ),
+                this.make( 'div' ).css( { 'clear': 'both' } )
+            )
+        );
+       
+        BioSync.ModalBox.showModalBox( {
+            width: modalBoxWidth,
+            title: 'Replace Clade with Clipboard Item' } );
+    }
+}
+
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.giveGreyBackground = function( e ) {
+    $( e.delegateTarget ).css( { 'background-color': '#F0F0F0' } );
+}
+
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.removeGreyBackground = function( e ) {
+
+    if( ( this.selectedClipboardItem ) && ( e.delegateTarget == this.selectedClipboardItem.get(0) ) ) { return; }
+
+    $( e.delegateTarget ).css( { 'background-color': '' } );
+}
+
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.selectClipboardItem = function( e ) {
+
+    var el = $( e.delegateTarget );
+
+    if( this.selectedClipboardItem ) { this.selectedClipboardItem.css( { 'background-color': '' } ); }
+    
+    if( ( this.selectedClipboardItem ) && ( this.selectedClipboardItem.get(0) == e.delegateTarget ) ) {
+
+        this.replaceButton.unbind( 'mouseenter' ).unbind( 'mouseleave' ).css( { 'color': 'grey' } ).attr( { 'active': 'no' } );
+        delete this.selectedClipboardItem;
+
+    } else {
+       
+        this.selectedClipboardItem = el.css( { 'background-color': '#F0F0F0' } );
+
+        if( this.replaceButton.attr( 'active' ) == 'no' ) {
+
+            this.replaceButton.css( { 'color': 'steelBlue' } )
+                              .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                              .attr( { 'active': 'yes' } )
+                              .bind( 'click', { }, $.proxy( this.askForReplaceCladeInfo, this ) );
+        }
+    }
+}
+
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.openNewStudyWindow = function( e ) {
+
+    window.open( BioSync.Common.makeUrl( { controller: 'study', argList: [ 'view', e.data.studyId ] } ) );
+
+    e.preventDefault();  e.stopPropagation();
+}
+
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.addNewGraftedTreeDialogueToContent = function( p ) {
+
+    $( p.content.children().last() ).before(
+        this.make('div').append( 
+            modal.makeBasicTextRow( { 'text': '' } ),
+            modal.makeBasicTextRow( { 'text': "This action will create a new 'grafted' tree.  Please give it a name and description" } ),
+            modal.makeBasicTextInput( { text: 'Grafted Tree Name : ', name: 'treeName', value: 'Untitled Grafted Tree' } ),
+            modal.makeBasicTextInput( { text: 'Description : ', name: 'treeDescription', value: '' } ) ) );
+}
+
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.askForReplaceCladeInfo = function( p ) {
+
+    var modal = BioSync.ModalBox;
+
+    var clipboardId = this.selectedClipboardItem.attr( 'clipboardId' );
+
+    var successArray = new Array( $.proxy( this.treeEditSuccess, this ) );
+
+        this.clipboardItems[ item[0] ] = { tree: item[7], type: 'source', id: item[8] }; 
+
+    var content = this.make('div').append(
+        modal.makeBasicTextRow( { text: 'Please provide a comment on your replace action.' } ),
+        modal.makeBasicTextInput( { text: 'Comment : ', name: 'comment', value: '' } ),
+        modal.makeHiddenInput( { name: 'replacedNodeId', value: this.replacedNodeId } ),
+        modal.makeHiddenInput( { name: 'columnIndex', value: this.replacingColumn.index } ),
+        modal.makeHiddenInput( { name: 'replacingNodeId', value: this.clipboardItems[ clipboardId ].id } ),
+        modal.makeHiddenInput( { name: 'replacingNodeTreeType', value: this.clipboardItems[ clipboardId ].type } ),
+        modal.makeHiddenInput( { name: 'replacingNodeTreeId', value: this.clipboardItems[ clipboardId ].tree } ),
+        modal.makeBasicActionRow( {
+             onClick:  $.proxy( this.showReplaceEditStatus, this ),
+             onCancel: $.proxy( this.unHighlightClade, this ),
+             submitText: 'Continue',
+             submitArgs: { onSuccess: successArray,
+                           submitUrl: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'replaceClade' ] } ) } } ) );
+
+    if( this.viewer.treeType == 'source' ) {
+        
+        this.addNewGraftedTreeDialogueToContent( { content: content } );
+    }
+
+    BioSync.ModalBox.showModalBox( { content: content, title: 'Replace Clade' } );
+
+}
+
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.pruneClade = function( p ) {
 
     var modal = BioSync.ModalBox;
@@ -545,12 +743,8 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.pruneClade = functio
                            submitUrl: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'pruneClade' ] } ) } } ) );
 
     if( this.viewer.treeType == 'source' ) {
-
-        $( content.children().last() ).before( this.make('div').append( 
-            modal.makeBasicTextRow( { 'text': '' } ),
-            modal.makeBasicTextRow( { 'text': "This action will create a new 'grafted' tree.  Please give it a name and description" } ),
-            modal.makeBasicTextInput( { text: 'Grafted Tree Name : ', name: 'treeName', value: 'Untitled Grafted Tree' } ),
-            modal.makeBasicTextInput( { text: 'Description : ', name: 'treeDescription', value: '' } ) ) );
+        
+        this.addNewGraftedTreeDialogueToContent( { content: content } );
     }
 
     BioSync.ModalBox.showModalBox( { content: content, title: 'Prune Clade' } );

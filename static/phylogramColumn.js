@@ -241,7 +241,18 @@ BioSync.TreeViewer.RenderUtil.Column.prototype = {
 
         this.nodeIdToAddToClipboard = this.closestNodeToMouse.id;
 
-        this.renderObj.showAddToClipboardForm( { column: this, nodeId: this.nodeIdToAddToClipboard } );
+        if( this.renderObj.viewer.isLoggedIn ) {
+
+            this.renderObj.showAddToClipboardForm( { column: this, nodeId: this.nodeIdToAddToClipboard } );
+
+        } else {
+
+            BioSync.Common.notify( {
+                text: 'Please login to use the clipboard.',
+                timeout: 5000,
+                x: this.renderObj.viewPanel.myWidth / 2,
+                y: this.renderObj.viewPanel.myHeight / 2 } );
+        }
     },
 
     clipboardItemAdded: function() {
@@ -256,7 +267,7 @@ BioSync.TreeViewer.RenderUtil.Column.prototype = {
 
     showNodeAddedToClipboardDialogue: function() {
 
-        this.nodeNotify( { 'text': 'Clade Added To Clipboard', node: this.nodeInfo[ this.nodeIfToAddToClipboard ] } );
+        this.nodeNotify( { 'text': 'Clade Added To Clipboard', node: this.nodeInfo[ this.nodeIdToAddToClipboard ] } );
     },
 
     handleEditNodeOptionClick: function() {

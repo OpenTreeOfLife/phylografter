@@ -95,9 +95,15 @@ BioSync.ModalBox.showModalBox = function( p ) {
     var contentWidth = modalBoxContent.outerWidth( true );
     modalBoxContainer.hide();
 
-    if( p.height ) { modalBoxContent.height( p.height ); contentHeight = p.height; }
+    if( p.height ) {
+    
+        modalBoxContent.height( p.height );
+        contentHeight = p.height;
+        modalBoxForm.height( contentHeight - modalBoxTitle.outerHeight( true ) ); 
+    }
+
     if( p.width ) { modalBoxContent.width( p.width ); contentWidth = p.width;  }
-   
+
     modalBoxContent.css( { top: ( ( myDocument.height() - ( contentHeight ) ) / 2 ),
                            left: ( ( myDocument.width() - ( contentWidth ) ) / 2 ) } );
 

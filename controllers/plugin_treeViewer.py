@@ -26,7 +26,7 @@ def treeViewer():
               viewInfo = dict( mode = 'navigate' ) ) ) }}
     """
 
-    return util.handleViewerInstantiation( request, response, session, db )
+    return util.handleViewerInstantiation( request, response, session, db, auth )
 
 
 def getMatchingDescendantLabels():
@@ -131,10 +131,6 @@ def addColumn():
 
     return response.json( util.getRenderModule( request, session ).addColumn( db, session, request ) )
 
-
-def addItemToClipboard():
-    row = db.clipboard.insert( name = request.vars.name, treeType = request.vars.treeType, creationDate = datetime.datetime.now(), nodeId = request.vars.nodeId )
-    return response.json( dict() )
 
 def uncollapseNodes():
     return response.json( util.getRenderModule( request, session ).uncollapseNodes( db, session, request ) )

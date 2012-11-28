@@ -646,6 +646,9 @@ BioSync.Common.unbindFirstFocus = function() {
 BioSync.Common.setMouseToPointer = function() { document.body.style.cursor = 'pointer'; }
 BioSync.Common.setMouseToDefault = function() { document.body.style.cursor = 'default'; }
 
+BioSync.Common.underlineText = function() { $( this ).css( { 'text-decoration': 'underline' } ); }
+BioSync.Common.removeTextUnderline = function() { $( this ).css( { 'text-decoration': 'none' } ); }
+
 BioSync.Common.isModalBoxVisible = function() { return $('#modalBoxContainer').is(':visible'); }
 
 $(document).mousemove( BioSync.Common.checkForSymbolDrag );
