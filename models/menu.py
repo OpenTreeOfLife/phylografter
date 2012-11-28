@@ -22,6 +22,7 @@ response.meta.copyright = 'Copyright 2007-2012'
 
 response.menu = [
     (T('Home'), False, URL('default','index'), []),
+    (T('Instructions'), False, URL('default','quickstart'), []),
     ## (T('Taxa'), False, URL('taxon','index'), []),
     (T('Studies'), False, URL('study','index'), [
         ("New study", False, URL('study','create', [])),

@@ -287,7 +287,7 @@ def define_tables(db, migrate=False):
               writable=False, notnull=True),
         Field("newick", "text", required=True),
         Field("clade_labels_represent", "string",
-              default="bootstrap values",
+              ## default="bootstrap values",
               requires=IS_NULL_OR(IS_IN_SET(["taxon names", "bootstrap values",
                                              "posterior support"]))),
         Field("clade_labels_comment", "text"),

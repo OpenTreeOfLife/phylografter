@@ -96,7 +96,7 @@ def initializePhylogramTreeConfig():
         verticalTipBuffer = Storage( value = 20, type = 'int' ),
          branchLength = Storage( value = 20, type = 'int' ),
          branchLengthStyle = 'smooth',
-         maxTips = Storage( value = 50, type = 'int' ),
+         maxTips = Storage( value = 200, type = 'int' ),
          verticalPadding = 50,
          horizontalPadding = 50,
          tipLabelBuffer = 10,
