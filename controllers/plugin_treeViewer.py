@@ -26,7 +26,7 @@ def treeViewer():
               viewInfo = dict( mode = 'navigate' ) ) ) }}
     """
 
-    return util.handleViewerInstantiation( request, response, session, db )
+    return util.handleViewerInstantiation( request, response, session, db, auth )
 
 
 def getMatchingDescendantLabels():
