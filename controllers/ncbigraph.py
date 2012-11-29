@@ -9,7 +9,7 @@ def fan():
     G = NCBIgraph.connect()
     n = G.ncbi_node_idx.get_unique(taxid=taxid)
     sg = NCBIgraph.named_neighborhood_subgraph(G, n.eid)
-    pos = NCBIgraph.fan_layout(sg)
+    pos = NCBIgraph.fan_layout(sg, start=-45, end=45, radius=1000)
 
     t = NCBIgraph.tango()
     stree_colors = defaultdict(lambda:'#%02x%02x%02x'% tuple(
@@ -23,7 +23,7 @@ def fan():
         stree = sg.edge2stree[e]
         edges.append(dict(source=src, target=tgt, stree=stree, color=c))
 
-    nodes = []
+    nodes = {}
     for v in sg.vertices():
         n = sg.sgv2vtx[v]
         if n.type=='ncbi_node': c='blue'
@@ -31,8 +31,8 @@ def fan():
         else: c = 'yellow'
         vtx = sg.sgv2vtx[v]
         x, y = pos[v]
-        nodes.append(dict(eid=vtx.eid, x=x, y=y, color=c,
-                          label=vtx.get('name') or ''))
+        nodes[vtx.eid] = dict(x=x, y=-y, color=c,
+                              label=vtx.get('name') or '')
 
     return dict(nodes=nodes, edges=edges)
         

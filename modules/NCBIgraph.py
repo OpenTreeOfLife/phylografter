@@ -491,7 +491,7 @@ def n4jedges2graph(edges, root_eid=None):
     if root_eid: sg.root = sg.eid2sgv[root_eid]
     return sg
 
-def fan_layout(sg):
+def fan_layout(sg, start=-45.0, end=45.0, radius=500):
     stree_leafcount = Counter()
     all_leaves = list(sg.leaves())
     for lf in all_leaves:
@@ -516,14 +516,16 @@ def fan_layout(sg):
                     leaves.insert(i, lf)
                 else:
                     i = leaves.index(lf)
-    angle = -45
-    unit = 90.0/(len(leaves)-1)
+    angle = start
+    unit = (end-start)/float(len(leaves)-1)
+    print 'unit', unit
     for lf in leaves:
-        x = math.cos(math.radians(angle))*1000
-        y = math.sin(math.radians(angle))*1000
+        ## print 'angle', angle
+        x = math.cos(math.radians(angle))*radius
+        y = math.sin(math.radians(angle))*radius
         angle += unit
         pos[lf] = [x,y]
-        pin[lf] = True
+        pin[lf] = 1
 
     for lf in leaves:
         for stree, p in iter_rootpaths(sg, lf):
