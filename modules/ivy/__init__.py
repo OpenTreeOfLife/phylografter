@@ -28,12 +28,12 @@ from . import treebase
 #import db
 #import contrib
 try:
-    import ltt as _ltt
+    from . import ltt as _ltt
     ltt = _ltt.ltt
-    import graph
+    from . import graph
 except ImportError:
     pass
 
-import chars, align, sequtil
+from . import chars, align, sequtil
 ## try: import vis
 ## except RuntimeError: pass
