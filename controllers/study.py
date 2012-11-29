@@ -355,6 +355,10 @@ def view():
     t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
         request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
         limitby=(0,20), orderby=db.ottol_name.unique_name)
+    if rec.treebase_id:
+        t.treebase_id.comment = A(
+            "Import from TreeBASE", _class="button",
+            _href=URL('study','tbimport',args=rec.treebase_id))
     form = SQLFORM(t, rec, deletable=False, readonly=readonly,
                    fields = ["citation", "year_published", "doi", "label",
                              "focal_clade_ottol", "treebase_id",

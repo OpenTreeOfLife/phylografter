@@ -1,0 +1,67 @@
+{{response.subtitle='instructions'}}
+{{extend 'layout.html'}}
+
+<h3>How to upload data</h3>
+
+<ol style="width:40em">
+  <li>
+    <a href="user/login" style="font-weight:bold">Log in</a> using an
+    online account (Google, Yahoo!, etc.)
+  </li>
+  <li>
+    <span style="font-weight:bold">Request "contributor" permission
+    for your account</span> by sending an e-mail to <a href="mailto:rree at
+    fieldmuseum dot org">rree at fieldmuseum dot org</a>.
+  </li>
+  <li>
+    <span style="font-weight:bold">Create a new study record</span>
+    (published source of trees and data), by selecting an option from
+    the "Studies" menu above:
+    <ol>
+      <li>
+	<a href="{{=URL('study','create')}}"target="_blank">New
+	study</a>, or
+      </li>
+      <li>
+	<a href="{{=URL('study','tbimport')}}"target="_blank">Import
+	from TreeBASE</a>
+      </li>
+    </ol>
+    (Note: you may want to search
+    the <a href="{{=URL('study','index')}}">studies table</a> first to
+    make sure the study has not already been added. E.g., search by
+    typing the author's name into the text field at the bottom of the
+    "Citation" column.)
+  </li>
+  <li>
+    <span style="font-weight:bold">Upload trees and data</span>
+    associated with the study using the <input type="button"
+    value="Upload new tree"/> and <input type="button" value="Add file"/> buttons. If possible, upload a file containing the Genbank accession numbers of the sequences used in the study.
+  </li>
+  <li>
+    <span style="font-weight:bold">Tag studies and trees</span> with
+    arbitrary terms using the "Tags" input field on the right side of
+    their respective pages. For example, a tree might be tagged with
+    the names of the genes used to reconstruct it.
+  </li>
+  <li>
+    <span style="font-weight:bold">Map OTUs to taxa</span>. Each study
+    has an associated set of operational taxonomic units (OTUs) that
+    should be mapped if possible to names in the reference
+    taxonomy. Leaf nodes on uploaded trees with labels that match
+    taxon names are mapped automatically. The others can be mapped
+    manually:
+
+    <p>Clicking <input type="button"
+    value="Map&nbsp;OTUs&nbsp;to&nbsp;Taxa"/> will bring up a table
+    showing node labels in the first column and taxon names in the
+    second. Click the name in the second column (will be "None" if the
+    OTU is unmapped) and type the name of the correct taxon.</p>
+    
+    <p style="font-weight:bold">Please note, at this time it
+      is <span style="text-decoration:underline">not possible</span>
+      to add new names to the reference taxonomy through
+      Phylografter.</p>
+  </li>
+  
+</ol>

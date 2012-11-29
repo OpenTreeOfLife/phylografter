@@ -40,3 +40,6 @@ def call():
     """
     session.forget()
     return service()
+
+def quickstart():
+    return dict()
