@@ -9,7 +9,7 @@ import math
 from gluon.storage import Storage
 from types import *
 
-def handleViewerInstantiation( request, response, session, db ):
+def handleViewerInstantiation( request, response, session, db, auth ):
     """
     This function handles a viewer instantiation request.  This is not fully fleshed out - more details to come.
     In controllers/plugin_treeViewer.py, def treeViewer, can provide more information as well.
@@ -42,6 +42,7 @@ def handleViewerInstantiation( request, response, session, db ):
             instanceParams[ param ] = request.vars[ param ]
 
     instanceParams[ 'isTreePreprocessed' ] = session.TreeViewer.isTreePreprocessed = False
+    instanceParams[ 'isLoggedIn' ] = auth.is_logged_in()
 
     return dict( instanceParams = response.json( instanceParams ) )
 
