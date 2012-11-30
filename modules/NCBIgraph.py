@@ -516,9 +516,8 @@ def fan_layout(sg, start=-45.0, end=45.0, radius=500):
                     leaves.insert(i, lf)
                 else:
                     i = leaves.index(lf)
-    angle = start
-    unit = (end-start)/float(len(leaves)-1)
-    print 'unit', unit
+    unit = (end-start)/float(len(leaves))
+    angle = start + 0.5*unit
     for lf in leaves:
         ## print 'angle', angle
         x = math.cos(math.radians(angle))*radius
@@ -533,7 +532,7 @@ def fan_layout(sg, start=-45.0, end=45.0, radius=500):
             for e in p[1:]: sg.eweight[e] *= 1.2
 
     return gt.sfdp_layout(sg,
-                          C=0.00001,
+                          C=1e-8,
                           p=-1,
                           pos=pos,
                           pin=pin,
