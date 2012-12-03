@@ -695,11 +695,11 @@ def ref_from_doi():
             o.write(year + ". ")
         title = d.get("title", "")
         if title:
-            o.write('"%s" ' % title)
+            o.write('%s. ' % title.strip())
         journal = d.get("container-title", "")
         if journal:
             o.write(journal)
-            o.write(". ")
+            o.write(" ")
         volume = d.get("volume", "")
         if volume:
             o.write(volume)
@@ -707,12 +707,12 @@ def ref_from_doi():
         if issue:
             o.write("(" + issue + ")")
         if issue or volume:
-            o.write(". ")
+            o.write(":")
         page = d.get("page", "")
         if page:
             o.write(page)
             o.write(".")
-        return o.getvalue(), year
+        return ' '.join(o.getvalue().split()), year
 
     if len(request.args) != 2:
         response.status = 404

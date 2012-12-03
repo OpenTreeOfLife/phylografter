@@ -41,7 +41,7 @@ def getMatchingDescendantLabels():
     query = [ \
         'SELECT SQL_CALC_FOUND_ROWS ', nTbl, '.id, ' , nTbl, '.label, ottol_name.name, ', nTbl, '.next, ', nTbl, '.back '
         'FROM ', nTbl, ' LEFT JOIN ottol_name ON ', nTbl, '.ottol_name = ottol_name.id ',
-        'WHERE ', nTbl, '.tree = ', session.TreeViewer.treeId, ' AND ' ]
+        'WHERE ', nTbl, '.tree = ', str(session.TreeViewer.treeId), ' AND ' ]
 
     if( int( request.vars.next ) != 1 ):
 
