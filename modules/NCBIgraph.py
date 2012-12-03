@@ -446,20 +446,21 @@ def stree_subgraph(G):
     sg.leaves = leaves
     return sg
 
-def named_neighborhood_subgraph(G, root_eid):
+def named_neighborhood_subgraph(G, root_eid, sg=None):
     edges = G.gremlin.query(scripts.named_neighborhood, dict(n=root_eid))
-    return n4jedges2graph(edges, root_eid)
+    return n4jedges2graph(edges, root_eid, sg)
 
-def n4jedges2graph(edges, root_eid=None):
-    sg = gt.Graph()
-    sg.sgv2vtx = {}
-    sg.eid2sgv = {}
-    ## sg.sgv2eid = {}
-    sg.eid2vtx = {}
-    sg.edge2stree = {}
-    sg.eweight = sg.new_edge_property('double')
-    ## sg.ecolor = sg.new_vertex_property("string")
-    sg.vtext = sg.new_vertex_property("string")
+def n4jedges2graph(edges, root_eid=None, sg=None):
+    if not sg:
+        sg = gt.Graph()
+        sg.sgv2vtx = {}
+        sg.eid2sgv = {}
+        ## sg.sgv2eid = {}
+        sg.eid2vtx = {}
+        sg.edge2stree = {}
+        sg.eweight = sg.new_edge_property('double')
+        ## sg.ecolor = sg.new_vertex_property("string")
+        sg.vtext = sg.new_vertex_property("string")
 
     for e in edges:
         # reverse edge direction

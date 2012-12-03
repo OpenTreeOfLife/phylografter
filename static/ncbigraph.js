@@ -8,29 +8,35 @@ function draw_canvas(canvas, w, h, node_radius) {
 	$.each(data.edges, function(i, edge) {
 	    var src = data.nodes[edge.source];
 	    var tgt = data.nodes[edge.target];
-	    var theta = Raphael.angle(src.x, src.y, tgt.x, tgt.y);
-	    if (src.x < tgt.x) theta = 180.0-theta;
-	    edge.theta = theta;
+	    var deg = Raphael.angle(src.x, src.y, tgt.x, tgt.y); //degrees
+	    if (src.x < tgt.x) { deg = 180.0-deg; }
+	    edge.deg = deg;
 	    var oe = outEdges[edge.source];
-	    oe = oe ? oe : [];
-	    oe.push(edge);
+	    oe = oe ? oe : {};
+	    ov = oe[edge.target];
+	    ov = ov ? ov : [];
+	    ov.push(edge);
+	    oe[edge.target] = ov;
 	    outEdges[edge.source] = oe;
 	    var ie = inEdges[edge.target];
-	    ie = ie ? ie : [];
-	    ie.push(edge);
+	    ie = ie ? ie : {};
+	    iv = ie[edge.source];
+	    iv = iv ? iv : [];
+	    iv.push(edge);
+	    ie[edge.source] = iv;
 	    inEdges[edge.target] = ie;
 	    //c.path('M'+src.x+','+src.y+' L'+tgt.x+','+tgt.y);
 	});
 	$.each(data.nodes, function(eid, node) {
 	    //console.log([node.label, inEdges[node.eid]]);
-	    var edges = inEdges[node.eid] ? inEdges[node.eid] : [];
-	    if (edges.length > 0) {
+	    var ev = outEdges[node.eid] ? outEdges[node.eid] : {};
+	    $.each(ev, function(target, edges) {
 		var u = 10;
 		var span = (edges.length-1) * u;
 		var c0 = -span/2;
 		$.each(edges, function(i, edge) {
 		    var src = data.nodes[edge.source];
-		    var rad = (edge.theta+90) * (Math.PI/180);
+		    var rad = (edge.deg+90) * (Math.PI/180);
 		    var src_cpx = src.x + Math.cos(rad)*c0;
 		    var src_cpy = src.y + Math.sin(rad)*c0;
 		    var tgt_cpx = node.x + Math.cos(rad)*c0;
@@ -46,7 +52,7 @@ function draw_canvas(canvas, w, h, node_radius) {
 			      'stroke-width': 2});
 		    c0 += u;
 		});
-	    }
+	    });
 	});
 	$.each(data.nodes, function(eid, node) {
 	    var radius = node_radius * node.radius;

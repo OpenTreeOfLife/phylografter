@@ -5,10 +5,15 @@ def index():
     return dict()
 
 def fan():
-    taxid = request.args(0) or '91827' # core eudicots
     G = NCBIgraph.connect()
+    ## taxid = request.args(0) or '91827' # core eudicots
+    taxid='71275'
     n = G.ncbi_node_idx.get_unique(taxid=taxid)
     sg = NCBIgraph.named_neighborhood_subgraph(G, n.eid)
+
+    ## rosids = G.ncbi_node_idx.get_unique(taxid='71275')
+    ## NCBIgraph.named_neighborhood_subgraph(G, rosids.eid, sg)
+    
     ## pos = NCBIgraph.fan_layout(sg, start=-45, end=45, radius=1000)
     pos = NCBIgraph.fan_layout(sg, start=-45, end=45, radius=1000)
 
@@ -39,6 +44,7 @@ def fan():
                               eid=vtx.eid, taxid=vtx.get('taxid') or None,
                               label=vtx.get('name') or '')
 
+    print edges
     return dict(nodes=nodes, edges=edges)
         
     
