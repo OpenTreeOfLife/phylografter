@@ -214,12 +214,20 @@ def dtrecords():
 def details():
     return DIV()
 
+def delete_stree(rec):
+    snodes = db(db.snode.tree==i).select()
+    for n in snodes:
+        if n.otu.snode.count()==1:
+            del db.otu[int(n.otu)]
+        n.delete_record()
+    rec.delete_record()
+
+@auth.requires_membership('editor')
 def delete():
     i = int(request.args(0) or 0)
     rec = db.stree(i)
     assert rec
-    db(db.snode.tree==i).delete()
-    rec.delete_record()
+    delete_stree(rec)
 
 def _lookup_taxa(nodes):
     def f(x):
