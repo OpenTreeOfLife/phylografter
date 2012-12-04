@@ -23,10 +23,15 @@ def pruneClade():
 
     return response.json( util.getRenderModule( request, session, 'Graft' ).pruneClade( db, session, request, auth ) )
 
+
 def replaceClade():
 
     return response.json( util.getRenderModule( request, session, 'Graft' ).replaceClade( db, session, request, auth ) )
 
+
+def graftClade():
+
+    return response.json( util.getRenderModule( request, session, 'Graft' ).graftClade( db, session, request, auth ) )
 
 
 def updateUrl():
@@ -52,47 +57,6 @@ def getPreEditClade():
     return util.getRenderResponse( response, session, clade )
 
 
-def getPostEditClade():
-
-    editRow = db( db.gtree_edit.id == request.vars.editId ).select()[0]
-
-    clade = build.node2tree( db, editRow.affected_clade_id, 'grafted' )
-
-    grafts = db( ( db.gtree_edit.gtree == session.TreeViewer.treeId ) &
-                 ( db.gtree_edit.mtime > editRow.mtime ) ).select( orderby = "mtime DESC" )
-
-
-    for graft in grafts:
-        graftUtil.revertEdit( db, session, clade, graft )
-
-    util.autoCollapse( clade, session, db, 'cladogram', [ ] )
-
-    return util.getRenderResponse( response, session, clade )
-
-       
-        
-def graftClade():
-
-    tree = build.tree( db, session.TreeViewer.treeId, session.TreeViewer.type )
-
-    newCladeRecord = db( db.clipboard.id == request.vars.clipboardNodeId ).select().first()
-
-    newCladeSiblingId = int( request.vars.affectedNodeId )
-
-    graftUtil.graftClade( tree, newCladeSiblingId, build.node2tree( db, newCladeRecord.nodeId, newCladeRecord.treeType ) )
-
-
-
-def postGraftDBUpdate():
-    
-    graftUtil.postGraftDBUpdate( db, session, auth )
-
-
-
-def postPruneDBUpdate():
-    graftUtil.postPruneDBUpdate( db, session, auth )
-
-
 def getGtreeGraftHistory():
 
     return response.json( \
@@ -105,138 +69,6 @@ def deleteGtree():
     return response.json( dict() )
 
 
-
-#below is old..
-def sourceNavigatePrune( params ):
-    
-    db = params.db; auth = params.auth
-
-    tree = build.stree( db, params.treeId )
-
-    treePrune( Storage( db = db, params = params, tree = tree ) )
-    
-    insertSTreeId = params.treeId
-
-    params.treeId = createGTreeRecord( Storage( auth = auth, db = db, params = params ) )
-
-    editId = createEditRecord( Storage( auth = auth, db = db, params = params, action = 'prune', treeType = 'source' ) )
-
-    return postGraftForClient( Storage(
-        params = params,
-        editId = editId,
-        tree = tree,
-        treeType = 'source',
-        action = 'prune',
-        insertSTreeId = insertSTreeId ) )
-
-
-def graftedNavigatePrune( params ):
-    
-    db = params.db; auth = params.auth
-
-    tree = build.gtree( db, params.treeId )
-
-    prunedGNode = treePrune( Storage( db = db, params = params, tree = tree ) )
-
-    editId = createEditRecord( Storage( auth = auth, db = db, params = params, action = 'prune', treeType = 'grafted' ) )
-
-    pruneGNodeRecords( Storage( db = db, params = params, node = prunedGNode, editId = editId ) )
-
-    return postGraftForClient( Storage(
-        params = params,
-        editId = editId,
-        tree = tree,
-        treeType = 'grafted',
-        action = 'prune' ) )
-
-
-###Old - hopefully deprecated###
-def navigateExpandNode():
-
-    root = build.gnode2tree( db, request.vars.nodeId, ( db.gnode.pruned == False ) )
-
-    return response.json( treeUtil.getNavigateData( { 'tree': root, 'info': { 'viewerHeight': session.viewportHeight,
-                     
-                                                                              'labelWidthMetric': session.labelWidthMetric } } ) )
-def navigateGetTree():
-
-    session.labelWidthMetric = float( request.vars.labelWidthMetric )
-    session.viewportHeight = int( request.vars.viewportHeight )
-
-    root = build.gtree( db, request.args[0] )
-    
-    return response.json( treeUtil.getNavigateData( { 'tree': root,
-                                                      'info': { 'viewerHeight': session.viewportHeight,
-                                                                'labelWidthMetric': session.labelWidthMetric } } ) )
-
-
-def navigateViewGraft():
-    
-    return response.json( dict() )
-
-    gTreeId = int( request.vars.treeId )
-    editId = int( request.vars.editId )
-
-    sourceTree = build.stree( db, db( ( db.gnode.tree == gTreeId ) &
-                                      ( db.gnode.next == 1 ) &
-                                      ( db.snode.id == db.gnode.snode ) &
-                                      ( db.stree.id == db.snode.tree ) ).select( db.stree.id )[0] )
-
-
-    grafts = db( ( db.gtree_edit.gtree == gTreeId ) &
-                 ( db.gtree_edit.mtime <= db( db.gtree_edit.id == editId ).select( db.gtree_edit.mtime )[0] ) ).select( orderby = db.gtree_edit.mtime )
-
-
-    for graft in grafts:
-        treeUtil.graft( { 'graft': graft, 'tree': sourceTree } )
-
-    return response.json( dict() )
-    
-
-
-
-
-def navigateGetGraftView():
-
-    baseTree = None
-
-    if request.vars.treeType == 'source':
-
-       baseTree = build.snode2tree( db, request.vars.affectedCladeId )
-
-    elif request.vars.editId:
-       
-       baseTree = treeUtil.rollbackTree( Storage( editRecord = db.gtree_edit[ request.vars.editId ],
-                                                  tree = build.gtree( db, request.vars.treeId ), db = db ) )
-       
-       baseTree = treeUtil.getNodeById( { 'currentNode': baseTree, 'id': int( request.vars.affectedCladeId ) } )
-       
-    elif request.vars.treeType == 'grafted':
-
-       baseTree = build.gnode2tree( db, request.vars.affectedCladeId, ( db.gnode.pruned == False ) )
-
-    
-    newSiblingClade = build.snode2tree( db, request.vars.clipboardNodeId )
-    
-    if( request.vars.graftType == 'graft' ):
-        baseTree.add_child( newSiblingClade )
-    elif( request.vars.graftType == 'replace' ):
-        childToRemove = treeUtil.getNodeById( { 'currentNode': baseTree,
-                                                'id': int( request.vars.affectedNodeId ) } )
-        baseTree.remove_child( childToRemove )
-        baseTree.add_child( newSiblingClade )
-    
-    return response.json( treeUtil.getNavigateData( { 'tree': baseTree, 'info': { 'viewerHeight': session.viewportHeight,
-                                                                                  'labelWidthMetric': session.labelWidthMetric } } ) )
-
-
-
-def commitGraftAction():
-    
-    params = treeUtil.handleGraftParams( request.vars )
-    params.db = db; params.auth = auth; params.session = session
-
-    return response.json( getattr( treeUtil, ''.join( [ params.treeType, params.viewMode.title(), params.graftType.title() ] ) )( params ) )
 
 
 def isTreeOwner():

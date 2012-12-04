@@ -38,6 +38,7 @@ def pruneClade( db, session, request, auth ):
     return dict() 
 
 
+
 def replaceClade( db, session, request, auth ):
 
     replacedNodeId = int( request.vars.replacedNodeId )
@@ -70,6 +71,27 @@ def replaceClade( db, session, request, auth ):
                     while( ( len( treeState.columns ) - 1 ) > columnIndex ):
                         treeState.columns.pop()
 
-    graftUtil.postReplaceDBUpdate( db, session, request, auth, tree, replacedCladeRow )
+    graftUtil.postReplaceDBUpdate( db, session, request, auth, tree, replacedCladeRow, replacingClade )
+
+    return dict()
+
+
+def graftClade( db, session, request, auth ):
+
+    graftingOntoNodeId = int( request.vars.graftingOntoNodeId )
+    graftingNodeId = int( request.vars.graftingNodeId )
+    graftingNodeTreeId = int( request.vars.graftingNodeTreeId )
+
+    columnIndex = int( request.vars.columnIndex )
+    
+    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
+    columnInfo = treeState.columns[ columnIndex ]
+
+    tree = getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, treeState.columns[ 0 ].rootNodeId, Storage() )
+    graftingClade = getattr( build, ''.join( [ request.vars.graftingNodeTreeType, 'Clade' ] ) )( db, graftingNodeId, Storage() )
+
+    graftUtil.graftClade( tree, graftingOntoNodeId, graftingClade )
+
+    graftUtil.postGraftDBUpdate( db, session, request, auth, tree, graftingOntoNodeId, graftingClade )
 
     return dict()

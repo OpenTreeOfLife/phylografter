@@ -533,6 +533,106 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.handleMovingClipboar
     }
 }
 
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getClipboardForCladeGraft = function( p ) {
+
+    this.graftingColumn = p.column;
+    this.graftingOntoNodeId = p.nodeId;
+
+    this.highlightClade( { column: p.column, nodeId: this.graftingOntoNodeId } );
+
+    $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_clipboard', argList: [ 'getClipboard' ] } ),
+              type: "GET", data: { },
+              success: new Array( $.proxy( this.showModalClipboardForCladeGraft, this ) ) } );
+}
+
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardForCladeGraft = function( response ) {
+
+    var clipboardInfo = eval( '(' + response + ')' );
+    
+    var modal = BioSync.ModalBox;
+
+    var clipboardItems = this.make('div');
+
+    var css = { 'float': 'left', 'text-align': 'center', margin: '5px 0px', 'font-weight': 'bold' };
+
+    var modalBoxWidth = this.viewer.windowWidth * .75;
+
+    this.clipboardSubmitButton = this.graftButton = this.make('span').text( 'Add Child' ).css( { 'color': 'grey' } ).attr( { 'active': 'no' } );
+    this.clipboardSubmitAction = this.askForGraftCladeInfo;
+
+    $('#modalBoxForm').append(
+        this.make( 'div' ).append(
+            this.make( 'div' ).append(
+                BioSync.ModalBox.makeBasicTextRow( { text: "Here are your clipboard items.  Click on an item to select it.  To add an item in this list as a child to the selected node in the tree, click the 'Add Child' button below." } ),
+                this.make('div').css( { 'text-align': 'center',
+                                        'font-size': '20px',
+                                        'color': 'steelBlue',
+                                        'margin-bottom': '10px',
+                                        'padding': '10px' } ).text( 'Source Tree Clipboard Items' ),
+                this.make( 'div' ).css( { 'border': '1px solid black',
+                                          'padding': '10px',
+                                          'border-radius': '5px' } ).append( 
+                    this.make( 'div' ).width( modalBoxWidth * .25 ).css( css ).text( 'Name' ),
+                    this.make( 'div' ).width( modalBoxWidth * .10 ).css( css ).text( 'Descendants' ),
+                    this.make( 'div' ).width( modalBoxWidth * .15 ).css( css ).text( 'Date Created' ),
+                    this.make( 'div' ).width( modalBoxWidth * .45 ).css( css ).text( 'Study' ),
+                    this.make( 'div' ).css( { 'clear': 'both' } ),
+                    clipboardItems
+                ),
+                this.make( 'div' ).attr( { 'class': 'actionRow' } ).css( { 'padding-bottom': '10px' } ).append(
+                    this.make('div').attr( { 'class': 'twoOpt modalBoxSubmit' } )
+                                    .css( { 'float': 'left' } ).append(
+                        this.graftButton ),
+                    this.make('div').attr( { 'class': 'twoOpt modalBoxCancel' } )
+                                    .css( { 'float': 'left', 'color': 'steelBlue' } ).append(
+                        this.make('span').hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                        .text( 'Cancel' )
+                                        .bind( 'click', { }, BioSync.ModalBox.closeBox )
+                                        .bind( 'click', { }, $.proxy( this.unHighlightClade, this ) ) ) )
+            )
+        )
+    );
+
+    delete css['font-weight'];
+    delete css['font-size'];
+
+    this.clipboardItems = { };
+
+    for( var i = 0, ii = clipboardInfo.sourceList.length; i < ii; i++ ) {
+
+        var item = clipboardInfo.sourceList[ i ];
+
+        this.clipboardItems[ item[0] ] = { tree: item[6], type: 'source', id: item[9] }; 
+
+        clipboardItems.append(
+            this.make( 'div' ).attr( { 'clipboardId': item[0] } )
+                              .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                              .hover( $.proxy( this.giveGreyBackground, this ), $.proxy( this.removeGreyBackground, this ) )
+                              .bind( 'click', { }, $.proxy( this.selectClipboardItem, this ) ).append(
+                this.make('div').width( modalBoxWidth * .25 )
+                                .css( css )
+                                .text( item[2] )
+                                .attr( { 'title': item[2] } )
+                                .css( { 'white-space': 'nowrap', 'overflow': 'hidden', 'text-overflow': 'ellipsis' } ),
+                this.make('div').width( modalBoxWidth * .10 ).css( css ).text( ( Math.floor( ( item[5] - item[4] - 1 ) / 2 ) ) ),
+                this.make('div').width( modalBoxWidth * .15 ).css( css ).text( item[3] ),
+                this.make('div').width( modalBoxWidth * .45 ).css( css )
+                       .css( { 'white-space': 'nowrap', 'overflow': 'hidden', 'text-overflow': 'ellipsis' } ).append(
+                    this.make( 'span' ).text( item[7] /*.substr( 0, 50 ) */ ).attr( { 'title': item[7] } )
+                                       .width( modalBoxWidth * .45 )
+                                       .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                                       .bind( 'click', { studyId: item[6] }, $.proxy( this.openNewStudyWindow, this ) )
+                ),
+                this.make( 'div' ).css( { 'clear': 'both' } )
+            )
+        );
+       
+        BioSync.ModalBox.showModalBox( {
+            width: modalBoxWidth,
+            title: 'Add Clipboard Item to Tree' } );
+    }
+}
+
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getClipboardForCladeReplace = function( p ) {
 
     this.replacingColumn = p.column;
@@ -557,7 +657,8 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
 
     var modalBoxWidth = this.viewer.windowWidth * .75;
 
-    this.replaceButton = this.make('span').text( 'Replace' ).css( { 'color': 'grey' } ).attr( { 'active': 'no' } );
+    this.clipboardSubmitButton = this.replaceButton = this.make('span').text( 'Replace' ).css( { 'color': 'grey' } ).attr( { 'active': 'no' } );
+    this.clipboardSubmitAction = this.askForReplaceCladeInfo;
 
     $('#modalBoxForm').append(
         this.make( 'div' ).append(
@@ -601,7 +702,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
 
         var item = clipboardInfo.sourceList[ i ];
 
-        this.clipboardItems[ item[0] ] = { tree: item[6], type: 'source', id: item[8] }; 
+        this.clipboardItems[ item[0] ] = { tree: item[6], type: 'source', id: item[9] }; 
 
         clipboardItems.append(
             this.make( 'div' ).attr( { 'clipboardId': item[0] } )
@@ -651,20 +752,20 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.selectClipboardItem 
     
     if( ( this.selectedClipboardItem ) && ( this.selectedClipboardItem.get(0) == e.delegateTarget ) ) {
 
-        this.replaceButton.unbind( 'mouseenter' ).unbind( 'mouseleave' ).css( { 'color': 'grey' } ).attr( { 'active': 'no' } );
+        this.clipboardSubmitButton.unbind( 'mouseenter' ).unbind( 'mouseleave' ).css( { 'color': 'grey' } ).attr( { 'active': 'no' } );
         delete this.selectedClipboardItem;
 
     } else {
        
         this.selectedClipboardItem = el.css( { 'background-color': '#F0F0F0' } );
 
-        if( this.replaceButton.attr( 'active' ) == 'no' ) {
+        if( this.clipboardSubmitButton.attr( 'active' ) == 'no' ) {
 
-            this.replaceButton.css( { 'color': 'steelBlue' } )
+            this.clipboardSubmitButton.css( { 'color': 'steelBlue' } )
                               .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
                               .attr( { 'active': 'yes' } )
                               .bind( 'click', { }, BioSync.ModalBox.closeBox )
-                              .bind( 'click', { }, $.proxy( this.askForReplaceCladeInfo, this ) );
+                              .bind( 'click', { }, $.proxy( this.clipboardSubmitAction, this ) );
         }
     }
 }
@@ -717,6 +818,38 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.askForReplaceCladeIn
     }
 
     BioSync.ModalBox.showModalBox( { content: content, title: 'Replace Clade' } );
+
+}
+
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.askForGraftCladeInfo = function( p ) {
+
+    var modal = BioSync.ModalBox;
+
+    var clipboardId = this.selectedClipboardItem.attr( 'clipboardId' );
+
+    var successArray = new Array( $.proxy( this.treeEditSuccess, this ) );
+    
+    var content = this.make('div').append(
+        modal.makeBasicTextRow( { text: 'Please provide a comment on your graft action.' } ),
+        modal.makeBasicTextInput( { text: 'Comment : ', name: 'comment', value: '' } ),
+        modal.makeHiddenInput( { name: 'graftingOntoNodeId', value: this.graftingOntoNodeId } ),
+        modal.makeHiddenInput( { name: 'columnIndex', value: this.graftingColumn.index } ),
+        modal.makeHiddenInput( { name: 'graftingNodeId', value: this.clipboardItems[ clipboardId ].id } ),
+        modal.makeHiddenInput( { name: 'graftingNodeTreeType', value: this.clipboardItems[ clipboardId ].type } ),
+        modal.makeHiddenInput( { name: 'graftingNodeTreeId', value: this.clipboardItems[ clipboardId ].tree } ),
+        modal.makeBasicActionRow( {
+             onClick:  $.proxy( this.showGraftEditStatus, this ),
+             onCancel: $.proxy( this.unHighlightClade, this ),
+             submitText: 'Continue',
+             submitArgs: { onSuccess: successArray,
+                           submitUrl: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'graftClade' ] } ) } } ) );
+
+    if( this.viewer.treeType == 'source' ) {
+        
+        this.addNewGraftedTreeDialogueToContent( { content: content } );
+    }
+
+    BioSync.ModalBox.showModalBox( { content: content, title: 'Graft Clade' } );
 
 }
 

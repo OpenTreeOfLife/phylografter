@@ -406,6 +406,8 @@ def define_tables(db, migrate=False):
         Field( 'user', db.auth_user ),
         Field( 'originalTreeType', 'string', requires=IS_IN_SET( [ "grafted", "source" ] ) ),
         Field( 'mtime', "datetime", default=datetime.datetime.now() ),
+        Field( 'newNodeOriginId', 'integer' ),
+        Field( 'newNodeOriginType', 'integer' ),
         migrate=migrate
         )
 

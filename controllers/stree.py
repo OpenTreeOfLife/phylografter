@@ -384,8 +384,9 @@ def svgView():
 
     if( 'TreeViewer' not in session ):
         session.TreeViewer = Storage()
-        session.TreeViewer.treeType = 'source'
-        session.TreeViewer.strNodeTable = 'snode'
+
+    session.TreeViewer.treeType = 'source'
+    session.TreeViewer.strNodeTable = 'snode'
 
     i = int(request.args(0))
     if i:

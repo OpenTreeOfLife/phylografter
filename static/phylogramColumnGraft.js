@@ -22,3 +22,10 @@ BioSync.TreeGrafter.RenderUtil.Column.prototype.handleReplaceCladeOptionClick = 
 
     this.renderObj.getClipboardForCladeReplace( { column: this, nodeId: this.nodeIdToReplace } );
 }
+
+BioSync.TreeGrafter.RenderUtil.Column.prototype.handleGraftCladeOptionClick = function() {
+
+    this.nodeIdToGraftOnto = this.closestNodeToMouse.id;
+
+    this.renderObj.getClipboardForCladeGraft( { column: this, nodeId: this.nodeIdToGraftOnto } );
+}
