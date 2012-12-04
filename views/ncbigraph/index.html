@@ -9,7 +9,9 @@
 
 <script type="text/javascript">
 $(document).ready(function() {
-    draw_canvas("canvas", 1100, 800, 10, "{{=request.args(0) or 58024}}");
-    //draw_canvas("canvas", 1100, 800, 10, "{{=request.args(0) or 91827}}");
+    //console.log('index.html is {{=request.args(0)}}');
+    var url = "{{=URL('fan', extension='json')}}";
+    var taxid = "{{=request.args(0) or 58024}}"
+    draw_canvas("canvas", 1100, 800, url, taxid, 10);
 })
 </script>

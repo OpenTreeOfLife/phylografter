@@ -111,12 +111,14 @@ def map_taxonomy(G, root):
 
     def get_ncbi_node(leaf):
         label = leaf.rec.label
-        if leaf.rec.ottol_name:
-            if leaf.rec.ottol_name.ncbi_taxid:
-                taxid = str(leaf.rec.ottol_name.ncbi_taxid)
+        oname = leaf.rec.ottol_name or leaf.rec.otu.ottol_name
+        if oname:
+            if oname.ncbi_taxid:
+                taxid = str(oname.ncbi_taxid)
+                #print 'taxid', taxid, oname.name
                 return G.ncbi_node_idx.get_unique(taxid=taxid)
             else:
-                label = leaf.rec.ottol_name.name
+                label = oname.name
         name = label.replace('_', ' ')
         ambig = G.ncbi_name_idx.lookup(name=name) or []
         if ambig:
@@ -125,7 +127,7 @@ def map_taxonomy(G, root):
             else: return v
 
     lvs = root.leaves()
-    unmapped = []; ambig = []
+    unmapped = []; ambig = []; resolved = []
     for lf in lvs:
         lf.ncbi_node = get_ncbi_node(lf)
         if not lf.ncbi_node: unmapped.append(lf)
@@ -134,26 +136,32 @@ def map_taxonomy(G, root):
     leaves = [ x.ncbi_node for x in lvs
                if x.ncbi_node and isinstance(x.ncbi_node, Vertex) ]
     taxroot = ncbi_subtree(G, leaves)
-    ## print 'taxroot 1', taxroot.ncbi_node.name, taxroot.ncbi_node.taxid
+    anc = taxroot.ncbi_node
+    print 'taxroot:', taxroot.ncbi_node.name, taxroot.ncbi_node.taxid
     if ambig:
         for lf in ambig:
-            print 'ambig', lf
-            found = None
+            print 'ambiguous:', lf.rec.label
+            found = []
             for n in lf.ncbi_node:
-                anc = taxroot.ncbi_node
                 params = dict(n=n.eid, anc=anc.eid)
-                if G.gremlin.execute(scripts.ncbi_rootpath, params).content:
+                if G.gremlin.execute(
+                    scripts.ncbi_anc_in_rootpath, params).content:
                     print 'found %s (%s) in %s' % (n.name, n.taxid, anc.name)
-                    found = n
-                    break
-            if found: lf.ncbi_node = found
+                    found.append(n)
+            if found and len(found)==1:
+                lf.ncbi_node = found[0]
+                resolved.append(lf)
             else: lf.ncbi_node = None
         leaf_eids(root)
         leaves = [ x.ncbi_node for x in lvs if x.ncbi_node ]
-        taxroot = ncbi_subtree(G, leaves)
-        ## print 'taxroot 2', taxroot.ncbi_node.name, taxroot.ncbi_node.taxid
-    unmapped = [ x for x in lvs if not x.ncbi_node ]
+        t2 = ncbi_subtree(G, leaves)
+        print 'taxroot is now:', t2.ncbi_node.name, t2.ncbi_node.taxid
+        assert t2.eid == taxroot.eid
+    #unmapped = [ x for x in lvs if not x.ncbi_node ]
     assert (not unmapped), unmapped
+    assert len(resolved)==len(ambig)
+    leaves = [ x.ncbi_node for x in lvs ]
+    taxroot = ncbi_subtree(G, leaves)
     v = [ x.eid for x in leaves ]
     assert len(v)==len(set(v)), 'multiple tips, same taxon not implemented yet'
     leaf_eids(root)
@@ -161,8 +169,8 @@ def map_taxonomy(G, root):
 
     nodes = list(root.postiter())
     for n in nodes:
-        n.ncbi_node = None
         n.conflicts = []
+        n.ncbi_node = None
         v = leafset2taxnodes.get(n.leaf_eids)
         if v:
             taxnode = v[0]
@@ -214,15 +222,16 @@ def insert_mapped_stree(G, root):
             vtx = G.vertices.index.get_unique(ingroup=k)
             if not vtx:
                 vtx = G.vertices.create(type='snode', ingroup=k)
+                print 'node created', vtx.eid
                 G.vertices.index.put(vtx.eid, ingroup=k)
-                print 'created snode', vtx.eid
                 created_nodes.append(vtx)
 
         stree = vtx.get('stree')
         if not stree: stree = [n.rec.tree]
         else:
             i = n.rec.tree
-            if i not in stree: stree.append(i)
+            if i not in stree:
+                stree.append(i)
         snode = vtx.get('snode')
         if not snode: snode = [n.rec.id]
         else:
@@ -242,25 +251,39 @@ def insert_mapped_stree(G, root):
             else:
                 e = G.edges.create(vtx, 'SNODE_CHILD_OF', n.parent.vtx,
                                    stree=[n.rec.tree], snode=[n.rec.id])
-                print 'created SNODE_CHILD_OF', e._outV, e.eid, e._inV
+                print 'edge created SNODE_CHILD_OF', e.eid
                 created_edges.append(e)
+
+            stree = e.get('stree')
+            if not stree:
+                stree = [n.rec.tree]
+            else:
+                i = n.rec.tree
+                if i not in stree: stree.append(i)
+            G.edges.index.put(e.eid, stree=n.rec.tree)
+
+            snode = e.get('snode')
+            if not snode: snode = [n.rec.id]
+            else:
+                i = n.rec.id
+                if i not in snode: snode.append(i)
+            G.edges.index.put(e.eid, snode=n.rec.id)
+
             e.stree=stree
             e.snode=snode
             e.save()
 
-            G.edges.index.put(e.eid, stree=n.rec.tree)
-            G.edges.index.put(e.eid, snode=n.rec.id)
         for c in n.conflicts:
             e = G.edges.create(vtx, 'CONFLICTS_WITH', c,
                                stree=n.rec.tree, snode=n.rec.id)
             G.edges.index.put(e.eid, stree_conflicts=n.rec.tree)
-            print 'created CONFLICTS_WITH', e._outV, e.eid, e._inV
+            print 'edge created CONFLICTS_WITH', e.eid
             created_edges.append(e)
         
     G.edges.create(G.stree, 'ROOT', root.vtx, stree=root.rec.tree)
     return created_nodes, created_edges
 
-def insert_stree(G, stree_id):
+def insert_stree(G, db, stree_id):
     assert not stree_inserted(G, stree_id)
     r = build.stree(db, stree_id)
     map_taxonomy(G, r)
@@ -858,6 +881,55 @@ def draw_fan(sg):
                   vertex_text_position=3.1415,
                   edge_color=ecolor,
                   edge_pen_width=ewidth)
+
+def traverse_fetch_stree_edges(G, stree_id):
+    n = G.vertices.index.get_unique(proxy='stree')
+    q = scripts.fetch_stree
+    edges = list(G.gremlin.query(q, dict(n=n.eid,i=stree_id)))
+    #indexed_edges = list(G.edges.index.lookup(stree=stree_id))
+    return edges
+
+def remove_stree(G, db, stree_id):
+    t = db.snode
+    snode_ids = [ x.id for x in db(t.tree==stree_id).select(t.id) ]
+    edges = traverse_fetch_stree_edges(G, stree_id)
+    nids = set([ e._outV for e in edges ]) | set([ e._inV for e in edges ])
+    for e in edges:
+        if stree_id in e.stree:
+            if len(e.stree)==1:
+                print 'deleting edge', e.eid
+                G.edges.delete(e.eid)
+            else:
+                print 'updating edge', e.eid
+                v = list(e.stree)
+                v.remove(stree_id)
+                e.stree = v
+                v = list(e.snode)
+                for snid in v:
+                    if snid in snode_ids: v.remove(snid)
+                e.snode = v
+                e.save()
+            
+            
+    for n in G.gremlin.query('n._().transform{g.v(it)}', dict(n=list(nids))):
+        if stree_id in n.stree:
+            if len(n.stree)==1:
+                print 'deleting node', n.eid
+                G.vertices.delete(n.eid)
+            else:
+                print 'updating node', n.eid
+                v = list(n.stree)
+                v.remove(stree_id)
+                n.stree = v
+                v = list(n.snode)
+                for snid in v:
+                    if snid in snode_ids: v.remove(snid)
+                n.snode = v
+                n.save()
+        
+    for e in [ x for x in G.stree.outE() if x.stree==stree_id ]:
+        G.edges.delete(e.eid)
+
 
 ## G = connect()
 ## rec = db.stree(3)

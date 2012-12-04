@@ -1,12 +1,13 @@
-function draw_canvas(canvas_id, w, h, node_radius, taxid) {
+function draw_canvas(canvas_id, w, h, url, taxid, node_radius) {
     node_radius = (typeof node_radius==='undefined') ? 10 : node_radius;
     var canvas = Raphael(canvas_id, w, h);
-    $.getJSON('fan.json', 'taxid='+taxid, function(data) {
-	draw_fan(canvas, node_radius, data, 0.0, 1.0);
+    //console.log('draw_canvas is '+taxid);
+    $.getJSON(url, 'taxid='+taxid, function(data) {
+	draw_fan(canvas, url, data, 0.0, 1.0, node_radius);
     });
 }
 
-function draw_fan(canvas, node_radius, data, rotation, scale) {
+function draw_fan(canvas, url, data, rotation, scale, node_radius) {
     var outEdges = {};
     var inEdges = {};
     var fan = canvas.set();
@@ -107,8 +108,8 @@ function draw_fan(canvas, node_radius, data, rotation, scale) {
 		var s = 's'+scale+','+scale+','+node.x+','+node.y;
 		//fan.animate({transform:r+t+s}, 500, '<>');
 		fan.animate({transform:r+t+s, opacity:0}, 500, '<>',function() {
-		    $.getJSON('fan.json', {'taxid':node.taxid}, function(data) {
-			draw_fan(canvas, node_radius, data, 0.0, 1.0);
+		    $.getJSON(url, {'taxid':node.taxid}, function(data) {
+			draw_fan(canvas, url, data, 0.0, 1.0, node_radius);
 		    });
 		});
 	    });

@@ -7,6 +7,7 @@ def index():
 def fan():
     G = NCBIgraph.connect()
     taxid = request.vars.taxid or '91827' # core eudicots
+    #print 'fan is', taxid
     #taxid='71275'
     n = G.ncbi_node_idx.get_unique(taxid=taxid)
     sg = NCBIgraph.named_neighborhood_subgraph(G, n.eid)

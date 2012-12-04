@@ -13,9 +13,16 @@ leafids.each() { lf ->
 c2p
 """
 
-ncbi_rootpath = """
-g.v(n).out('NCBI_CHILD_OF').loop(1) {
-    it.object.id != anc } { true }.id
+fetch_stree = """
+g.v(n).outE('ROOT').filter{it.getProperty('stree')==i}.inV.as('n').inE('SNODE_CHILD_OF').filter{i in it.getProperty('stree')}.outV.loop('n'){true}{true}.outE('SNODE_CHILD_OF').filter{i in it.getProperty('stree')}.dedup()
+"""
+
+find_name = """
+g.v(n).in('NCBI_CHILD_OF').loop(1){it.object.name!=name}{it.object.name==name}
+"""
+
+ncbi_anc_in_rootpath = """
+g.v(n).out('NCBI_CHILD_OF').loop(1){it.object.id != anc}{it.object.id==anc}
 """
 
 stree_rootpath = """
