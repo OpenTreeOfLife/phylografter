@@ -601,7 +601,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
 
         var item = clipboardInfo.sourceList[ i ];
 
-        this.clipboardItems[ item[0] ] = { tree: item[7], type: 'source', id: item[8] }; 
+        this.clipboardItems[ item[0] ] = { tree: item[6], type: 'source', id: item[8] }; 
 
         clipboardItems.append(
             this.make( 'div' ).attr( { 'clipboardId': item[0] } )
@@ -663,6 +663,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.selectClipboardItem 
             this.replaceButton.css( { 'color': 'steelBlue' } )
                               .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
                               .attr( { 'active': 'yes' } )
+                              .bind( 'click', { }, BioSync.ModalBox.closeBox )
                               .bind( 'click', { }, $.proxy( this.askForReplaceCladeInfo, this ) );
         }
     }
@@ -676,6 +677,8 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.openNewStudyWindow =
 }
 
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.addNewGraftedTreeDialogueToContent = function( p ) {
+
+    var modal = BioSync.ModalBox;
 
     $( p.content.children().last() ).before(
         this.make('div').append( 
@@ -692,8 +695,6 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.askForReplaceCladeIn
     var clipboardId = this.selectedClipboardItem.attr( 'clipboardId' );
 
     var successArray = new Array( $.proxy( this.treeEditSuccess, this ) );
-
-        this.clipboardItems[ item[0] ] = { tree: item[7], type: 'source', id: item[8] }; 
 
     var content = this.make('div').append(
         modal.makeBasicTextRow( { text: 'Please provide a comment on your replace action.' } ),

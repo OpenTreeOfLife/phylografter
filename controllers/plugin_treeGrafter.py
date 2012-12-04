@@ -2,7 +2,8 @@ treeUtil = local_import("treeUtil", reload=True)
 viewerUtil = local_import("viewerUtil", reload=True)
 from gluon.storage import Storage
 
-ivy = local_import("ivy", reload=True)
+#ivy = local_import("ivy", reload=True)
+import ivy
 build = local_import("build", reload=True)
 util = local_import( "plugin_treeViewer", reload = True )
 graftUtil = local_import( "plugin_treeGrafter", reload = True )
@@ -86,20 +87,6 @@ def postGraftDBUpdate():
     
     graftUtil.postGraftDBUpdate( db, session, auth )
 
-
-def replaceClade():
-
-    tree = build.tree( db, request.vars.treeId, session.TreeViewer.type )
-
-    newClade = db( db.clipboard.id == request.vars.clipboardNodeId ).select()[0]
-
-    replacedCladeId = int( request.vars.affectedNodeId )
-
-    graftUtil.replaceClade( tree, replacedCladeId, build.node2tree( db, newClade.nodeId, newClade.treeType ) )
-
-    request.vars.clipboardNodeType = newClade.treeType
-
-    graftUtil.postReplaceDBUpdate( db, session, auth, tree, session.TreeViewer.type, replacedCladeId, newClade.nodeId, request.vars )
 
 
 def postPruneDBUpdate():

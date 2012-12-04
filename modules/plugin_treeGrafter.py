@@ -139,13 +139,18 @@ def replaceClade( tree, replacedNodeId, replacingClade ):
     cladeToReplace = util.getNodeById( tree, replacedNodeId )
     parentOfReplaced = cladeToReplace.parent
 
-    parentClade.remove_child( cladeToReplace )
-    parentClade.add_child( replacingClade )
+    parentOfReplaced.remove_child( cladeToReplace )
+    parentOfReplaced.add_child( replacingClade )
+
+    parentOfReplaced.meta[ 'affectedCladeId' ] = True
+    replacingClade.meta[ 'targetGNode' ] = True
 
 
 def postReplaceDBUpdate( db, session, request, auth, tree, replacedCladeRow ):    
   
     treeType = session.TreeViewer.treeType
+
+    replacingCladeId = int( request.vars.replacingNodeId )
 
     if treeType == 'source':
 
@@ -153,13 +158,11 @@ def postReplaceDBUpdate( db, session, request, auth, tree, replacedCladeRow ):
         
         index( tree )
 
-        util.gatherTreeInfo( tree, session )
-        
-        reference = dict( newCladeId = newCladeId, targetGNode = None, oldAffectedCladeId = replacedNode.parent, newAffectedCladeId = None )
+        reference = dict( newCladeId = replacingCladeId, targetGNode = None, oldAffectedCladeId = replacedCladeRow.parent, newAffectedCladeId = None )
         
         insertSnodesToGtree( db, gtreeId, tree, None, reference )
         
-        createEditRecord( db, auth, gtreeId, 'replace', reference['newAffectedCladeId'], replacedNode.id, newCladeId, requestVars.comment, treeType, auth.user.id, reference['targetGNode'] )
+        createEditRecord( db, auth, gtreeId, 'replace', reference['newAffectedCladeId'], replacedCladeRow.id, replacingCladeId, requestVars.comment, treeType, auth.user.id, reference['targetGNode'] )
 
     else:
         
@@ -224,6 +227,8 @@ def pruneClade( tree, nodeId ):
     parentClade = cladeToPrune.parent
 
     parentClade.remove_child( cladeToPrune )
+
+    parentClade.meta[ 'affectedCladeId' ] = True
 
 
 def postPruneDBUpdate( db, session, request, auth, tree, prunedNodeRow ):
@@ -389,11 +394,11 @@ def insertSnodesToGtree( db, gtreeId, node, parentId, reference=None ):
 
     if( reference is not None ):
         
-        if( ( 'newCladeId' in reference ) and ( node.id == reference['newCladeId'] ) ):
+        if( ( 'newCladeId' in reference ) and ( node.id == reference['newCladeId'] ) and ( 'targetGNode' in node.meta ) ):
             
             reference['targetGNode'] = gnode.id
         
-        if( ( 'oldAffectedCladeId' in reference ) and ( node.id == reference['oldAffectedCladeId'] ) ):
+        if( ( 'oldAffectedCladeId' in reference ) and ( node.id == reference['oldAffectedCladeId'] ) and ( 'affectedCladeId' in node.meta ) ):
 
             reference['newAffectedCladeId'] = gnode.id
         
