@@ -459,8 +459,8 @@ def n4jedges2graph(edges, root_eid=None, sg=None):
         sg.eid2vtx = {}
         sg.edge2stree = {}
         sg.eweight = sg.new_edge_property('double')
-        ## sg.ecolor = sg.new_vertex_property("string")
-        sg.vtext = sg.new_vertex_property("string")
+        ## sg.ecolor = sg.new_vertex_property('string')
+        sg.vtext = sg.new_vertex_property('string')
 
     for e in edges:
         # reverse edge direction
@@ -492,7 +492,7 @@ def n4jedges2graph(edges, root_eid=None, sg=None):
     if root_eid: sg.root = sg.eid2sgv[root_eid]
     return sg
 
-def fan_layout(sg, start=-45.0, end=45.0, radius=500):
+def fan_layout(sg, x0=0.0, y0=0.0, start=-45.0, end=45.0, radius=500):
     stree_leafcount = Counter()
     all_leaves = list(sg.leaves())
     for lf in all_leaves:
@@ -500,7 +500,7 @@ def fan_layout(sg, start=-45.0, end=45.0, radius=500):
             stree_leafcount[sg.edge2stree[e]] += 1
 
     pos = sg.new_vertex_property('vector<double>')
-    for x in sg.vertices(): pos[x] = [0.0, 0.0]
+    for x in sg.vertices(): pos[x] = [x0, y0]
     root = sg.root
     pin = sg.new_vertex_property('bool')
     pin[root] = 1
@@ -521,8 +521,8 @@ def fan_layout(sg, start=-45.0, end=45.0, radius=500):
     angle = start + 0.5*unit
     for lf in leaves:
         ## print 'angle', angle
-        x = math.cos(math.radians(angle))*radius
-        y = math.sin(math.radians(angle))*radius
+        x = math.cos(math.radians(angle))*radius + x0
+        y = math.sin(math.radians(angle))*radius + y0
         angle += unit
         pos[lf] = [x,y]
         pin[lf] = 1
@@ -532,12 +532,14 @@ def fan_layout(sg, start=-45.0, end=45.0, radius=500):
             sg.eweight[p[0]] = 0.5
             for e in p[1:]: sg.eweight[e] *= 1.2
 
-    return gt.sfdp_layout(sg,
-                          C=1e-8,
-                          p=-1,
-                          pos=pos,
-                          pin=pin,
-                          eweight=sg.eweight)
+    pos = gt.sfdp_layout(sg,
+                         C=1e-8,
+                         p=-1,
+                         pos=pos,
+                         pin=pin,
+                         eweight=sg.eweight)
+    pos.angle = unit
+    return pos
 
 def named_bfs(sg, vertex, nodemap=None, edgemap=None):
     # sg assumed to be filtered for snode nodes and edges

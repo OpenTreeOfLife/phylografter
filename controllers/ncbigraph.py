@@ -6,8 +6,8 @@ def index():
 
 def fan():
     G = NCBIgraph.connect()
-    ## taxid = request.args(0) or '91827' # core eudicots
-    taxid='71275'
+    taxid = request.vars.taxid or '91827' # core eudicots
+    #taxid='71275'
     n = G.ncbi_node_idx.get_unique(taxid=taxid)
     sg = NCBIgraph.named_neighborhood_subgraph(G, n.eid)
 
@@ -15,7 +15,8 @@ def fan():
     ## NCBIgraph.named_neighborhood_subgraph(G, rosids.eid, sg)
     
     ## pos = NCBIgraph.fan_layout(sg, start=-45, end=45, radius=1000)
-    pos = NCBIgraph.fan_layout(sg, start=-45, end=45, radius=1000)
+    radius = 1000;
+    pos = NCBIgraph.fan_layout(sg, start=-45, end=45, radius=radius)
 
     t = NCBIgraph.tango()
     stree_colors = defaultdict(lambda:'#%02x%02x%02x'% tuple(
@@ -44,7 +45,6 @@ def fan():
                               eid=vtx.eid, taxid=vtx.get('taxid') or None,
                               label=vtx.get('name') or '')
 
-    print edges
-    return dict(nodes=nodes, edges=edges)
+    return dict(nodes=nodes, edges=edges, angle=pos.angle, radius=radius)
         
     
