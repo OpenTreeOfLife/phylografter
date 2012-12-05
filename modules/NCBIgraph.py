@@ -62,7 +62,7 @@ def stree_inserted(G, stree_id):
     return G.edges.index.count(stree=stree_id) > 0
 
 def fetch_stree_root(G, stree_id):
-    q = "g.v(n).outE.and(_().has('stree', T.eq, i)).outV"
+    q = "g.v(n).outE.and(_().has('stree', T.eq, i)).inV"
     x = G.gremlin.query(q, dict(n=G.stree.eid, i=stree_id))
     if x: return x.next()
 
@@ -75,7 +75,7 @@ def ncbi_subtree(G, leaves, fetchnodes=True):
     eid2n = dict([ (x.eid, x) for x in leaves ])
     leafids = eid2n.keys()
     d = G.gremlin.execute(scripts.ncbi_subtree, dict(leafids=leafids)).content
-    nodes = dict([ (x, build.Node(isleaf=True, eid=x)) for x in leafids ])
+    nodes = dict([ (x, build.Node(eid=x)) for x in leafids ])
     for k,(e,(v,)) in d.items():
         k = int(k)
         c = nodes.get(k) or build.Node(eid=k)
@@ -91,6 +91,8 @@ def ncbi_subtree(G, leaves, fetchnodes=True):
         if not n.parent:
             n.isroot = True
             root = n
+    for n in nodes.values():
+        if not n.children: n.isleaf = True
     while len(root.children)==1: root = root.children[0]
     root.parent = None
     return root
@@ -126,6 +128,8 @@ def map_taxonomy(G, root):
             if len(v)==1: return v[0]
             else: return v
 
+    for n in root: n.ncbi_node = None
+
     lvs = root.leaves()
     unmapped = []; ambig = []; resolved = []
     for lf in lvs:
@@ -157,20 +161,35 @@ def map_taxonomy(G, root):
         t2 = ncbi_subtree(G, leaves)
         print 'taxroot is now:', t2.ncbi_node.name, t2.ncbi_node.taxid
         assert t2.eid == taxroot.eid
-    #unmapped = [ x for x in lvs if not x.ncbi_node ]
+    unmapped = [ x for x in root.leaves() if not x.ncbi_node ]
     assert (not unmapped), unmapped
-    assert len(resolved)==len(ambig)
+    assert len(resolved)==len(ambig), '%s, %s' % (resolved, ambig)
     leaves = [ x.ncbi_node for x in lvs ]
     taxroot = ncbi_subtree(G, leaves)
+    print 'taxroot final:', taxroot.ncbi_node.name, taxroot.ncbi_node.taxid
+
     v = [ x.eid for x in leaves ]
     assert len(v)==len(set(v)), 'multiple tips, same taxon not implemented yet'
+
+    # check that leaf taxa are mutually non-nested
+    f = lambda x:x.ncbi_node and x.ncbi_node.eid==lf.ncbi_node.eid
+    for lf in root.leaves():
+        v = taxroot.findall(f)
+        if v:
+            assert len(v)==1
+            if not v[0].isleaf:
+                eids = [ x.ncbi_node.eid for x in v[0] ]
+                g = lambda x:x.ncbi_node and x.ncbi_node.eid in eids
+                nodes = root.findall(g)
+                print root.ismono(nodes)
+    
     leaf_eids(root)
     leafset2taxnodes = leaf_eids(taxroot)
 
     nodes = list(root.postiter())
     for n in nodes:
         n.conflicts = []
-        n.ncbi_node = None
+        #n.ncbi_node = None
         v = leafset2taxnodes.get(n.leaf_eids)
         if v:
             taxnode = v[0]
@@ -179,11 +198,11 @@ def map_taxonomy(G, root):
             n.ncbi_node = taxnode.ncbi_node
             n.label = taxnode.ncbi_node.name
             ref = n
-            for taxnode in v[1:]:
+            for tn in v[1:]:
                 newnode = build.Node(rec=n.rec, conflicts=[], type='snode',
-                                     edge_eid=taxnode.edge_eid,
-                                     ncbi_node=taxnode.ncbi_node,
-                                     label=taxnode.ncbi_node.name,
+                                     edge_eid=tn.edge_eid,
+                                     ncbi_node=tn.ncbi_node,
+                                     label=tn.ncbi_node.name,
                                      leaf_eids=ref.leaf_eids)
                 p = ref.prune()
                 newnode.add_child(ref)
@@ -215,15 +234,18 @@ def insert_mapped_stree(G, root):
     created_nodes = []
     created_edges = []
     for n in root:
+        if not n.ncbi_node:
+            assert not n.isleaf
+            n.taxhash = taxhash(n)
+    for n in root:
         if n.ncbi_node:
             vtx = n.ncbi_node
         else:
-            k = taxhash(n)
-            vtx = G.vertices.index.get_unique(ingroup=k)
+            vtx = G.vertices.index.get_unique(ingroup=n.taxhash)
             if not vtx:
-                vtx = G.vertices.create(type='snode', ingroup=k)
+                vtx = G.vertices.create(type='snode', ingroup=n.taxhash)
                 print 'node created', vtx.eid
-                G.vertices.index.put(vtx.eid, ingroup=k)
+                G.vertices.index.put(vtx.eid, ingroup=n.taxhash)
                 created_nodes.append(vtx)
 
         stree = vtx.get('stree')
@@ -931,7 +953,7 @@ def remove_stree(G, db, stree_id):
         G.edges.delete(e.eid)
 
 
-## G = connect()
+G = connect()
 ## rec = db.stree(3)
 ## root = build.stree(db, rec.id)
 ## map_taxonomy(G, root)
@@ -1001,8 +1023,11 @@ def remove_stree(G, db, stree_id):
 
 ## cmap = {2:'green',3:'purple',4:'orange',9:'brown',10:'cyan',
 ##         212:'magenta'}
-## n = G.ncbi_node_idx.get_unique(name='core eudicotyledons')
 ## n = G.ncbi_node_idx.get_unique(name='rosids')
+## t = tango()
+## cmap = defaultdict(lambda:'#%02x%02x%02x'% tuple(
+##     [ int(x*255) for x in t.next()[:-1] ]))
+## n = G.ncbi_node_idx.get_unique(name='core eudicotyledons')
 ## sg = named_neighborhood_subgraph(G, n.eid)
 ## sg.stree_colors = cmap
 ## draw_fan(sg)

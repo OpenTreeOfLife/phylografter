@@ -5,7 +5,8 @@ leafids.each() { lf ->
     e = c.outE('NCBI_CHILD_OF').next()
     c2p[c.id] = [e.id, e.inV.id]
     
-    c.out('NCBI_CHILD_OF').loop(1){!(it.object.id in c2p)}{true}.each() { n ->
+    //c.out('NCBI_CHILD_OF').loop(1){!(it.object.id in c2p)}{true}.each() { n ->
+    c.out('NCBI_CHILD_OF').loop(1){true}{true}.each() { n ->
         e = n.outE('NCBI_CHILD_OF')
         if (e) { e = e.next(); c2p[n.id] = [e.id, e.inV.id] }
     }
