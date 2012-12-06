@@ -135,29 +135,29 @@ def map_stree(G, root):
         v = G.gremlin.execute(q, dict(n=lf.ncbi_node.eid)).content
         lf.ncbi_eid_rootpath.extend(v)
 
-    ## c = Counter()
-    ## v = filter(f, root.leaves())
-    ## N = len(v)
-    ## anc = None
-    ## for lf in v:
-    ##     for i, eid in enumerate(lf.ncbi_eid_rootpath):
-    ##         c[eid] += 1
-    ##         if c[eid]==N:
-    ##             anc = G.vertices.get(eid)
-    ##             break
-    ## print 'anc is %s (%s)' % (anc.name, anc.eid)
-
-    i = -1
+    c = Counter()
     v = filter(f, root.leaves())
-    s = set([ x.ncbi_eid_rootpath[i] for x in v ])
-    assert len(s)==1
-    while 1:
-        i -= 1
-        t = set([ x.ncbi_eid_rootpath[i] for x in v ])
-        if len(t) > 1: break
-        s = t
-    anc = G.vertices.get(s.pop())
+    N = len(v)
+    anc = None
+    for lf in v:
+        for i, eid in enumerate(lf.ncbi_eid_rootpath):
+            c[eid] += 1
+            if c[eid]==N:
+                anc = G.vertices.get(eid)
+                break
     print 'anc is %s (%s)' % (anc.name, anc.eid)
+
+    ## i = -1
+    ## v = filter(f, root.leaves())
+    ## s = set([ x.ncbi_eid_rootpath[i] for x in v ])
+    ## assert len(s)==1
+    ## while 1:
+    ##     i -= 1
+    ##     t = set([ x.ncbi_eid_rootpath[i] for x in v ])
+    ##     if len(t) > 1: break
+    ##     s = t
+    ## anc = G.vertices.get(s.pop())
+    ## print 'anc is %s (%s)' % (anc.name, anc.eid)
 
     resolved = []
     for lf in ambig:
@@ -204,19 +204,19 @@ def map_stree(G, root):
         return lvs
     mrca(root)
 
-    ## # double-check monophyly
-    ## for n in root:
-    ##     if n.ncbi_node:
-    ##         eid = n.ncbi_node.eid
-    ##         lvs = n.leaves()
-    ##         for lf in lvs:
-    ##             if eid not in lf.ncbi_eid_rootpath:
-    ##                 print n, lf
-    ##         assert all([ eid in x.ncbi_eid_rootpath for x in lvs ]), n
+    # double-check monophyly
+    for n in root:
+        if n.ncbi_node:
+            eid = n.ncbi_node.eid
+            lvs = n.leaves()
+            for lf in lvs:
+                if eid not in lf.ncbi_eid_rootpath:
+                    print n, lf
+            assert all([ eid in x.ncbi_eid_rootpath for x in lvs ]), n
 
     expand = root.findall(lambda x:x.ncbi_node and x.parent)
     for n in expand:
-        print n.ncbi_node.name
+        #print 'expanding', n.ncbi_node.name,
         outgroup = lfset - set(n.leaves())
         ref = n
         v = n.ncbi_eid_rootpath[1:]
@@ -225,7 +225,7 @@ def map_stree(G, root):
             if (eid not in w) and all([ eid not in x.ncbi_eid_rootpath
                                         for x in outgroup ]) :
                 tn = G.vertices.get(eid)
-                print '  adding', tn.name, eid
+                #print tn.name,
                 newnode = build.Node(rec=n.rec, conflicts=[], type='snode',
                                      ncbi_node=tn,
                                      ncbi_eid_rootpath=v[i:],
@@ -235,8 +235,18 @@ def map_stree(G, root):
                 p.add_child(newnode)
                 ref = newnode
             else: break
-        
+        #print
 
+    lvs = [ x.ncbi_node for x in root.leaves() ]
+    taxtree = ncbi_subtree(G, lvs, fetchnodes=False)
+    clades = [ x.ncbi_node.eid for x in root if x.ncbi_node ]
+    conflicts = set()
+    for n in taxtree:
+        if n.eid not in clades: conflicts.add(n.eid)
+    root.conflicts = conflicts
+
+
+# deprecated, use map_stree
 def map_taxonomy(G, root):
     def leaf_eids(root):
         d = defaultdict(list)
@@ -443,12 +453,12 @@ def insert_mapped_stree(G, root):
             e.snode=snode
             e.save()
 
-        for c in n.conflicts:
-            e = G.edges.create(vtx, 'CONFLICTS_WITH', c,
-                               stree=n.rec.tree, snode=n.rec.id)
-            G.edges.index.put(e.eid, stree_conflicts=n.rec.tree)
-            print 'edge created CONFLICTS_WITH', e.eid
-            created_edges.append(e)
+        ## for c in n.conflicts:
+        ##     e = G.edges.create(vtx, 'CONFLICTS_WITH', c,
+        ##                        stree=n.rec.tree, snode=n.rec.id)
+        ##     G.edges.index.put(e.eid, stree_conflicts=n.rec.tree)
+        ##     print 'edge created CONFLICTS_WITH', e.eid
+        ##     created_edges.append(e)
         
     G.edges.create(G.stree, 'ROOT', root.vtx, stree=root.rec.tree)
     return created_nodes, created_edges
@@ -699,17 +709,17 @@ def fan_layout(sg, x0=0.0, y0=0.0, start=-45.0, end=45.0, radius=500):
     pin[root] = 1
 
     leaves = []
-    while len(leaves) < len(all_leaves):
-        for lfcount, stree in reversed(sorted(
-            [ (stree_leafcount[i], i) for i in
-              [ sg.edge2stree[e] for e in root.out_edges() ] ])):
-            i = 0
-            for lf in filter(lambda x:x.out_degree()==0,
-                             stree_dfs(sg, root, stree)):
-                if lf not in leaves:
-                    leaves.insert(i, lf)
-                else:
-                    i = leaves.index(lf)
+    ## while len(leaves) < len(all_leaves):
+    for lfcount, stree in reversed(sorted(
+        [ (stree_leafcount[i], i) for i in
+          [ sg.edge2stree[e] for e in root.out_edges() ] ])):
+        i = 0
+        for lf in filter(lambda x:x.out_degree()==0,
+                         stree_dfs(sg, root, stree)):
+            if lf not in leaves:
+                leaves.insert(i, lf)
+            else:
+                i = leaves.index(lf)
     unit = (end-start)/float(len(leaves))
     angle = start + 0.5*unit
     for lf in leaves:
@@ -907,15 +917,6 @@ def draw_stree(G, stree_id, color='green'):
         k = n.sgv; v = n2c[n]
         pos[k] = [v.x, v.y]
         if n.isleaf: pin[k] = True
-    ## leaves = root.leaves()
-    ## angle = 0
-    ## unit = 360.0/len(leaves)
-    ## for lf in leaves:
-    ##     x = math.cos(math.radians(angle))*1000
-    ##     y = math.sin(math.radians(angle))*1000
-    ##     angle += unit
-    ##     pos[lf.sgv] = [x,y]
-    ##     pin[lf.sgv] = True
 
     vcolor = sg.new_vertex_property("string")
     ecolor = sg.new_edge_property("string")
@@ -924,8 +925,9 @@ def draw_stree(G, stree_id, color='green'):
     for v in sg.vertices():
         vcolor[v] = 'red' if sg.ncbi_node[v] else 'gray'
     for e in sg.edges():
-        ecolor[e] = sg.ncbi_color if sg.ncbi_edge[e] else 'gray'
-        ewidth[e] = 1
+        ecolor[e] = (sg.ncbi_color if sg.ncbi_edge[e]
+                     else color if sg.snode_edge[e] else 'gray')
+        ewidth[e] = 4 if sg.snode_edge[e] else 1
 
     seen = set()
     for n in root:
@@ -952,10 +954,6 @@ def draw_stree(G, stree_id, color='green'):
     sg.set_vertex_filter(None)
     sg.set_edge_filter(None)
     p2 = gt.sfdp_layout(sg,
-                        ## p=0,
-                        ## C=0.0001,
-                        ## gamma=2.0,
-                        ## theta=1.2,
                         pin=sg.snode,
                         pos=p1)
     sg.set_reversed(True)
@@ -965,14 +963,8 @@ def draw_stree(G, stree_id, color='green'):
                   vertex_fill_color=vcolor,
                   vertex_text=sg.vtext,
                   vertex_text_position=3.1415,
-                  ## vertex_halo=sg.halo,
-                  ## vertex_halo_color='green',
                   edge_color=ecolor,
-                  edge_pen_width=ewidth,
-                  ## eweight=sg.eweight
-                  )
-    ## sg.set_vertex_filter(None)
-    ## sg.set_edge_filter(None)
+                  edge_pen_width=ewidth)
 
 def draw_mapped_stree(G, root, color='green'):
     import math
@@ -994,7 +986,8 @@ def draw_mapped_stree(G, root, color='green'):
         n.sgv = sg.add_vertex()
         if n.ncbi_node:
             sg.vtext[n.sgv] = n.ncbi_node.name
-            eid2sgv[n.ncbi_node.eid] = n.sgv
+            if n.ncbi_node.eid not in eid2sgv:
+                eid2sgv[n.ncbi_node.eid] = n.sgv
             sg.vcolor[n.sgv] = sg.ncbi_color
         else:
             sg.vcolor[n.sgv] = color
@@ -1006,7 +999,8 @@ def draw_mapped_stree(G, root, color='green'):
         se = sg.add_edge(n.parent.sgv, n.sgv)
         sg.snode_edge[se] = 1
         sg.ncbi_edge[se] = 0
-        sg.eweight[se] = 4.0
+        sg.ewidth[se] = 4.0
+        sg.eweight[se] = 1.0
         sg.ecolor[se] = color
 
     lvs = [ x.ncbi_node for x in root.leaves() ]
@@ -1015,6 +1009,7 @@ def draw_mapped_stree(G, root, color='green'):
         isgv = eid2sgv.get(n.eid)
         if not isgv:
             isgv = sg.add_vertex()
+            sg.snode[isgv] = 0
             eid2sgv[n.eid] = isgv
             sg.vcolor[isgv] = 'red'
             sg.vtext[isgv] = G.vertices.get(n.eid).name
@@ -1022,6 +1017,7 @@ def draw_mapped_stree(G, root, color='green'):
         osgv = eid2sgv.get(n.parent.eid)
         if not osgv:
             osgv = sg.add_vertex()
+            sg.snode[osgv] = 0
             eid2sgv[n.parent.eid] = isgv
             sg.vcolor[osgv] = 'red'
             sg.vtext[osgv] = G.vertices.get(eid).name
@@ -1030,22 +1026,22 @@ def draw_mapped_stree(G, root, color='green'):
         se = sg.add_edge(osgv, isgv)
         sg.snode_edge[se] = 0
         sg.ncbi_edge[se] = 1
-        sg.eweight[se] = 1.0
+        sg.ewidth[se] = 1.0
         sg.ecolor[se] = sg.ncbi_color
+        sg.eweight[se] = 0.1
 
     pos = sg.new_vertex_property('vector<double>')
     pin = sg.new_vertex_property('bool')
     for x in sg.vertices():
         pos[x] = [0.0, 0.0]
-        pin[x] = False
-    pos[root.sgv] = [0.0, 0.0]
-    pin[root.sgv] = True
+        pin[x] = 0
+    pin[root.sgv] = 1
     root.ladderize()
     n2c = layout_polar.calc_node_positions(root, radius=1000)
     for n in root:
         k = n.sgv; v = n2c[n]
         pos[k] = [v.x, v.y]
-        if n.isleaf: pin[k] = True
+        if n.isleaf: pin[k] = 1
 
     sg.set_vertex_filter(sg.snode)
     sg.set_edge_filter(sg.snode_edge)
@@ -1056,17 +1052,21 @@ def draw_mapped_stree(G, root, color='green'):
                         pos=pos)
     sg.set_vertex_filter(None)
     sg.set_edge_filter(None)
+    for v in sg.vertices():
+        if not sg.snode[v]: p1[v] = [0.0, 0.0]
+        else: pin[v] = 1
     p2 = gt.sfdp_layout(sg,
-                        pin=sg.snode,
+                        #eweight=sg.eweight,
+                        pin=pin,#sg.snode,
                         pos=p1)
+    ## p2 = p1
     gt.graph_draw(sg,
                   pos=p2,
-                  pin=pin,
                   vertex_fill_color=sg.vcolor,
                   vertex_text=sg.vtext,
                   vertex_text_position=3.1415,
                   edge_color=sg.ecolor,
-                  edge_pen_width=sg.eweight)
+                  edge_pen_width=sg.ewidth)
 
 def draw_neighborhood_fan(sg, root, cmap=None):
     if not cmap:
@@ -1194,8 +1194,8 @@ def remove_stree(G, db, stree_id):
 
 
 G = connect()
-r = build.stree(db, 5)
-map_stree(G, r)
+## r = build.stree(db, 15)
+## map_stree(G, r)
 ## rec = db.stree(3)
 ## root = build.stree(db, rec.id)
 ## map_taxonomy(G, root)
@@ -1266,6 +1266,7 @@ map_stree(G, r)
 ## cmap = {2:'green',3:'purple',4:'orange',9:'brown',10:'cyan',
 ##         212:'magenta'}
 ## n = G.ncbi_node_idx.get_unique(name='rosids')
+
 ## t = tango()
 ## cmap = defaultdict(lambda:'#%02x%02x%02x'% tuple(
 ##     [ int(x*255) for x in t.next()[:-1] ]))

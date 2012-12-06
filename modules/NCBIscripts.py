@@ -38,7 +38,7 @@ named_neighborhood = """
 v = []
 root = g.v(n)
 root_strees = root.stree.toList()
-for (lf in root.as('root').inE('SNODE_CHILD_OF').outV.loop('root'){!it.object.has('type','ncbi_node')}.dedup()) {
+for (lf in root.as('root').inE('SNODE_CHILD_OF').outV.loop('root'){it.object.getProperty('type')!='ncbi_node'}.dedup()) {
     for (anc in lf.as('lf').outE('SNODE_CHILD_OF').inV.loop('lf'){it.object!=root}{true}) {
         for (e in anc.inE('SNODE_CHILD_OF')) {
             //strees = e.stree.toList()
