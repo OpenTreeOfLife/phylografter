@@ -43,7 +43,6 @@ def replaceClade( db, session, request, auth ):
 
     replacedNodeId = int( request.vars.replacedNodeId )
     replacingNodeId = int( request.vars.replacingNodeId )
-    replacingNodeTreeId = int( request.vars.replacingNodeTreeId )
 
     columnIndex = int( request.vars.columnIndex )
     
@@ -80,7 +79,6 @@ def graftClade( db, session, request, auth ):
 
     graftingOntoNodeId = int( request.vars.graftingOntoNodeId )
     graftingNodeId = int( request.vars.graftingNodeId )
-    graftingNodeTreeId = int( request.vars.graftingNodeTreeId )
 
     columnIndex = int( request.vars.columnIndex )
     

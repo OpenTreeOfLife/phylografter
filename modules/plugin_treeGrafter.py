@@ -69,6 +69,9 @@ def graftClade( tree, graftingOntoNodeId, graftingClade ):
     parent = util.getNodeById( tree, graftingOntoNodeId )
     parent.add_child( graftingClade )
     
+    graftingClade.meta[ 'targetGNode' ] = True
+    parent.meta[ 'affectedCladeId' ] = True
+
 
 def postGraftDBUpdate( db, session, auth):
 

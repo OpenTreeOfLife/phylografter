@@ -368,6 +368,12 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getPostEditClade = f
 }
 
 
+BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showGraftEditStatus = function() {
+
+    this.showTreeEditStatus( { preSuccessText: 'Adding child, updating database',
+                               successText: 'Added' } );
+}
+
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showReplaceEditStatus = function() {
     
     this.showTreeEditStatus( { preSuccessText: 'Replacing clade, updating database',
@@ -538,7 +544,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getClipboardForClade
     this.graftingColumn = p.column;
     this.graftingOntoNodeId = p.nodeId;
 
-    this.highlightClade( { column: p.column, nodeId: this.graftingOntoNodeId } );
+    this.highlightClade( { column: p.column, nodeId: this.graftingOntoNodeId, nodeOnly: true } );
 
     $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_clipboard', argList: [ 'getClipboard' ] } ),
               type: "GET", data: { },
@@ -552,6 +558,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
     var modal = BioSync.ModalBox;
 
     var clipboardItems = this.make('div');
+    var graftedClipboardItems = this.make('div');
 
     var css = { 'float': 'left', 'text-align': 'center', margin: '5px 0px', 'font-weight': 'bold' };
 
@@ -579,6 +586,27 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
                     this.make( 'div' ).css( { 'clear': 'both' } ),
                     clipboardItems
                 ),
+
+                this.make( 'div' ).width( '100%' ).css( { 'margin': '25px 0px', 'border': '1px solid green' } ),
+
+                this.make('div').css( { 'text-align': 'center',
+                                        'font-size': '20px',
+                                        'color': 'steelBlue',
+                                        'margin-bottom': '10px',
+                                        'padding': '10px' } ).text( 'Grafted Tree Clipboard Items' ),
+
+                this.make( 'div' ).css( { 'border': '1px solid black',
+                                          'padding': '10px',
+                                          'border-radius': '5px' } ).append( 
+                    this.make( 'div' ).width( modalBoxWidth * .20 ).css( css ).text( 'Name' ),
+                    this.make( 'div' ).width( modalBoxWidth * .20 ).css( css ).text( 'Descendants' ),
+                    this.make( 'div' ).width( modalBoxWidth * .20 ).css( css ).text( 'Date Created' ),
+                    this.make( 'div' ).width( modalBoxWidth * .20 ).css( css ).text( 'Grafted Tree Name' ),
+                    this.make( 'div' ).css( { 'clear': 'both' } ),
+                    graftedClipboardItems
+                ),
+
+
                 this.make( 'div' ).attr( { 'class': 'actionRow' } ).css( { 'padding-bottom': '10px' } ).append(
                     this.make('div').attr( { 'class': 'twoOpt modalBoxSubmit' } )
                                     .css( { 'float': 'left' } ).append(
@@ -602,7 +630,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
 
         var item = clipboardInfo.sourceList[ i ];
 
-        this.clipboardItems[ item[0] ] = { tree: item[6], type: 'source', id: item[9] }; 
+        this.clipboardItems[ item[0] ] = { type: 'source', id: item[8] }; 
 
         clipboardItems.append(
             this.make( 'div' ).attr( { 'clipboardId': item[0] } )
@@ -627,10 +655,53 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
             )
         );
        
-        BioSync.ModalBox.showModalBox( {
+    }
+
+    for( var i = 0, ii = clipboardInfo.graftedList.length; i < ii; i++ ) {
+
+        var item = clipboardInfo.graftedList[ i ];
+
+        this.clipboardItems[ item[0] ] = { type: 'grafted', id: item[7] }; 
+
+        graftedClipboardItems.append(
+            this.make( 'div' ).attr( { 'clipboardId': item[0] } )
+                              .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                              .hover( $.proxy( this.giveGreyBackground, this ), $.proxy( this.removeGreyBackground, this ) )
+                              .bind( 'click', { }, $.proxy( this.selectClipboardItem, this ) ).append(
+                this.make('div').width( modalBoxWidth * .20 )
+                                .css( css )
+                                .text( item[2] )
+                                .attr( { 'title': item[2] } )
+                                .css( { 'white-space': 'nowrap', 'overflow': 'hidden', 'text-overflow': 'ellipsis' } ),
+                this.make('div').width( modalBoxWidth * .20 ).css( css ).text( ( Math.floor( ( item[5] - item[4] - 1 ) / 2 ) ) ),
+                this.make('div').width( modalBoxWidth * .20 ).css( css ).text( item[3] ),
+                this.make('div').width( modalBoxWidth * .20 ).css( css )
+                       .css( { 'white-space': 'nowrap', 'overflow': 'hidden', 'text-overflow': 'ellipsis' } ).append(
+                    this.make( 'span' ).text( item[6] ).attr( { 'title': item[6] } )
+                                       .width( modalBoxWidth * .20 )
+                ),
+                this.make( 'div' ).css( { 'clear': 'both' } )
+            )
+        );
+    }
+
+    BioSync.ModalBox.showModalBox( {
             width: modalBoxWidth,
             title: 'Add Clipboard Item to Tree' } );
+
+/*
+    var modalBoxContent = $('#modalBoxContent');
+    var heightDifference = modalBoxContent.outerHeight( true ) - this.viewer.windowHeight;
+
+    if( heightDifference > 0 ) {
+
+       var sourceListHeight = clipboardItems.outerHeight( true ); 
+       var graftedListHeight = graftedClipboardItems.outerHeight( true ); 
+
+       var ratio = sourceListHeight / graftedListHeight;
+    
     }
+    */
 }
 
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getClipboardForCladeReplace = function( p ) {
@@ -804,7 +875,6 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.askForReplaceCladeIn
         modal.makeHiddenInput( { name: 'columnIndex', value: this.replacingColumn.index } ),
         modal.makeHiddenInput( { name: 'replacingNodeId', value: this.clipboardItems[ clipboardId ].id } ),
         modal.makeHiddenInput( { name: 'replacingNodeTreeType', value: this.clipboardItems[ clipboardId ].type } ),
-        modal.makeHiddenInput( { name: 'replacingNodeTreeId', value: this.clipboardItems[ clipboardId ].tree } ),
         modal.makeBasicActionRow( {
              onClick:  $.proxy( this.showReplaceEditStatus, this ),
              onCancel: $.proxy( this.unHighlightClade, this ),
@@ -836,7 +906,6 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.askForGraftCladeInfo
         modal.makeHiddenInput( { name: 'columnIndex', value: this.graftingColumn.index } ),
         modal.makeHiddenInput( { name: 'graftingNodeId', value: this.clipboardItems[ clipboardId ].id } ),
         modal.makeHiddenInput( { name: 'graftingNodeTreeType', value: this.clipboardItems[ clipboardId ].type } ),
-        modal.makeHiddenInput( { name: 'graftingNodeTreeId', value: this.clipboardItems[ clipboardId ].tree } ),
         modal.makeBasicActionRow( {
              onClick:  $.proxy( this.showGraftEditStatus, this ),
              onCancel: $.proxy( this.unHighlightClade, this ),

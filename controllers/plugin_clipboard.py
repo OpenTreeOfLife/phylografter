@@ -23,7 +23,6 @@ def getClipboard():
             'snode.back, ',
             'study.id, ',
             'study.citation, ',
-            'snode.tree, ',
             'snode.id ',
         'FROM clipboard JOIN snode ON ( snode.id = clipboard.nodeId AND clipboard.treeType = "source" ) ',
                        'JOIN stree ON stree.id = snode.tree ',
@@ -39,8 +38,8 @@ def getClipboard():
             'clipboard.creationDate, ',
             'gnode.next, ',
             'gnode.back, ',
-            'gtree.id, ',
-            'gtree.title ',
+            'gtree.title, ',
+            'gnode.id ',
         'FROM clipboard JOIN gnode ON ( gnode.id = clipboard.nodeId AND clipboard.treeType = "grafted" ) ',
                        'JOIN gtree ON gtree.id = gnode.tree ' ]
 

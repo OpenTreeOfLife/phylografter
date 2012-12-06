@@ -39,9 +39,14 @@ def getMatchingDescendantLabels():
     limit = ''.join( [ 'LIMIT ', str( ( int( request.vars.page ) - 1 ) * pageLength ), ', ', str( pageLength ) ] )
 
     query = [ \
-        'SELECT SQL_CALC_FOUND_ROWS ', nTbl, '.id, ' , nTbl, '.label, ottol_name.name, ', nTbl, '.next, ', nTbl, '.back '
+        'SELECT SQL_CALC_FOUND_ROWS ', nTbl, '.id, ' , nTbl, '.label, ottol_name.name, ', nTbl, '.next, ', nTbl, '.back ',
         'FROM ', nTbl, ' LEFT JOIN ottol_name ON ', nTbl, '.ottol_name = ottol_name.id ',
+        'WHERE ', nTbl, '.tree = ', str(session.TreeViewer.treeId), ' AND ' ] if nTbl == 'snode' else \
+            [ \
+        'SELECT SQL_CALC_FOUND_ROWS ', nTbl, '.id, ' , nTbl, '.label, ottol_name.name, ', nTbl, '.next, ', nTbl, '.back ',
+        'FROM ', nTbl, ' LEFT JOIN snode ON gnode.snode = snode.id LEFT JOIN ottol_name ON snode.ottol_name = ottol_name.id ',
         'WHERE ', nTbl, '.tree = ', str(session.TreeViewer.treeId), ' AND ' ]
+
 
     if( int( request.vars.next ) != 1 ):
 
