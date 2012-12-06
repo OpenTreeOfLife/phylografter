@@ -97,6 +97,146 @@ def ncbi_subtree(G, leaves, fetchnodes=True):
     root.parent = None
     return root
 
+def map_stree(G, root):
+    def get_ncbi_node(leaf):
+        label = leaf.rec.label
+        oname = leaf.rec.ottol_name or leaf.rec.otu.ottol_name
+        if oname:
+            if oname.ncbi_taxid:
+                taxid = str(oname.ncbi_taxid)
+                #print 'taxid', taxid, oname.name
+                return G.ncbi_node_idx.get_unique(taxid=taxid)
+            else:
+                label = oname.name
+        name = label.replace('_', ' ')
+        ambig = G.ncbi_name_idx.lookup(name=name) or []
+        if ambig:
+            v = [ x.outV('NCBI_NAME_OF').next() for x in ambig ]
+            if len(v)==1: return v[0]
+            else: return v
+
+    for n in root: n.ncbi_node = None
+
+    leaves = root.leaves()
+    unmapped = []; ambig = []; resolved = []
+    for lf in leaves:
+        lf.ncbi_node = get_ncbi_node(lf)
+        if not lf.ncbi_node: unmapped.append(lf)
+        elif not isinstance(lf.ncbi_node, Vertex): ambig.append(lf)
+        else: pass
+        lf.ncbi_eid_rootpath = None
+
+    assert (not unmapped), unmapped
+
+    f = lambda x: x.ncbi_node and isinstance(x.ncbi_node, Vertex)
+    q = scripts.ncbi_eid_rootpath
+    for lf in ifilter(f, leaves):
+        lf.ncbi_eid_rootpath = [lf.ncbi_node.eid]
+        v = G.gremlin.execute(q, dict(n=lf.ncbi_node.eid)).content
+        lf.ncbi_eid_rootpath.extend(v)
+
+    ## c = Counter()
+    ## v = filter(f, root.leaves())
+    ## N = len(v)
+    ## anc = None
+    ## for lf in v:
+    ##     for i, eid in enumerate(lf.ncbi_eid_rootpath):
+    ##         c[eid] += 1
+    ##         if c[eid]==N:
+    ##             anc = G.vertices.get(eid)
+    ##             break
+    ## print 'anc is %s (%s)' % (anc.name, anc.eid)
+
+    i = -1
+    v = filter(f, root.leaves())
+    s = set([ x.ncbi_eid_rootpath[i] for x in v ])
+    assert len(s)==1
+    while 1:
+        i -= 1
+        t = set([ x.ncbi_eid_rootpath[i] for x in v ])
+        if len(t) > 1: break
+        s = t
+    anc = G.vertices.get(s.pop())
+    print 'anc is %s (%s)' % (anc.name, anc.eid)
+
+    resolved = []
+    for lf in ambig:
+        print 'ambiguous:', lf.rec.label
+        found = []
+        for n in lf.ncbi_node:
+            params = dict(n=n.eid, anc=anc.eid)
+            if G.gremlin.execute(
+                scripts.ncbi_anc_in_rootpath, params).content:
+                print 'found %s (%s) in %s' % (n.name, n.taxid, anc.name)
+                found.append(n)
+        if found and len(found)==1:
+            lf.ncbi_node = found[0]
+            lf.ncbi_eid_rootpath = [lf.ncbi_node.eid]
+            v = G.gremlin.execute(q, dict(n=lf.ncbi_node.eid)).content
+            lf.ncbi_eid_rootpath.extend(v)
+            resolved.append(lf)
+    assert len(resolved)==len(ambig), '%s\n%s' % (ambig, resolved)
+        
+    lfset = set(leaves)
+    def mrca(n):
+        if n.isleaf: return [n]
+        lvs = mrca(n.children[0])
+        for child in n.children[1:]: lvs.extend(mrca(child))
+        outgroup = lfset-set(lvs)
+
+        c = Counter()
+        N = len(n.children)
+        for child in n.children:
+            for i, eid in enumerate(child.ncbi_eid_rootpath):
+                c[eid] += 1
+                if c[eid]==N:
+                    flag = True
+                    for lf in outgroup:
+                        if eid in lf.ncbi_eid_rootpath:
+                            flag = False
+                            n.ncbi_eid_rootpath = child.ncbi_eid_rootpath[i:]
+                            break
+                    if not flag: break
+                    n.ncbi_node = G.vertices.get(eid)
+                    n.ncbi_eid_rootpath = child.ncbi_eid_rootpath[i:]
+                    if not n.label: n.label = n.ncbi_node.name.replace(' ','_')
+                    break
+        return lvs
+    mrca(root)
+
+    ## # double-check monophyly
+    ## for n in root:
+    ##     if n.ncbi_node:
+    ##         eid = n.ncbi_node.eid
+    ##         lvs = n.leaves()
+    ##         for lf in lvs:
+    ##             if eid not in lf.ncbi_eid_rootpath:
+    ##                 print n, lf
+    ##         assert all([ eid in x.ncbi_eid_rootpath for x in lvs ]), n
+
+    expand = root.findall(lambda x:x.ncbi_node and x.parent)
+    for n in expand:
+        print n.ncbi_node.name
+        outgroup = lfset - set(n.leaves())
+        ref = n
+        v = n.ncbi_eid_rootpath[1:]
+        w = n.parent.ncbi_eid_rootpath
+        for i, eid in enumerate(v):
+            if (eid not in w) and all([ eid not in x.ncbi_eid_rootpath
+                                        for x in outgroup ]) :
+                tn = G.vertices.get(eid)
+                print '  adding', tn.name, eid
+                newnode = build.Node(rec=n.rec, conflicts=[], type='snode',
+                                     ncbi_node=tn,
+                                     ncbi_eid_rootpath=v[i:],
+                                     label=tn.name.replace(' ','_'))
+                p = ref.prune()
+                newnode.add_child(ref)
+                p.add_child(newnode)
+                ref = newnode
+            else: break
+        
+
 def map_taxonomy(G, root):
     def leaf_eids(root):
         d = defaultdict(list)
@@ -834,197 +974,79 @@ def draw_stree(G, stree_id, color='green'):
     ## sg.set_vertex_filter(None)
     ## sg.set_edge_filter(None)
 
-def draw_mapped_stree(root, color='green'):
+def draw_mapped_stree(G, root, color='green'):
     import math
     from ivy import layout, layout_polar
     sg = gt.Graph() # graph-tool graph representing subgraph of G
-    sg.eid2vtx = {} # map G vertex eids to G vertices
-    sg.eid2sgv = {} # map G vertex eids to subgraph vertices
-    sg.eid2sge = {} # map G edge eids to subgraph edges
-    sg.eid2n = {} # map G vertex eids to stree nodes
-    sg.eid2leaf = {} # map G vertex eids to stree leaves
-    sg.stree = {} # map stree_id to root (ivy) node
-    sg.sgv2vtx = {} # map sg vertices to G vertices
-    sg.name2sgv = {} # map names to sg vertices
     sg.ncbi_color = 'blue'
-    sg.snode_overlap_color = 'yellow'
-    sg.stree_edgecounts = Counter()
-    sg.se_created = set()
-    sg.vtx_leaves = []
-    sg.root = None
     sg.vtext = sg.new_vertex_property("string")
-    sg.isleaf = sg.new_vertex_property("bool")
     sg.snode = sg.new_vertex_property("bool")
     sg.snode_edge = sg.new_edge_property("bool")
     sg.ncbi_node = sg.new_vertex_property("bool")
     sg.ncbi_edge = sg.new_edge_property("bool")
-    sg.edge2stree = sg.new_edge_property("int")
-    sg.eweight = sg.new_edge_property("double")
+    sg.vcolor = sg.new_vertex_property("string")
+    sg.ecolor = sg.new_edge_property("string")
+    sg.ewidth = sg.new_edge_property("int")
+    sg.eweight = sg.new_edge_property("int")
 
-    c2p = {}
-    # build the subgraph
-    edges = G.edges.index.lookup(stree=stree_id)
-    assert edges
-    for e in edges:
-        # get/create+store subgraph vertices
-        osgv = sg.eid2sgv.get(e._outV)
-        if not osgv:
-            osgv = sg.add_vertex()
-            sg.eid2sgv[e._outV] = osgv
-        sg.snode[osgv] = 1
-        sg.ncbi_node[osgv] = 0
+    eid2sgv = {}
+    for n in root:
+        n.sgv = sg.add_vertex()
+        if n.ncbi_node:
+            sg.vtext[n.sgv] = n.ncbi_node.name
+            eid2sgv[n.ncbi_node.eid] = n.sgv
+            sg.vcolor[n.sgv] = sg.ncbi_color
+        else:
+            sg.vcolor[n.sgv] = color
 
-        isgv = sg.eid2sgv.get(e._inV)
-        if not isgv:
-            isgv = sg.add_vertex()
-            sg.eid2sgv[e._inV] = isgv
-        sg.snode[isgv] = 1
-        sg.ncbi_node[isgv] = 0
+        sg.snode[n.sgv] = 1
+        sg.ncbi_node[n.sgv] = 0
 
-        # get/fetch+store G vertices
-        ovtx = sg.eid2vtx.get(e._outV) or e.outV() # child
-        name = ovtx.get('name') or ''
-        sg.vtext[osgv] = name
-        if name: sg.name2sgv[name] = osgv
-        sg.isleaf[osgv] = 0
-        sg.eid2vtx[e._outV] = ovtx
-        sg.sgv2vtx[osgv] = ovtx
-        ivtx = sg.eid2vtx.get(e._inV) or e.inV() # parent
-        name = ivtx.get('name') or ''
-        sg.vtext[isgv] = name
-        if name: sg.name2sgv[name] = isgv
-        sg.isleaf[isgv] = 0
-        sg.eid2vtx[e._inV] = ivtx
-        sg.sgv2vtx[isgv] = ivtx
-
-        # is ovtx a leaf?
-        if not [ x for x in ovtx.inE('SNODE_CHILD_OF') or []
-                 if stree_id in (x.get('stree') or []) ]:
-            sg.isleaf[osgv] = 1
-            sg.vtx_leaves.append(ovtx)
-            sg.eid2leaf[stree_id][e._outV] = osgv
-
-        # create subgraph edges
-        # NOTE reversed direction (parent-->child)
-        se = sg.add_edge(isgv, osgv)
-        sg.se_created.add((ivtx.eid, ovtx.eid))
-        sg.eid2sge[e.eid] = se
+    for n in root.descendants():
+        se = sg.add_edge(n.parent.sgv, n.sgv)
         sg.snode_edge[se] = 1
         sg.ncbi_edge[se] = 0
-        assert not sg.edge2stree[se]
-        sg.edge2stree[se] = stree_id
-        sg.stree_edgecounts[stree_id] += 1
+        sg.eweight[se] = 4.0
+        sg.ecolor[se] = color
+
+    lvs = [ x.ncbi_node for x in root.leaves() ]
+    taxtree = ncbi_subtree(G, lvs, fetchnodes=False)
+    for n in taxtree.descendants():
+        isgv = eid2sgv.get(n.eid)
+        if not isgv:
+            isgv = sg.add_vertex()
+            eid2sgv[n.eid] = isgv
+            sg.vcolor[isgv] = 'red'
+            sg.vtext[isgv] = G.vertices.get(n.eid).name
+
+        osgv = eid2sgv.get(n.parent.eid)
+        if not osgv:
+            osgv = sg.add_vertex()
+            eid2sgv[n.parent.eid] = isgv
+            sg.vcolor[osgv] = 'red'
+            sg.vtext[osgv] = G.vertices.get(eid).name
+        eid2sgv[n.parent.eid] = osgv
+
+        se = sg.add_edge(osgv, isgv)
+        sg.snode_edge[se] = 0
+        sg.ncbi_edge[se] = 1
         sg.eweight[se] = 1.0
-
-        c = (sg.eid2n[stree_id].get(ovtx.eid) or
-             build.Node(vtx=ovtx, sgv=osgv))
-        sg.eid2n[stree_id][ovtx.eid] = c
-        c.sge = se
-        p = (sg.eid2n[stree_id].get(ivtx.eid) or
-             build.Node(vtx=ivtx, sgv=isgv))
-        sg.eid2n[stree_id][ivtx.eid] = p
-        if p != c: p.add_child(c)
-        c2p[c] = p
-
-    for c, p in c2p.items():
-        if not p.parent:
-            p.isroot = True
-            p.sge = None
-            sg.stree[stree_id] = p
-        if not c.children: c.isleaf = True
-    assert sg.stree.get(stree_id)
-
-    if not sg.root: sg.root = sg.stree[stree_id]
-    else:
-        params = dict(anc=sg.stree[stree_id].vtx.eid, n=sg.root.vtx.eid)
-        if G.gremlin.execute(scripts.ncbi_rootpath, params).content:
-            sg.root = sg.stree[stree_id]
-            ## print ('setting new sg root to', sg.stree[stree_id],
-            ##        sg.vtext[sg.stree[stree_id].sgv] or '')
-
-    taxtree = ncbi_subtree(G, sg.vtx_leaves, fetchnodes=False)
-    for n in taxtree:
-        if n.parent:
-            osgv = sg.eid2sgv.get(n.eid)
-            if not osgv:
-                osgv = sg.add_vertex()
-                ovtx = G.vertices.get(n.eid)
-                sg.sgv2vtx[osgv] = ovtx
-                sg.eid2sgv[n.eid] = osgv
-                sg.eid2vtx[n.eid] = ovtx
-                sg.ncbi_node[osgv] = 1
-                sg.vtext[osgv] = ovtx.name
-                sg.snode[osgv] = 0
-            isgv = sg.eid2sgv.get(n.parent.eid)
-            if not isgv:
-                isgv = sg.add_vertex()
-                ivtx = G.vertices.get(n.parent.eid)
-                sg.sgv2vtx[isgv] = ivtx
-                sg.eid2sgv[n.parent.eid] = isgv
-                sg.eid2vtx[n.parent.eid] = ivtx
-                sg.ncbi_node[isgv] = 1
-                sg.snode[isgv] = 0
-                sg.vtext[isgv] = ivtx.name
-
-            if not (n.eid, n.parent.eid) in sg.se_created:
-            ## if not n.edge_eid in sg.eid2sge:
-                se = sg.add_edge(isgv, osgv)
-                sg.se_created.add((n.parent.eid, n.eid))
-                sg.eid2sge[n.edge_eid] = se
-                sg.ncbi_edge[se] = 1
-                sg.snode_edge[se] = 0
-                sg.eweight[se] = 1.0
-
+        sg.ecolor[se] = sg.ncbi_color
 
     pos = sg.new_vertex_property('vector<double>')
     pin = sg.new_vertex_property('bool')
     for x in sg.vertices():
         pos[x] = [0.0, 0.0]
         pin[x] = False
-    pos[sg.root.sgv] = [0.0, 0.0]
-    pin[sg.root.sgv] = True
-    root = sg.stree[stree_id]
+    pos[root.sgv] = [0.0, 0.0]
+    pin[root.sgv] = True
     root.ladderize()
     n2c = layout_polar.calc_node_positions(root, radius=1000)
     for n in root:
         k = n.sgv; v = n2c[n]
         pos[k] = [v.x, v.y]
         if n.isleaf: pin[k] = True
-    ## leaves = root.leaves()
-    ## angle = 0
-    ## unit = 360.0/len(leaves)
-    ## for lf in leaves:
-    ##     x = math.cos(math.radians(angle))*1000
-    ##     y = math.sin(math.radians(angle))*1000
-    ##     angle += unit
-    ##     pos[lf.sgv] = [x,y]
-    ##     pin[lf.sgv] = True
 
-    vcolor = sg.new_vertex_property("string")
-    ecolor = sg.new_edge_property("string")
-    ewidth = sg.new_edge_property("int")
-    eweight = sg.new_edge_property("int")
-    for v in sg.vertices():
-        vcolor[v] = 'red' if sg.ncbi_node[v] else 'gray'
-    for e in sg.edges():
-        ecolor[e] = sg.ncbi_color if sg.ncbi_edge[e] else 'gray'
-        ewidth[e] = 1
-
-    seen = set()
-    for n in root:
-        if n.sgv not in seen:
-            vcolor[n.sgv] = color
-            seen.add(n.sgv)
-        else:
-            vcolor[n.sgv] = sg.snode_overlap_color
-        if n.vtx.type=='ncbi_node':
-            vcolor[n.sgv] = sg.ncbi_color
-        if n.parent:
-            if n.sge not in seen:
-                ecolor[n.sge] = color
-                ewidth[n.sge] = 4
-                seen.add(n.sge)
-            
     sg.set_vertex_filter(sg.snode)
     sg.set_edge_filter(sg.snode_edge)
     p1 = gt.sfdp_layout(sg,
@@ -1035,25 +1057,16 @@ def draw_mapped_stree(root, color='green'):
     sg.set_vertex_filter(None)
     sg.set_edge_filter(None)
     p2 = gt.sfdp_layout(sg,
-                        ## p=0,
-                        ## C=0.0001,
-                        ## gamma=2.0,
-                        ## theta=1.2,
                         pin=sg.snode,
                         pos=p1)
-    sg.set_reversed(True)
     gt.graph_draw(sg,
                   pos=p2,
                   pin=pin,
-                  vertex_fill_color=vcolor,
+                  vertex_fill_color=sg.vcolor,
                   vertex_text=sg.vtext,
                   vertex_text_position=3.1415,
-                  ## vertex_halo=sg.halo,
-                  ## vertex_halo_color='green',
-                  edge_color=ecolor,
-                  edge_pen_width=ewidth,
-                  ## eweight=sg.eweight
-                  )
+                  edge_color=sg.ecolor,
+                  edge_pen_width=sg.eweight)
 
 def draw_neighborhood_fan(sg, root, cmap=None):
     if not cmap:
@@ -1160,7 +1173,6 @@ def remove_stree(G, db, stree_id):
                 e.snode = v
                 e.save()
             
-            
     for n in G.gremlin.query('n._().transform{g.v(it)}', dict(n=list(nids))):
         if stree_id in n.stree:
             if len(n.stree)==1:
@@ -1182,6 +1194,8 @@ def remove_stree(G, db, stree_id):
 
 
 G = connect()
+r = build.stree(db, 5)
+map_stree(G, r)
 ## rec = db.stree(3)
 ## root = build.stree(db, rec.id)
 ## map_taxonomy(G, root)

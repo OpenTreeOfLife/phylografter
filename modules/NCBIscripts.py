@@ -26,6 +26,10 @@ ncbi_anc_in_rootpath = """
 g.v(n).out('NCBI_CHILD_OF').loop(1){it.object.id != anc}{it.object.id==anc}
 """
 
+ncbi_eid_rootpath = """
+g.v(n).out('NCBI_CHILD_OF').loop(1){true}{true}.id
+"""
+
 stree_rootpath = """
 g.v(lf).as('x').out('SNODE_CHILD_OF').filter{i in it.stree}.loop('x'){it.object.id!=r}{true}
 """
@@ -56,4 +60,9 @@ start lf=node({n}), root=node({r})
 match lf-[edges:SNODE_CHILD_OF*]->root
 where all(e in edges where {i} in e.stree)
 return edges
+"""
+
+mrca = """
+counter = [:]
+n._().transform{g.v(it)}
 """
