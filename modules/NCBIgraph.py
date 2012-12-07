@@ -194,11 +194,10 @@ def map_stree(G, root):
                     for lf in outgroup:
                         if eid in lf.ncbi_eid_rootpath:
                             flag = False
-                            n.ncbi_eid_rootpath = child.ncbi_eid_rootpath[i:]
                             break
+                    n.ncbi_eid_rootpath = child.ncbi_eid_rootpath[i:]
                     if not flag: break
                     n.ncbi_node = G.vertices.get(eid)
-                    n.ncbi_eid_rootpath = child.ncbi_eid_rootpath[i:]
                     if not n.label: n.label = n.ncbi_node.name.replace(' ','_')
                     break
         return lvs
@@ -237,144 +236,164 @@ def map_stree(G, root):
             else: break
         #print
 
-    lvs = [ x.ncbi_node for x in root.leaves() ]
-    taxtree = ncbi_subtree(G, lvs, fetchnodes=False)
-    clades = [ x.ncbi_node.eid for x in root if x.ncbi_node ]
-    conflicts = set()
-    for n in taxtree:
-        if n.eid not in clades: conflicts.add(n.eid)
-    root.conflicts = conflicts
-
-
-# deprecated, use map_stree
-def map_taxonomy(G, root):
-    def leaf_eids(root):
-        d = defaultdict(list)
-        for n in root.postiter():
-            if n.isleaf:
-                if n.ncbi_node: n.leaf_eids = frozenset([n.ncbi_node.eid])
-                else: n.leaf_eids = frozenset()
-            else:
-                if len(n.children)==1: n.leaf_eids = n.children[0].leaf_eids
-                else: n.leaf_eids = reduce(
-                    lambda a,b:a|b, [ x.leaf_eids for x in n.children ])
-            d[n.leaf_eids].append(n)
-        return d
-
-    def get_ncbi_node(leaf):
-        label = leaf.rec.label
-        oname = leaf.rec.ottol_name or leaf.rec.otu.ottol_name
-        if oname:
-            if oname.ncbi_taxid:
-                taxid = str(oname.ncbi_taxid)
-                #print 'taxid', taxid, oname.name
-                return G.ncbi_node_idx.get_unique(taxid=taxid)
-            else:
-                label = oname.name
-        name = label.replace('_', ' ')
-        ambig = G.ncbi_name_idx.lookup(name=name) or []
-        if ambig:
-            v = [ x.outV('NCBI_NAME_OF').next() for x in ambig ]
-            if len(v)==1: return v[0]
-            else: return v
-
-    for n in root: n.ncbi_node = None
-
-    lvs = root.leaves()
-    unmapped = []; ambig = []; resolved = []
-    for lf in lvs:
-        lf.ncbi_node = get_ncbi_node(lf)
-        if not lf.ncbi_node: unmapped.append(lf)
-        elif not isinstance(lf.ncbi_node, Vertex): ambig.append(lf)
-        else: pass
-    leaves = [ x.ncbi_node for x in lvs
-               if x.ncbi_node and isinstance(x.ncbi_node, Vertex) ]
-    taxroot = ncbi_subtree(G, leaves)
-    print 'taxroot:', taxroot.ncbi_node.name, taxroot.ncbi_node.taxid
-    anc = taxroot.ncbi_node
-    if ambig:
-        for lf in ambig:
-            print 'ambiguous:', lf.rec.label
-            found = []
-            for n in lf.ncbi_node:
-                params = dict(n=n.eid, anc=anc.eid)
-                if G.gremlin.execute(
-                    scripts.ncbi_anc_in_rootpath, params).content:
-                    print 'found %s (%s) in %s' % (n.name, n.taxid, anc.name)
-                    found.append(n)
-            if found and len(found)==1:
-                lf.ncbi_node = found[0]
-                resolved.append(lf)
-            else: lf.ncbi_node = None
-        leaf_eids(root)
-        leaves = [ x.ncbi_node for x in lvs if x.ncbi_node ]
-        t2 = ncbi_subtree(G, leaves)
-        print 'taxroot is now:', t2.ncbi_node.name, t2.ncbi_node.taxid
-        assert t2.eid == taxroot.eid
-    assert (not unmapped), unmapped
-    assert len(resolved)==len(ambig), '%s, %s' % (resolved, ambig)
-    leaves = [ x.ncbi_node for x in lvs ]
-    taxroot = ncbi_subtree(G, leaves)
-    print 'taxroot final:', taxroot.ncbi_node.name, taxroot.ncbi_node.taxid
-    root.ncbi_node = taxroot.ncbi_node
-
-    v = [ x.eid for x in leaves ]
-    assert len(v)==len(set(v)), 'multiple tips, same taxon not implemented yet'
-
-    # check if leaf taxa are nested
-    for lf in root.leaves():
-        f = lambda x:x.ncbi_node and x.ncbi_node.eid==lf.ncbi_node.eid
-        v = taxroot.findall(f)
-        if v:
-            assert len(v)==1
-            if not v[0].isleaf:
-                print lf, 'is a leaf, but its taxon contains other leaves'
-                eids = [ x.ncbi_node.eid for x in v[0].leaves() ]
-                eids.append(lf.ncbi_node.eid)
-                g = lambda x:x.ncbi_node and x.ncbi_node.eid in eids
-                nodes = root.findall(g)
-                assert len(nodes) > 1
-                assert root.ismono(nodes), ('nested taxa do not '
-                                            'form a clade: %s' % nodes)
-                anc = root.mrca(nodes)
-                anc.ncbi_node = v[0].ncbi_node
-                for desc in root:
-                    desc.leaf_eids = desc.leaf_eids - set([anc.ncbi_node.eid])
-    
-    leaf_eids(root)
-    leafset2taxnodes = leaf_eids(taxroot)
-
-    nodes = list(root.postiter())
-    for n in nodes:
+    def traverse(n):
         n.conflicts = []
-        #n.ncbi_node = None
-        v = leafset2taxnodes.get(n.leaf_eids)
-        if v:
-            taxnode = v[0]
-            n.eid = taxnode.eid
-            n.edge_eid = taxnode.edge_eid
-            n.ncbi_node = taxnode.ncbi_node
-            n.label = taxnode.ncbi_node.name
-            ref = n
-            for tn in v[1:]:
-                newnode = build.Node(rec=n.rec, conflicts=[], type='snode',
-                                     edge_eid=tn.edge_eid,
-                                     ncbi_node=tn.ncbi_node,
-                                     label=tn.ncbi_node.name,
-                                     leaf_eids=ref.leaf_eids)
-                p = ref.prune()
-                newnode.add_child(ref)
-                p.add_child(newnode)
-                ref = newnode
+        if n.isleaf:
+            n.taxa = set([n.ncbi_node.eid])
         else:
-            # this clade cannot be assigned to any taxon
-            # does it conflict with any taxa?
-            s1 = n.leaf_eids
-            for t in taxroot:
-                s2 = t.leaf_eids
+            n.taxa = set([n.ncbi_node.eid]) if n.ncbi_node else set()
+            for c in n.children:
+                traverse(c)
+                n.taxa.update(c.taxa)
+                
+    traverse(root)
+    lvs = [ x.ncbi_node for x in root.leaves() ]
+    taxtree = ncbi_subtree(G, lvs, fetchnodes=True)
+    traverse(taxtree)
+    root.taxtree = taxtree
+        
+    for n in taxtree:
+        if n.eid not in root.taxa:
+            s1 = n.taxa
+            for d in root.descendants():
+                s2 = d.taxa
                 if (not s1.isdisjoint(s2) and not s1.issubset(s2)
                     and not s1.issuperset(s2)):
-                    n.conflicts.append(t.ncbi_node)
+                    d.conflicts.append(n.ncbi_node)
+                
+            
+    #root.conflicts = conflicts
+
+
+## # deprecated, use map_stree
+## def map_taxonomy(G, root):
+##     def leaf_eids(root):
+##         d = defaultdict(list)
+##         for n in root.postiter():
+##             if n.isleaf:
+##                 if n.ncbi_node: n.leaf_eids = frozenset([n.ncbi_node.eid])
+##                 else: n.leaf_eids = frozenset()
+##             else:
+##                 if len(n.children)==1: n.leaf_eids = n.children[0].leaf_eids
+##                 else: n.leaf_eids = reduce(
+##                     lambda a,b:a|b, [ x.leaf_eids for x in n.children ])
+##             d[n.leaf_eids].append(n)
+##         return d
+
+##     def get_ncbi_node(leaf):
+##         label = leaf.rec.label
+##         oname = leaf.rec.ottol_name or leaf.rec.otu.ottol_name
+##         if oname:
+##             if oname.ncbi_taxid:
+##                 taxid = str(oname.ncbi_taxid)
+##                 #print 'taxid', taxid, oname.name
+##                 return G.ncbi_node_idx.get_unique(taxid=taxid)
+##             else:
+##                 label = oname.name
+##         name = label.replace('_', ' ')
+##         ambig = G.ncbi_name_idx.lookup(name=name) or []
+##         if ambig:
+##             v = [ x.outV('NCBI_NAME_OF').next() for x in ambig ]
+##             if len(v)==1: return v[0]
+##             else: return v
+
+##     for n in root: n.ncbi_node = None
+
+##     lvs = root.leaves()
+##     unmapped = []; ambig = []; resolved = []
+##     for lf in lvs:
+##         lf.ncbi_node = get_ncbi_node(lf)
+##         if not lf.ncbi_node: unmapped.append(lf)
+##         elif not isinstance(lf.ncbi_node, Vertex): ambig.append(lf)
+##         else: pass
+##     leaves = [ x.ncbi_node for x in lvs
+##                if x.ncbi_node and isinstance(x.ncbi_node, Vertex) ]
+##     taxroot = ncbi_subtree(G, leaves)
+##     print 'taxroot:', taxroot.ncbi_node.name, taxroot.ncbi_node.taxid
+##     anc = taxroot.ncbi_node
+##     if ambig:
+##         for lf in ambig:
+##             print 'ambiguous:', lf.rec.label
+##             found = []
+##             for n in lf.ncbi_node:
+##                 params = dict(n=n.eid, anc=anc.eid)
+##                 if G.gremlin.execute(
+##                     scripts.ncbi_anc_in_rootpath, params).content:
+##                     print 'found %s (%s) in %s' % (n.name, n.taxid, anc.name)
+##                     found.append(n)
+##             if found and len(found)==1:
+##                 lf.ncbi_node = found[0]
+##                 resolved.append(lf)
+##             else: lf.ncbi_node = None
+##         leaf_eids(root)
+##         leaves = [ x.ncbi_node for x in lvs if x.ncbi_node ]
+##         t2 = ncbi_subtree(G, leaves)
+##         print 'taxroot is now:', t2.ncbi_node.name, t2.ncbi_node.taxid
+##         assert t2.eid == taxroot.eid
+##     assert (not unmapped), unmapped
+##     assert len(resolved)==len(ambig), '%s, %s' % (resolved, ambig)
+##     leaves = [ x.ncbi_node for x in lvs ]
+##     taxroot = ncbi_subtree(G, leaves)
+##     print 'taxroot final:', taxroot.ncbi_node.name, taxroot.ncbi_node.taxid
+##     root.ncbi_node = taxroot.ncbi_node
+
+##     v = [ x.eid for x in leaves ]
+##     assert len(v)==len(set(v)), 'multiple tips, same taxon not implemented yet'
+
+##     # check if leaf taxa are nested
+##     for lf in root.leaves():
+##         f = lambda x:x.ncbi_node and x.ncbi_node.eid==lf.ncbi_node.eid
+##         v = taxroot.findall(f)
+##         if v:
+##             assert len(v)==1
+##             if not v[0].isleaf:
+##                 print lf, 'is a leaf, but its taxon contains other leaves'
+##                 eids = [ x.ncbi_node.eid for x in v[0].leaves() ]
+##                 eids.append(lf.ncbi_node.eid)
+##                 g = lambda x:x.ncbi_node and x.ncbi_node.eid in eids
+##                 nodes = root.findall(g)
+##                 assert len(nodes) > 1
+##                 assert root.ismono(nodes), ('nested taxa do not '
+##                                             'form a clade: %s' % nodes)
+##                 anc = root.mrca(nodes)
+##                 anc.ncbi_node = v[0].ncbi_node
+##                 for desc in root:
+##                     desc.leaf_eids = desc.leaf_eids - set([anc.ncbi_node.eid])
+    
+##     leaf_eids(root)
+##     leafset2taxnodes = leaf_eids(taxroot)
+
+##     nodes = list(root.postiter())
+##     for n in nodes:
+##         n.conflicts = []
+##         #n.ncbi_node = None
+##         v = leafset2taxnodes.get(n.leaf_eids)
+##         if v:
+##             taxnode = v[0]
+##             n.eid = taxnode.eid
+##             n.edge_eid = taxnode.edge_eid
+##             n.ncbi_node = taxnode.ncbi_node
+##             n.label = taxnode.ncbi_node.name
+##             ref = n
+##             for tn in v[1:]:
+##                 newnode = build.Node(rec=n.rec, conflicts=[], type='snode',
+##                                      edge_eid=tn.edge_eid,
+##                                      ncbi_node=tn.ncbi_node,
+##                                      label=tn.ncbi_node.name,
+##                                      leaf_eids=ref.leaf_eids)
+##                 p = ref.prune()
+##                 newnode.add_child(ref)
+##                 p.add_child(newnode)
+##                 ref = newnode
+##         else:
+##             # this clade cannot be assigned to any taxon
+##             # does it conflict with any taxa?
+##             s1 = n.leaf_eids
+##             for t in taxroot:
+##                 s2 = t.leaf_eids
+##                 if (not s1.isdisjoint(s2) and not s1.issubset(s2)
+##                     and not s1.issuperset(s2)):
+##                     n.conflicts.append(t.ncbi_node)
 
 def taxhash(n):
     def collect_taxa(n):
@@ -453,14 +472,16 @@ def insert_mapped_stree(G, root):
             e.snode=snode
             e.save()
 
-        ## for c in n.conflicts:
-        ##     e = G.edges.create(vtx, 'CONFLICTS_WITH', c,
-        ##                        stree=n.rec.tree, snode=n.rec.id)
-        ##     G.edges.index.put(e.eid, stree_conflicts=n.rec.tree)
-        ##     print 'edge created CONFLICTS_WITH', e.eid
-        ##     created_edges.append(e)
+        for c in n.conflicts:
+            e = G.edges.create(vtx, 'CONFLICTS_WITH', c,
+                               stree=n.rec.tree, snode=n.rec.id)
+            G.edges.index.put(e.eid, stree_conflicts=n.rec.tree)
+            print 'edge created CONFLICTS_WITH', e.eid
+            created_edges.append(e)
         
-    G.edges.create(G.stree, 'ROOT', root.vtx, stree=root.rec.tree)
+    e = G.edges.create(G.stree, 'ROOT', root.vtx, stree=root.rec.tree)
+    created_edges.append(e)
+    print 'edge created ROOT', e.eid
     return created_nodes, created_edges
 
 def insert_stree(G, db, stree_id):
@@ -672,7 +693,7 @@ def n4jedges2graph(edges, root_eid=None, sg=None):
             start = sg.add_vertex()
             vtx = e.inV()
             sg.sgv2vtx[start] = vtx
-            sg.vtext[start] = vtx.get('name') or str(vtx.eid)
+            sg.vtext[start] = vtx.get('name') or ''#str(vtx.eid)
             sg.eid2sgv[e._inV] = start
             sg.eid2vtx[e._inV] = vtx
         end = sg.eid2sgv.get(e._outV)
@@ -687,6 +708,21 @@ def n4jedges2graph(edges, root_eid=None, sg=None):
             e = sg.add_edge(start, end)
             sg.edge2stree[e] = i
             sg.eweight[e] = 1.0
+
+
+    if root_eid:
+        def rootpath(edge):
+            stree = sg.edge2stree[edge]
+            assert stree
+            yield edge
+            while 1:
+                edges = edge.source().in_edges()
+                it = ifilter(lambda x:sg.edge2stree[x]==stree, edges)
+                try:
+                    edge = it.next()
+                    yield edge
+                except StopIteration: break
+                if edge.source().in_degree()==0: break
 
     def leaves():
         return ifilter(lambda x:x.out_degree()==0, sg.vertices())
@@ -895,8 +931,6 @@ def draw_stree_subgraph(sg, stree_colors=None, pos=None, pin=None,
                   edge_color=ecolor,
                   edge_pen_width=ewidth
                   )
-    ## sg.set_vertex_filter(None)
-    ## sg.set_edge_filter(None)
 
 def draw_stree(G, stree_id, color='green'):
     import math
@@ -921,7 +955,7 @@ def draw_stree(G, stree_id, color='green'):
     vcolor = sg.new_vertex_property("string")
     ecolor = sg.new_edge_property("string")
     ewidth = sg.new_edge_property("int")
-    eweight = sg.new_edge_property("int")
+    eweight = sg.new_edge_property("double")
     for v in sg.vertices():
         vcolor[v] = 'red' if sg.ncbi_node[v] else 'gray'
     for e in sg.edges():
@@ -976,10 +1010,11 @@ def draw_mapped_stree(G, root, color='green'):
     sg.snode_edge = sg.new_edge_property("bool")
     sg.ncbi_node = sg.new_vertex_property("bool")
     sg.ncbi_edge = sg.new_edge_property("bool")
+    sg.conflict_edge = sg.new_edge_property("bool")
     sg.vcolor = sg.new_vertex_property("string")
     sg.ecolor = sg.new_edge_property("string")
     sg.ewidth = sg.new_edge_property("int")
-    sg.eweight = sg.new_edge_property("int")
+    sg.eweight = sg.new_edge_property("double")
 
     eid2sgv = {}
     for n in root:
@@ -1004,8 +1039,7 @@ def draw_mapped_stree(G, root, color='green'):
         sg.ecolor[se] = color
 
     lvs = [ x.ncbi_node for x in root.leaves() ]
-    taxtree = ncbi_subtree(G, lvs, fetchnodes=False)
-    for n in taxtree.descendants():
+    for n in root.taxtree.descendants():
         isgv = eid2sgv.get(n.eid)
         if not isgv:
             isgv = sg.add_vertex()
@@ -1030,6 +1064,16 @@ def draw_mapped_stree(G, root, color='green'):
         sg.ecolor[se] = sg.ncbi_color
         sg.eweight[se] = 0.1
 
+    ## for n in root:
+    ##     for c in n.conflicts:
+    ##         se = sg.add_edge(n.sgv, eid2sgv[c.eid])
+    ##         sg.snode_edge[se] = 0
+    ##         sg.ncbi_edge[se] = 0
+    ##         sg.conflict_edge = 1
+    ##         sg.ewidth[se] = 1
+    ##         sg.eweight[se] = 0
+    ##         sg.ecolor[se] = 'red'
+
     pos = sg.new_vertex_property('vector<double>')
     pin = sg.new_vertex_property('bool')
     for x in sg.vertices():
@@ -1043,11 +1087,28 @@ def draw_mapped_stree(G, root, color='green'):
         pos[k] = [v.x, v.y]
         if n.isleaf: pin[k] = 1
 
+    def rootpath(node):
+        while 1:
+            if node.in_degree()==0: break
+            edges = node.in_edges()
+            it = ifilter(lambda x:sg.snode_edge[x], edges)
+            try:
+                edge = it.next()
+                yield edge
+            except StopIteration: break
+            node = edge.source()
+
+    for lf in root.leaves():
+        p = rootpath(lf.sgv)
+        sg.eweight[p.next()] = 0.95
+        for e in p: sg.eweight[e] *= 1.01
+
     sg.set_vertex_filter(sg.snode)
     sg.set_edge_filter(sg.snode_edge)
     p1 = gt.sfdp_layout(sg,
                         p=1,
                         C=0.00001,
+                        eweight=sg.eweight,
                         pin=pin,
                         pos=pos)
     sg.set_vertex_filter(None)
@@ -1127,7 +1188,7 @@ def draw_fan(sg):
     ecolor = sg.new_edge_property("string")
     ewidth = sg.new_edge_property("int")
     for e in sg.edges():
-        ewidth[e] = 5
+        ewidth[e] = 3
         ecolor[e] = sg.stree_colors[sg.edge2stree[e]]
     for v in sg.vertices():
         n = sg.sgv2vtx[v]
@@ -1267,10 +1328,11 @@ G = connect()
 ##         212:'magenta'}
 ## n = G.ncbi_node_idx.get_unique(name='rosids')
 
-## t = tango()
-## cmap = defaultdict(lambda:'#%02x%02x%02x'% tuple(
-##     [ int(x*255) for x in t.next()[:-1] ]))
-## n = G.ncbi_node_idx.get_unique(name='core eudicotyledons')
-## sg = named_neighborhood_subgraph(G, n.eid)
-## sg.stree_colors = cmap
-## draw_fan(sg)
+t = tango()
+cmap = defaultdict(lambda:'#%02x%02x%02x'% tuple(
+    [ int(x*255) for x in t.next()[:-1] ]))
+n = G.ncbi_node_idx.get_unique(name='Spermatophyta')
+n = G.ncbi_node_idx.get_unique(name='Magnoliophyta')
+sg = named_neighborhood_subgraph(G, n.eid)
+sg.stree_colors = cmap
+draw_fan(sg)
