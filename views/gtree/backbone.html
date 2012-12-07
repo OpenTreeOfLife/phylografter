@@ -2,7 +2,11 @@
 
 {{=plugin_treeGrafter(
     dict( treeId = request.args(0),
-          menuInfo = dict( options = [ dict( name = 'branchLength' ), dict( name = 'search' ), dict( name = 'treeSize' ) ] ),
+          menuInfo = dict( options = [ \
+            dict( name = 'branchLength' ),
+            dict( name = 'search' ),
+            dict( name = 'treeSize' ),
+            dict( name = 'graftAudit' ) ] ),
           eventInfo = dict( nodeRightClick = dict( handler = 'showNodeContextMenu',
                                                    options = [ dict( handler = 'handleCollapseCladeOptionClick', text = 'Collapse Clade' ),
                                                                dict( handler = 'handleReplaceCladeOptionClick', text = 'Replace Clade' ),

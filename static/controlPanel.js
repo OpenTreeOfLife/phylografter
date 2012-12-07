@@ -21,6 +21,13 @@ BioSync.TreeViewer.ControlPanel.prototype = {
             this.controlPanel = controlPanel;
             this.make = controlPanel.make;
             return this;
+        },
+
+        graftAudit: function( controlPanel ) {
+
+            this.controlPanel = controlPanel;
+            this.make = controlPanel.make;
+            return this;
         }
     },
 
@@ -195,6 +202,11 @@ BioSync.TreeViewer.ControlPanel.prototype = {
     }
 }
 
+
+BioSync.TreeViewer.ControlPanel.prototype.options.graftAudit.prototype = {
+
+    initialize: function() { }
+}
 
 BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
 
