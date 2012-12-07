@@ -660,11 +660,12 @@ def ref_from_doi():
     cross-site scripting in the AJAX code for updating the create form.
     """
     def normalize_doi_for_url(raw):
-        if raw.startswith('doi:'):
+        lowercase = raw.lower()
+        if lowercase.startswith('doi:'):
             raw = raw[4:]
-        elif raw.startswith('doi'):
+        elif lowercase.startswith('doi'):
             raw = raw[3:]
-        if raw.endswith('.json'):
+        if lowercase.endswith('.json'):
             raw = raw[:-5]
         return raw
     def format_citation(d):
@@ -714,11 +715,11 @@ def ref_from_doi():
             o.write(".")
         return ' '.join(o.getvalue().split()), year
 
-    if len(request.args) != 2:
+    if len(request.args) < 2:
         response.status = 404
-        response.write('Execting a DOI with one / in it')
+        response.write('Execting a DOI with at least one / in it')
         return
-    raw = '/'.join([request.args(0), request.args(1)])
+    raw = '/'.join(list(request.args))
     DOMAIN = 'http://dx.doi.org'
     doi = normalize_doi_for_url(raw)
     sys.stderr.write('About look up reference for the doi "%s"\n' % doi)
