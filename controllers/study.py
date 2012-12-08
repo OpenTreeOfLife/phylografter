@@ -3,7 +3,7 @@ from cStringIO import StringIO
 from gluon.custom_import import track_changes
 from gluon.storage import Storage
 
-from cStringIO import StringIO
+from StringIO import StringIO
 import requests
 import json
 
@@ -665,6 +665,8 @@ def ref_from_doi():
             raw = raw[4:]
         elif lowercase.startswith('doi'):
             raw = raw[3:]
+        elif lowercase.startswith('http://dx.doi.org/'):
+            raw = raw[18:]
         if lowercase.endswith('.json'):
             raw = raw[:-5]
         return raw
@@ -677,43 +679,45 @@ def ref_from_doi():
         authors_written = False
         for n, author in enumerate(d.get("author", [])):
             if n != 0:
-                o.write(", ")
-            given_name = author.get("given", "") 
-            family_name = author.get("family", "")
+                o.write(u", ")
+            given_name = unicode(author.get("given", ""))
+            family_name = unicode(author.get("family", ""))
             if family_name:
                 if given_name:
-                    o.write("%s %s" % (given_name, family_name))
-                else:
-                    o.write("%s" % (family_name))
+                    o.write(given_name)
+                    o.write(u" ")
+                o.write(family_name)
             elif given_name:
-                o.write("%s" % (give_name))
+                o.write(given_name)
             authors_written = True
         if authors_written:
-            o.write(". ")
+            o.write(u". ")
         # issue["date-parts"] is as list of [year, month] objects, I think...
-        year = str(d.get("issued",{}).get("date-parts",[[""],])[0][0])
+        year = unicode(d.get("issued",{}).get("date-parts",[[""],])[0][0])
         if year:
-            o.write(year + ". ")
-        title = d.get("title", "")
+            o.write(year)
+            o.write(u". ")
+        title = unicode(d.get("title", ""))
         if title:
-            o.write('%s. ' % title.strip())
-        journal = d.get("container-title", "")
+            o.write(title)
+            o.write(u'. ')
+        journal = unicode(d.get("container-title", ""))
         if journal:
             o.write(journal)
-            o.write(" ")
-        volume = d.get("volume", "")
+            o.write(u" ")
+        volume = unicode(d.get("volume", ""))
         if volume:
             o.write(volume)
-        issue = d.get("issue", "")
+        issue = unicode(d.get("issue", ""))
         if issue:
-            o.write("(" + issue + ")")
+            o.write(u"(" + issue + u")")
         if issue or volume:
-            o.write(":")
-        page = d.get("page", "")
+            o.write(u":")
+        page = unicode(d.get("page", ""))
         if page:
             o.write(page)
-            o.write(".")
-        return ' '.join(o.getvalue().split()), year
+            o.write(u".")
+        return u' '.join(o.getvalue().split()), year
 
     if len(request.args) < 2:
         response.status = 404
@@ -722,7 +726,7 @@ def ref_from_doi():
     raw = '/'.join(list(request.args))
     DOMAIN = 'http://dx.doi.org'
     doi = normalize_doi_for_url(raw)
-    sys.stderr.write('About look up reference for the doi "%s"\n' % doi)
+    #sys.stderr.write('About look up reference for the doi "%s"\n' % doi)
     RETURNS_OBJECT = True
     SUBMIT_URI = DOMAIN + '/' + doi
     payload = {
@@ -758,8 +762,12 @@ def ref_from_doi():
     resp.raise_for_status()
     if RETURNS_OBJECT:
         results = resp.json
-        sys.stderr.write('%s\n' % json.dumps(results, sort_keys=True, indent=4))
-        sys.stderr.write('%s\n' % str(dict(results)))
+        #sys.stderr.write('%s\n' % json.dumps(results, sort_keys=True, indent=4))
+        #sys.stderr.write('%s\n' % str(dict(results)))
+        if results is None:
+            sys.stderr.write('Requested DOI, "%s", does not exist\n' % doi)
+            response.status = 404
+            return
         d = dict(results)
         citation, year = format_citation(d)
         d['citation'] = citation
