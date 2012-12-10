@@ -8,7 +8,7 @@ import requests
 import json
 
 track_changes()
-ivy = local_import('ivy')
+import ivy
 treebase = ivy.treebase
 #from ivy import treebase
 response.subtitle = A("Studies", _href=URL('study','index'))

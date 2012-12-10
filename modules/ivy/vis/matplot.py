@@ -3,8 +3,8 @@ interactive viewers for trees, etc. using matplotlib
 """
 import sys, time, bisect, math, types, os, operator
 from pprint import pprint
-from .. import layout, tree
-from ..storage import Storage
+from ivy import layout, tree
+from ivy.storage import Storage
 import matplotlib, numpy
 import matplotlib.pyplot as pyplot
 from matplotlib.figure import SubplotParams, Figure

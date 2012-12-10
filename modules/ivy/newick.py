@@ -67,7 +67,7 @@ def parse(data, ttable=None, treename=None):
 
     Returns: the root node.
     """
-    from .tree import Node
+    from ivy.tree import Node
     
     if type(data) in types.StringTypes:
         data = StringIO(data)
