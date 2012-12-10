@@ -157,7 +157,8 @@ def dtrecords():
             q &= f.like('%'+sterm+'%')
                 
     def label(otu):
-        if not otu.ottol_name:
+        can_edit = auth.has_membership(role="contributor")
+        if (not otu.ottol_name) and can_edit:
             match, options = spellcheck.process_label(db, otu)
             if match and len(options)==1:
                 name = options[0]
@@ -232,11 +233,18 @@ def taxon_edit_cancel():
     ##     t.id, t.label, db.ottol_name.name, left=left).first()
     return taxon_link(r)
 
+@auth.requires_membership('contributor')
 def update_name():
     study = request.args(0)
     otu = request.args(1)
     name = request.args(2)
-    for x in study, otu, name: assert x
+    if not study:
+        session.flash = 'error in mapping otu to taxon'
+        redirect(URL('study','index'))
+    for x in otu, name:
+        if not x:
+            session.flash = 'error in mapping otu to taxon'
+            redirect(URL('study', args=[study]))
 
     otu = int(otu); name = int(name)
     db(db.otu.id==otu).update(ottol_name=name)
