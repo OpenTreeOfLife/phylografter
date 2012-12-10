@@ -1,6 +1,7 @@
 # coding: utf-8
 from uuid import uuid4
 from gluon.storage import Storage
+import spellcheck
 
 response.subtitle = "OTUs"
 
@@ -155,6 +156,26 @@ def dtrecords():
         if f and sterm:
             q &= f.like('%'+sterm+'%')
                 
+    def label(otu):
+        if not otu.ottol_name:
+            match, options = spellcheck.process_label(db, otu)
+            if match and len(options)==1:
+                name = options[0]
+                otu.update_record(ottol_name=name.id)
+                otu.snode.update(ottol_name=name.id)
+                return otu.label
+            else:
+                for i, name in enumerate(options):
+                    u = URL('update_name', args=[study.id, otu.id, name.id],
+                            extension='html')
+                    options[i] = A(name.unique_name, _href=u)
+            if options:
+                return DIV(otu.label,
+                           DIV('Did you mean:',
+                               UL(*[ LI(u,'?') for u in options ]))).xml()
+        else:
+            return otu.label
+
     def tx(otu):
         if auth.has_membership(role="contributor"):
             return taxon_link(otu)
@@ -164,7 +185,7 @@ def dtrecords():
     rows = db(q).select(t.id, t.label, t.ottol_name,
                         left=left, orderby=orderby, limitby=limitby)
 
-    data = [ (r.label, tx(r).xml()) for r in rows ]
+    data = [ (label(r), tx(r).xml()) for r in rows ]
     totalrecs = db(q0).count()
     disprecs = db(q).count()
     return dict(aaData=data,
@@ -210,3 +231,15 @@ def taxon_edit_cancel():
     ## r = db(t.id==request.args(0)).select(
     ##     t.id, t.label, db.ottol_name.name, left=left).first()
     return taxon_link(r)
+
+def update_name():
+    study = request.args(0)
+    otu = request.args(1)
+    name = request.args(2)
+    for x in study, otu, name: assert x
+
+    otu = int(otu); name = int(name)
+    db(db.otu.id==otu).update(ottol_name=name)
+    db(db.snode.otu==otu).update(ottol_name=name)
+    session.flash = 'OTU %s mapped to %s' % (otu, db.ottol_name[name].name)
+    redirect(URL('study', args=[study]))

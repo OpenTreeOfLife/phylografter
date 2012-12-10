@@ -598,8 +598,8 @@ def tbimport_otus():
                 if i:
                     nexml.otus[k]['otu'] = db.otu[i]
                     n += 1
-                else:
-                    print x.label, t
+                ## else:
+                ##     print x.label, t
 
             session.flash = "%s OTUs inserted" % n
             redirect(URL('study','tbimport_otus'))
