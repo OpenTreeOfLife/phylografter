@@ -174,6 +174,8 @@ def dtrecords():
                 return DIV(otu.label,
                            DIV('Did you mean:',
                                UL(*[ LI(u,'?') for u in options ]))).xml()
+            else:
+                return otu.label
         else:
             return otu.label
 
