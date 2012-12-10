@@ -9,7 +9,21 @@
 $(document).ready(function(){
     $('#doi_ajax_spinner').hide();
 	$("#populate_from_doi").click(function() {
-		var study_doi_url = "{{=URL(request.controller, 'ref_from_doi')}}" + "/" + $("#study_doi").val() + ".json" ;
+	    var raw_doi_str = $("#study_doi").val();
+	    var lowerdoi = raw_doi_str.toLowerCase();
+	    if (lowerdoi.slice(0, 4) == "doi:") {
+	        raw_doi_str = raw_doi_str.slice(4);
+	        $("#study_doi").val(raw_doi_str);
+	    }
+	    else if (lowerdoi.slice(0,11) ==  "dx.doi.org/") {
+	        raw_doi_str = raw_doi_str.slice(11);
+	        $("#study_doi").val(raw_doi_str);
+	    }
+	    else if (lowerdoi.slice(0,18) ==  "http://dx.doi.org/") {
+	        raw_doi_str = raw_doi_str.slice(18);
+	        $("#study_doi").val(raw_doi_str);
+	    }
+	    var study_doi_url = "{{=URL(request.controller, 'ref_from_doi')}}" + "/" + raw_doi_str + ".json" ;
         $("#doi_ajax_spinner").show();
 		$.ajax({
 			url : study_doi_url,
@@ -21,6 +35,7 @@ $(document).ready(function(){
 			success : function(data, textStatus, jqXHR) {
 				$("#study_citation").val(data.citation);
 				$("#study_year_published").val(data.year);
+				$(".flash").html("DOI found.").slideUp();
 				$("#doi_ajax_spinner").hide();
 			},
 			error : function(jqXHR, textStatus, errorThrown) {
