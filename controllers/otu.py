@@ -156,7 +156,7 @@ def dtrecords():
         if f and sterm:
             q &= f.like('%'+sterm+'%')
                 
-    def label(otu):
+    def label(otu, uid):
         can_edit = auth.has_membership(role="contributor")
         if (not otu.ottol_name) and can_edit:
             match, options = spellcheck.process_label(db, otu)
@@ -168,8 +168,8 @@ def dtrecords():
             else:
                 for i, name in enumerate(options):
                     u = URL('update_name', args=[study.id, otu.id, name.id],
-                            extension='html')
-                    options[i] = A(name.unique_name, _href=u)
+                            extension='load')
+                    options[i] = A(name.unique_name, _href=u, cid=uid)
             if options:
                 return DIV(otu.label,
                            DIV('Did you mean:',
@@ -179,16 +179,19 @@ def dtrecords():
         else:
             return otu.label
 
-    def tx(otu):
+    def datarow(otu):
         if auth.has_membership(role="contributor"):
-            return taxon_link(otu)
+            uid, link = taxon_link(otu)
+            return (label(otu, uid), link.xml())
         else:
-            return SPAN(otu.ottol_name.name if otu.ottol_name else '')
+            return (otu.label,
+                    SPAN(otu.ottol_name.name if otu.ottol_name else ''))
 
     rows = db(q).select(t.id, t.label, t.ottol_name,
                         left=left, orderby=orderby, limitby=limitby)
 
-    data = [ (label(r), tx(r).xml()) for r in rows ]
+    ## data = [ (label(r), tx(r).xml()) for r in rows ]
+    data = [ datarow(r) for r in rows ]
     totalrecs = db(q0).count()
     disprecs = db(q).count()
     return dict(aaData=data,
@@ -205,7 +208,7 @@ def taxon_link(otu):
     ## d = dict(otu=otu, taxon=taxon.id)
     u = URL(c="otu",f="taxon_edit.load",args=[otu.id])
     uid = uuid4().hex
-    return SPAN(A(str(taxon.name), _href=u, cid=uid), _id=uid)
+    return uid, SPAN(A(str(taxon.name), _href=u, cid=uid), _id=uid)
 
 def taxon_edit():
     otu = db.otu(int(request.args(0)))
@@ -240,16 +243,18 @@ def update_name():
     study = request.args(0)
     otu = request.args(1)
     name = request.args(2)
-    if not study:
-        session.flash = 'error in mapping otu to taxon'
-        redirect(URL('study','index'))
-    for x in otu, name:
-        if not x:
-            session.flash = 'error in mapping otu to taxon'
-            redirect(URL('study', args=[study]))
+    ## if not study:
+    ##     session.flash = 'error in mapping otu to taxon'
+    ##     redirect(URL('study','index'))
+    ## for x in otu, name:
+    ##     if not x:
+    ##         session.flash = 'error in mapping otu to taxon'
+    ##         redirect(URL('study', args=[study]))
 
     otu = int(otu); name = int(name)
     db(db.otu.id==otu).update(ottol_name=name)
     db(db.snode.otu==otu).update(ottol_name=name)
-    session.flash = 'OTU %s mapped to %s' % (otu, db.ottol_name[name].name)
-    redirect(URL('study', args=[study]))
+    ## session.flash = 'OTU %s mapped to %s' % (otu, db.ottol_name[name].name)
+    ## redirect(URL('study', args=[study]))
+    uid, link = taxon_link(db.otu(otu))
+    return dict(link=link)
