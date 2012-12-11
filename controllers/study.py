@@ -8,7 +8,7 @@ import requests
 import json
 
 track_changes()
-ivy = local_import('ivy')
+ivy = local_import('ivy',reload=True)
 treebase = ivy.treebase
 #from ivy import treebase
 response.subtitle = A("Studies", _href=URL('study','index'))
@@ -419,10 +419,15 @@ def tbimport():
     t = db.study
     key = "uploaded_nexml_%s" % auth.user.id
     contributor = "%s %s" % (auth.user.first_name, auth.user.last_name)
+    status = None
     tbid = request.args(0)
     if tbid:
-        e = treebase.fetch_study(tbid)
-        nexml = treebase.parse_nexml(e)
+        try:
+            e = treebase.fetch_study(tbid)
+            nexml = treebase.parse_nexml(e)
+        except:
+            nexml = { }
+            status = "Valid study id required"
         if nexml:
             nexml.meta['contributor'] = contributor
             cache.ram.clear(key)
@@ -434,8 +439,12 @@ def tbimport():
     form = SQLFORM.factory(*fields)
     if form.accepts(request.vars, session, dbio=False):
         if form.vars.study_id:
-            e = treebase.fetch_study(form.vars.study_id)
-            nexml = treebase.parse_nexml(e)
+            try:
+                e = treebase.fetch_study(form.vars.study_id)
+                nexml = treebase.parse_nexml(e)
+            except:
+                nexml = { }
+                status = "Valid study id required"
         elif form.vars.nexml_file:
             path = os.path.join(uploadfolder,
                                 form.vars.nexml_file_newfilename)
@@ -449,8 +458,8 @@ def tbimport():
             cache.ram.clear(key)
             x = cache.ram(key, lambda:nexml, time_expire=10000)
             redirect(URL('study','tbimport2',args=tbid))
-            
-    return dict(form=form)
+
+    return dict(form=form, status=status )
 
 @auth.requires_membership('contributor')
 def tbimport2():

@@ -42,6 +42,8 @@ try:
     from . import graph
 except ImportError:
     pass
+except:
+    pass
 
 import sequtil
 #from . import chars, align, sequtil

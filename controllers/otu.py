@@ -139,6 +139,7 @@ def dtrecords():
     left = db.ottol_name.on(db.ottol_name.id==t.ottol_name)
     fields = [ t.label, db.ottol_name.name ]
     orderby = []
+    print request.vars
     if request.vars.iSortCol_0:
         for i in range(int(request.vars.iSortingCols or 1)):
             col = int(request.vars.get("iSortCol_%s" % i))

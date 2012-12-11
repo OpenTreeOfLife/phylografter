@@ -33,7 +33,7 @@ def fetch_study(study_id, format="nexml"):
     if format=="nexus":
         return urlopen(url).read()
     else:
-        return etree.parse(url)
+        return etree.parse( url )
 
 def parse_chars(e, otus):
     v = []

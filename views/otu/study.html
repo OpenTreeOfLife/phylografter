@@ -18,7 +18,7 @@
 	    "sDom": '<"H"lrp>t<"F"ip>',
 	    "bJQueryUI": true,
 	    "sAjaxSource": "{{=URL(request.controller, 'dtrecords.json', args=[study.id])}}",
-	    "aoColumnDefs": []
+        "aaSorting":[]
 	} );
 
 	oSettings = oTable.fnSettings();
@@ -52,5 +52,13 @@
 		this.value = asInitVals[$("tfoot input").index(this)];
 	    }
 	} );
+
+    /*
+    setTimeout( function() {
+        
+        $(".DataTables_sort_wrapper:contains('Taxon')").click();
+
+    }, 1000 ); */
+
     } );
 </script>
