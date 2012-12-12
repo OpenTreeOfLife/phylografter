@@ -236,7 +236,8 @@ def taxon_edit_cancel():
     ## left = db.ottol_name.on(db.ottol_name.id==t.ottol_name)
     ## r = db(t.id==request.args(0)).select(
     ##     t.id, t.label, db.ottol_name.name, left=left).first()
-    return taxon_link(r)
+    uid, link = taxon_link(r)
+    return link
 
 @auth.requires_membership('contributor')
 def update_name():
