@@ -179,14 +179,15 @@ def write_input_files(request,
     '''
     for fn, content in inp_file_path_list:
         full_path = os.path.join(par_dir, fn)
-        fo = open(full_path, 'w')
-        try:
+        if not os.path.exists(full_path):
+            fo = open(full_path, 'w')
             try:
-                fo.write(content.read())
-            except:
-                fo.write(content)
-        finally:
-            fo.close()
+                try:
+                    fo.write(content.read())
+                except:
+                    fo.write(content)
+            finally:
+                fo.close()
         
             
 def do_ext_proc_launch(request,
