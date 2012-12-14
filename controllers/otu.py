@@ -100,6 +100,11 @@ response.subtitle = "OTUs"
 ##     N = db(db.otu.study==study.id).count()
 ##     return dict(study_url=study_url, N=N, table=powerTable.create())
 
+def studyNew():
+    study = db.study(request.args(0)) or redirect(URL("index"))
+
+    return dict( study = study )
+
 def study():
     t = db.otu
     study = db.study(request.args(0)) or redirect(URL("index"))
