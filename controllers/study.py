@@ -6,6 +6,9 @@ from gluon.storage import Storage
 from StringIO import StringIO
 import requests
 import json
+import time
+
+from externalproc import get_external_proc_dir_for_upload, invoc_status, ExternalProcStatus, get_logger, get_conf
 
 track_changes()
 import ivy
@@ -408,6 +411,68 @@ def tag():
     return dict(tags=v, form=form)
 
 def download():
+    return response.download(request, db)
+
+def to_nexml():
+    if len(request.args) == 1:
+        _LOG = get_logger(request, 'study')
+        try:
+            field = db['study_file']['file']
+        except Error:
+            sys.stderr.write('odd\n')
+            raise HTTP(404)
+        name = request.args[-1]
+        sys.stderr.write('looking for file "' + name + '"\n')
+        try:
+            ext_proc_dir = get_external_proc_dir_for_upload(request, db, name)
+        except ValueError:
+            raise HTTP(404)
+        if ext_proc_dir is None:
+            raise HTTP(404)
+        to_nexml_dir = os.path.join(ext_proc_dir, '2nexml')
+        if not os.path.exists(to_nexml_dir):
+            os.makedirs(to_nexml_dir)
+        timeout_duration = 0.1 #@TEMPORARY should not be hard coded
+        status = invoc_status(request, to_nexml_dir)
+        launched_this_call = False
+        if status == ExternalProcStatus.NOT_FOUND:
+            try:
+                exe_path = get_conf(request).get("external", "2nexml")
+                assert(os.path.exists(exe_path))
+            except:
+                _LOG.warn("Could not find the 2nexml executable")
+                raise HTTP(501, T("Server is not configured to allow 2nexml conversion"))
+            try:
+                (filename, upload_stream) = field.retrieve(name)
+            except IOError:
+                sys.stderr.write('not found\n')
+                raise HTTP(404)
+            do_ext_proc_launch(request,
+                               to_nexml_dir,
+                               [exe_path, 'in.nex'],
+                               'out.xml',
+                               'err.txt',
+                               [('in.nex', upload_stream)])
+            time.sleep(timeout_duration)
+            status = invoc_status(request, to_nexml_dir)
+            assert(status != ExternalProcStatus.NOT_FOUND)
+            launched_this_call = True
+        if status == ExternalProcStatus.RUNNING:
+            if not launched_this_call:
+                time.sleep(timeout_duration)
+                status = invoc_status(request, to_nexml_dir)
+            if status == ExternalProcStatus.RUNNING:
+                return HTTP(102, T("Process still running"))
+        if status == ExternalProcStatus.FAILED:
+            raise HTTP(501, T("Server is not configured to allow 2nexml conversion"))
+        if status == ExternalProcStatus.FAILED:
+            raise HTTP(501, T("Server is not configured to allow 2nexml conversion"))
+        output = os.path.join(to_nexml_dir, 'out.xml')
+        response.headers['Content-Type'] = 'text/xml'
+        return open(output, 'rU').read()
+        
+    else:
+        raise HTTP(301)
     return response.download(request, db)
 
 def strees():
