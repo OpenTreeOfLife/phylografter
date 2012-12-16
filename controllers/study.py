@@ -437,8 +437,10 @@ def tbimport():
             e = treebase.fetch_study(form.vars.study_id)
             nexml = treebase.parse_nexml(e)
         elif form.vars.nexml_file:
+            ## print form.vars.nexml_file
             path = os.path.join(uploadfolder,
-                                form.vars.nexml_file_newfilename)
+                                form.vars.nexml_file)
+                                ## form.vars.nexml_file_newfilename)
             nexml = treebase.parse_nexml(path)
             os.remove(path)
         else:
