@@ -97,3 +97,41 @@ You can authorize users to upload trees as follows:
 1. Under Models click 'database administration'
 1. Under db.auth\_membership click 'insert new auth\_membership'
 1. Choose your user and the 'contributor' group (id 3) and click submit
+
+
+Experimental features
+=====================
+
+Support for 2nexml functionality, and discussion of launching external processes
+---------------
+If you add a section similar to:
+
+<pre>
+[external]
+dir = /tmp/phylografter_external_tools/
+2nexml = /usr/local/bin/2nexml
+</pre>
+
+to the private/config file, then you should be able to use the NEXUS to NeXML 
+conversion facility. The "dir" setting in the "external" section
+specifies a directory on the filesystem that will be the parent of the scratch
+directory used when invoking external processes.  
+
+The "2nexml" setting in the "external" section is the absolute path of the 2nexml
+executable on the server's filesystem. Consult https://github.com/OpenTreeOfLife/2nexml
+for details on how to install the 2nexml tool.
+
+The URL for invoking this controller is:
+DOMAIN/phylografter/study/to_nexml/ID
+where the ID is the filename that web2py generates for a file that is uploaded
+as part of a study. This is the same ID scheme used in the study/download/ID 
+URLs, so this filename should be unique.
+
+When the controller is invoked, phylografter will try to find a row in the
+study_file table that has a file field that matches the ID.  If it finds this row,
+phylografter will trigger a newly implemented system for invoking an external process.
+ In this case, it will invoke the 2nexml command-line tool.
+
+
+NEXUS to NeXML conversion is typically fast, so the call to the external process
+blocks.
