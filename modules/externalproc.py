@@ -81,11 +81,12 @@ def get_external_proc_parent(request):
         try:
             _EXTERNAL_PROC_PARENT = conf.get('external', 'dir')
             _EXTERNAL_PROC_PARENT = os.path.abspath(_EXTERNAL_PROC_PARENT)
+            _LOG = get_logger(request, 'externalproc')
             if not os.path.exists(_EXTERNAL_PROC_PARENT):
                 try:
                     os.makedirs(_EXTERNAL_PROC_PARENT)
+                    _LOG.info('Created dir "%s"' % _EXTERNAL_PROC_PARENT)
                 except:
-                    _LOG = get_logger(request, 'externalproc')
                     _LOG.warn('Could not make the configuration-file-specified external dir "%s"\n' % _EXTERNAL_PROC_PARENT)
                     raise
         except:
@@ -139,6 +140,8 @@ def get_external_proc_dir_for_upload(request, db, upload_file):
     fp = os.path.join(par, pref_subdir, upload_subdir)
     if not os.path.exists(fp):
         os.makedirs(fp)
+        _LOG = get_logger(request, 'externalproc')
+        _LOG.info('Created dir "%s"' % fp)        
     return fp
 
 
@@ -195,7 +198,8 @@ def do_ext_proc_launch(request,
                        invocation,
                        stdout_path,
                        stderr_path,
-                       inp_file_path_list):
+                       inp_file_path_list,
+                       wait):
     '''
     Uses modules/joblauncher.py to launch an external process.
     
@@ -205,6 +209,7 @@ def do_ext_proc_launch(request,
         which need to be written to the par_dir before the invocation.
     '''
     write_input_files(request, par_dir, inp_file_path_list)
+    app_name = request.application
     job_launcher = os.path.abspath("applications/%s/modules/joblauncher.py" % app_name)
     if not os.path.exists(job_launcher):
         raise RuntimeError('Could not find joblauncher script')
@@ -217,4 +222,6 @@ def do_ext_proc_launch(request,
                      stderr_path] + invocation
     p = subprocess.Popen(wrapped_invoc)
     _LOG = get_logger(request, 'externalproc')
+    if wait:
+        p.wait()
     
