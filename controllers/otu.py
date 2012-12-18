@@ -105,6 +105,66 @@ def studyNew():
 
     return dict( study = study )
 
+
+def getStudyOTUs():
+
+    study = db.study( request.vars.studyId )
+
+    otuTable = db.otu
+
+    left = db.ottol_name.on( db.ottol_name.id == otuTable.ottol_name )
+
+    fields = [ otuTable.label, db.ottol_name.name ]
+
+    orderby = []
+
+    """ 
+    if request.vars.iSortCol_0:
+        for i in range(int(request.vars.iSortingCols or 1)):
+            col = int(request.vars.get("iSortCol_%s" % i))
+            scol = fields[col]
+            sdir = request.vars.get("sSortDir_%s" % i) or "asc"
+            if sdir == "desc": scol = ~scol
+            orderby.append(scol)
+    """
+
+
+    start = ( ( int( request.vars.page ) - 1  ) * int( request.vars.rowsOnPage ) ) + 1
+    end = start + int( request.vars.rowsOnPage )
+
+    limitby = ( start, end )
+
+    q = q0 = ( otuTable.study == study.id )
+
+    if len( request.vars.labelSearch ):
+        q &= otuTable.label.like( '%' + request.vars.labelSearch + '%' )
+    
+    if len( request.vars.taxonSearch ):
+        q &= db.ottol_name.name.like( '%' + request.vars.taxonSearch + '%' )
+
+    def tx(otu):
+        if auth.has_membership(role="contributor"):
+            return taxon_link(otu)
+        else:
+            return SPAN(otu.ottol_name.name if otu.ottol_name else '')
+
+    rows = db( q ).select( otuTable.id, otuTable.label, otuTable.ottol_name,
+                           left = left,
+                           orderby = orderby,
+                           limitby = limitby )
+
+    data = [ (r.label, tx(r).xml()) for r in rows ]
+    
+    totalrecs = db(q0).count()
+
+    disprecs = db(q).count()
+
+    return response.json( \
+        dict( data = data,
+              totalRecords = totalrecs,
+              recordsInData = disprecs ) )
+
+
 def study():
     t = db.otu
     study = db.study(request.args(0)) or redirect(URL("index"))

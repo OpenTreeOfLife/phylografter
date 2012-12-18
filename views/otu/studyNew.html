@@ -1,0 +1,12 @@
+{{extend 'layout.html'}}
+
+<div style="padding-bottom:0.5em;">OTUs from {{=A(_study_rep(study), _href=URL('study','view',args=study.id))}}</div>
+
+<div id="otuTable"></div>
+
+<script type="text/javascript" charset="utf-8">
+
+    BioSync.Common.loadScript( { name: 'otuTable' } );
+    BioSync.otuTable = new BioSync.OtuTable( { id: 'otuTable', studyId: {{=request.args(0)}} } ).initialize();
+
+</script>
