@@ -32,6 +32,11 @@ BioSync.OtuTable.prototype = {
 
         this.getTheInfo();
         
+        this.disablePrevButton();
+        this.prevButtonDisabled = true;
+        
+        this.enableNextButton();
+        this.nextButtonDisabled = false;
     },
 
     getTheInfo: function() {
@@ -43,7 +48,10 @@ BioSync.OtuTable.prototype = {
                       page: this.page,
                       rowsOnPage: this.rowsOnPage,
                       labelSearch: $('#labelSearch').val(),
-                      taxonSearch: $('#taxonSearch').val() },
+                      taxonSearch: $('#taxonSearch').val(),
+                      taxonSort: this.taxonSort,
+                      labelSort: this.labelSort
+                  },
                   success: $.proxy( this.handleTheInfo, this ) } );
     },
 
@@ -81,11 +89,18 @@ BioSync.OtuTable.prototype = {
             rightItem.width( ( tableWidth / 2 ) - 5 ).height( leftItem.height() );
         }
 
+        var lastItemIndex = this.recordsInData;
+
+        if( ( this.page * this.rowsOnPage ) < this.recordsInData ) {
+
+            lastItemIndex = this.page * this.rowsOnPage;
+        }
+
         var contextText = [
             'Showing ',
             ( ( this.page - 1  ) * this.rowsOnPage ) + 1,
             ' to ',
-            this.page * this.rowsOnPage,
+            lastItemIndex,
             ' of ', this.recordsInData,
             ' entries.' ].join('');
 
@@ -94,24 +109,8 @@ BioSync.OtuTable.prototype = {
             
             contextText += [ '(filtered from ', this.totalRecords, ' total entries)' ].join('');
         }
-            
+
         this.context.text( contextText );
-
-        if( this.page == 1 ) {
-
-            $( '.prevPageLink' )
-                .unbind( 'click', { }, $.proxy( this.prevPageClick, this ) )
-                .unbind( 'mouseenter' )
-                .unbind( 'mouseleave' );
-
-        } else {
-
-            $( '.prevPageLink' )
-                .unbind( 'click', { }, $.proxy( this.prevPageClick, this ) )
-                .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
-                .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline );
-        }
-
     },
 
     makeFooter: function() {
@@ -192,6 +191,26 @@ BioSync.OtuTable.prototype = {
         this.container.append( this.table );
     },
 
+    sortLabelColumn: function() {
+
+        this.labelSort =
+            ( ( this.labelSort == undefined ) || ( this.labelSort == 'descending' ) )
+                ? 'ascending'
+                : 'descending';
+
+        this.getTheInfo();
+    },
+
+    sortTaxonColumn: function() {
+    
+        this.taxonSort =
+            ( ( this.taxonSort == undefined ) || ( this.taxonSort == 'descending' ) )
+                ? 'ascending'
+                : 'descending';
+
+        this.getTheInfo();
+    },
+
     makeSubHeader: function() {
 
         this.subHeader = this.makeEl( 'div' ).css( { 'background-color': '#E6E6E6' } ).width( '100%' );
@@ -205,7 +224,8 @@ BioSync.OtuTable.prototype = {
                             'font-weight': 'bold',
                             'border': '1px solid gray' } )
                     .text( 'Label' )
-                    .bind( 'click', { }, $.proxy( this, this.sortLabelColumn ) );
+                    .bind( 'click', { }, $.proxy( this.sortLabelColumn, this ) )
+                    .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault );
 
         var rightSubHeader =
             this.makeEl( 'div' )
@@ -216,13 +236,24 @@ BioSync.OtuTable.prototype = {
                             'font-weight': 'bold',
                             'border': '1px solid gray' } )
                     .text( 'Taxon' )
-                    .bind( 'click', { }, $.proxy( this, this.sortTaxonColumn ) );
+                    .bind( 'click', { }, $.proxy( this.sortTaxonColumn, this ) )
+                    .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault );
 
         var clear = this.makeEl( 'div' ).css( { 'clear': 'both' } );
 
         this.container.append( this.subHeader.append( leftSubHeader, rightSubHeader, clear ) );
 
         this.subHeader.children().width( ( this.subHeader.outerWidth( true ) / 2 ) - 13 );
+
+        this.labelSort = undefined;
+        this.taxonSort = 'ascending';
+    },
+
+    changeRowsOnPage: function( e ) {
+
+        this.rowsOnPage = this.rowsOnPageSelector.val();
+
+        this.getTheInfo();
     },
 
     makeHeader: function() {
@@ -235,7 +266,17 @@ BioSync.OtuTable.prototype = {
                         'border-top-right-radius': '5px',
                         'border-top-left-radius': '5px' } );
 
-        this.rowsOnPageSelector =
+        this.rowsOnPageSelector = 
+            this.makeEl( 'select' )
+              .width( 50 )
+              .change( $.proxy( this.changeRowsOnPage, this ) )
+              .append(
+                this.makeEl( 'option' ).attr( { 'value': '10', 'selected': 'selected' } ).text( '10' ),
+                this.makeEl( 'option' ).attr( { 'value': '25' } ).text( '25' ),
+                this.makeEl( 'option' ).attr( { 'value': '50' } ).text( '50' ),
+                this.makeEl( 'option' ).attr( { 'value': '100' } ).text( '100' ) );
+
+        this.rowsOnPageContainer =
             this.makeEl( 'div' ).css( { 'float': 'left' } ).append(
                 this.makeEl( 'div' )
                     .text( 'Show' )
@@ -243,12 +284,9 @@ BioSync.OtuTable.prototype = {
                             'font-weight': 'bold',
                             'float': 'left' } ),
                 this.makeEl( 'div' ).css( { 'float': 'left' } ).append(
-                    this.makeEl( 'select' ).width( 50 ).append(
-                        this.makeEl( 'option' ).attr( { 'value': '10', 'selected': 'selected' } ).text( '10' ),
-                        this.makeEl( 'option' ).attr( { 'value': '25' } ).text( '25' ),
-                        this.makeEl( 'option' ).attr( { 'value': '50' } ).text( '50' ),
-                        this.makeEl( 'option' ).attr( { 'value': '100' } ).text( '100' ) ) ),
-                 this.makeEl( 'div' )
+                    this.rowsOnPageSelector
+                ),
+                this.makeEl( 'div' )
                     .text( ' entries' )
                     .css( { 'font-weight': 'bold',
                             'padding': '0px 5px',
@@ -262,20 +300,19 @@ BioSync.OtuTable.prototype = {
 
         this.container.append(
             this.header.append(
-                this.rowsOnPageSelector,
+                this.rowsOnPageContainer,
                 this.headerPagination,
                 this.makeEl( 'div' ).css( { 'clear': 'both' } ) ) );
     },
 
     makePagination: function() {
 
-        return this.makeEl( 'div' ).css( { 'padding': '0px 5px', 'float': 'right' } ).append(
-                    this.makeEl( 'div' ).css( { 'float': 'left', 'class': 'prevPageLink' } )
+        return this.makeEl( 'div' ).css( { 'padding': '0px 10px', 'float': 'right' } ).append(
+                    this.makeEl( 'div' ).attr( { 'class': 'prevPageLink' } )
+                                        .css( { 'float': 'left' } )
                                         .text( '<' ),
-                    this.makeEl( 'div' ).css( { 'padding': '0px 5px', 'float': 'left', 'class': 'nextPageLink' } )
-                                        .bind( 'click', { }, $.proxy( this.nextPageClick, this ) )
-                                        .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
-                                        .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                    this.makeEl( 'div' ).attr( { 'class': 'nextPageLink' } )
+                                        .css( { 'padding': '0px 10px', 'float': 'left' } )
                                         .text( '>' ),
                     this.makeEl( 'div' ).css( { 'clear': 'both' } ) );
     },
@@ -284,6 +321,16 @@ BioSync.OtuTable.prototype = {
 
         this.page -= 1;
 
+        if( this.page == 1 ) {
+
+            this.disablePrevButton();
+        }
+
+        if( this.nextButtonDisabled ) {
+
+            this.enableNextButton();
+        }
+
         this.getTheInfo();
     },
     
@@ -291,7 +338,72 @@ BioSync.OtuTable.prototype = {
 
         this.page += 1;
 
+        if( ( this.page * this.rowsOnPage ) >= this.recordsInData ) {
+
+            this.disableNextButton();
+        }
+
+        if( this.prevButtonDisabled ) {
+
+            this.enablePrevButton();
+        }
+
         this.getTheInfo();
+    },
+
+    disablePrevButton: function() {
+
+        $( '.prevPageLink' )
+            .unbind( 'click' )
+            .unbind( 'mouseenter' )
+            .unbind( 'mouseleave' );
+
+        $( '.prevPageLink' ).each( function( i, el ) {
+        
+            $.proxy( BioSync.Common.removeTextUnderline, el )();
+            $.proxy( BioSync.Common.setMouseToDefault, el )();
+
+        } );
+            
+        this.prevButtonDisabled = true;
+    },
+
+    disableNextButton: function() {
+
+        $( '.nextPageLink' )
+            .unbind( 'click' )
+            .unbind( 'mouseenter' )
+            .unbind( 'mouseleave' );
+
+        $( '.nextPageLink' ).each( function( i, el ) {
+        
+            $.proxy( BioSync.Common.removeTextUnderline, el )();
+            $.proxy( BioSync.Common.setMouseToDefault, el )();
+
+        } );
+            
+        this.nextButtonDisabled = true;
+    },
+
+    enablePrevButton: function() {
+
+        $( '.prevPageLink' )
+           .bind( 'click', { }, $.proxy( this.prevPageClick, this ) )
+           .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+           .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline );
+        
+        this.prevButtonDisabled = false;
+    },
+
+    enableNextButton: function() {
+
+        $( '.nextPageLink' )
+           .bind( 'click', { }, $.proxy( this.nextPageClick, this ) )
+           .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+           .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline );
+
+        this.nextButtonDisabled = false;
     }
+
 }
 
