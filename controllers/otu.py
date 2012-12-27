@@ -100,7 +100,7 @@ response.subtitle = "OTUs"
 ##     N = db(db.otu.study==study.id).count()
 ##     return dict(study_url=study_url, N=N, table=powerTable.create())
 
-def studyNew():
+def study():
     study = db.study(request.args(0)) or redirect(URL("index"))
 
     return dict( study = study )
@@ -162,81 +162,6 @@ def getStudyOTUs():
               recordsInData = disprecs ) )
 
 
-def study():
-    t = db.otu
-    study = db.study(request.args(0)) or redirect(URL("index"))
-    theme = "smoothness"
-    for x in (
-        'DataTables-1.8.1/media/js/jquery.js',
-        'DataTables-1.8.1/media/js/jquery.dataTables.min.js',
-        'DataTables-1.8.1/media/css/demo_table.css',
-        'DataTables-1.8.1/media/ui/css/%s/jquery-ui-1.8.5.custom.css' % theme):
-        response.files.append(URL('static',x))
-
-    colnames = ["Label", "Taxon"]
-    widths = ["50%", "50%"]
-    tid = "study-otus"
-    table = TABLE(_id=tid, _class="display")
-    table.append(THEAD(TR(*[ TH(f, _width=w)
-                             for f, w in zip(colnames, widths) ])))
-    table.append(TBODY(TR(TD("Loading data from server",
-                             _colspan=len(colnames),
-                             _class="dataTables_empty"))))
-    table.append(TFOOT(TR(
-        TH(INPUT(_name="search_label",
-                 _style="width:100%",_class="search_init",
-                 _title="search label" )),
-        TH(INPUT(_name="search_taxon",
-                 _style="width:100%",_class="search_init",
-                 _title="search taxon" ))
-        )))
-
-    return dict(tid=tid, table=table, study=study)
-    
-def dtrecords():
-    ## for k, v in sorted(request.vars.items()):
-    ##     print k, ":", v
-    study = db.study(request.args(0)) or redirect(URL("index"))
-    t = db.otu
-    left = db.ottol_name.on(db.ottol_name.id==t.ottol_name)
-    fields = [ t.label, db.ottol_name.name ]
-    orderby = []
-    if request.vars.iSortCol_0:
-        for i in range(int(request.vars.iSortingCols or 1)):
-            col = int(request.vars.get("iSortCol_%s" % i))
-            scol = fields[col]
-            sdir = request.vars.get("sSortDir_%s" % i) or "asc"
-            if sdir == "desc": scol = ~scol
-            orderby.append(scol)
-    start = int(request.vars.iDisplayStart or 0)
-    end = start + int(request.vars.iDisplayLength or 10)
-    limitby = (start,end)
-    q = q0 = (t.study==study.id)
-    for i, f in enumerate(fields):
-        sterm = request.vars.get("sSearch_%s" % i)
-        if f and sterm:
-            q &= f.like('%'+sterm+'%')
-                
-    def tx( row ):
-        if auth.has_membership(role="contributor"):
-            u = URL(c="otu",f="taxon_edit.load",args=[row.otu.id])
-            uid = uuid4().hex
-            return SPAN(A(str( row.ottol_name.name ), _href=u, cid=uid), _id=uid)
-        else:
-            return SPAN(row.otu.ottol_name.name if row.otu.ottol_name else '')
-
-    rows = db(q).select(t.id, t.label, t.ottol_name, db.ottol_name.name,
-                        left=left, orderby=orderby, limitby=limitby)
-
-    data = [ (r.otu.label, tx(r).xml()) for r in rows ]
-
-    totalrecs = db(q0).count()
-    disprecs = db(q).count()
-    return dict(aaData=data,
-                iTotalRecords=totalrecs,
-                iTotalDisplayRecords=disprecs,
-                sEcho=int(request.vars.sEcho))
-    
 def taxon_edit():
     otu = db.otu(int(request.args(0)))
     field = Field("taxon", "integer", default=otu.ottol_name)
