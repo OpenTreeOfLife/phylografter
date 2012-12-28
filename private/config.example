@@ -3,3 +3,7 @@ dbname=phylografter
 host=localhost
 user=guest
 password=12345
+
+#### [external]
+#### dir = /tmp/phylografter_external_tools/
+#### 2nexml = /usr/local/bin/2nexml

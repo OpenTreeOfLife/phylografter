@@ -3,12 +3,16 @@ from cStringIO import StringIO
 from gluon.custom_import import track_changes
 from gluon.storage import Storage
 
-from cStringIO import StringIO
+from StringIO import StringIO
 import requests
 import json
+import time
+
+from externalproc import get_external_proc_dir_for_upload, invoc_status, \
+    ExternalProcStatus, get_logger, get_conf, do_ext_proc_launch
 
 track_changes()
-ivy = local_import('ivy',reload=True)
+import ivy
 treebase = ivy.treebase
 #from ivy import treebase
 response.subtitle = A("Studies", _href=URL('study','index'))
@@ -410,6 +414,89 @@ def tag():
 def download():
     return response.download(request, db)
 
+def to_nexml():
+    if len(request.args) == 1:
+        _LOG = get_logger(request, 'study')
+        try:
+            field = db['study_file']['file']
+        except Error:
+            sys.stderr.write('odd\n')
+            raise HTTP(404)
+        name = request.args[-1]
+        sys.stderr.write('looking for file "' + name + '"\n')
+        try:
+            ext_proc_dir = get_external_proc_dir_for_upload(request, db, name)
+        except ValueError:
+            raise HTTP(404)
+        if ext_proc_dir is None:
+            raise HTTP(404)
+
+        #@TEMPORARY could be refactored into a create_ext_proc_subdir() call
+        to_nexml_dir = os.path.join(ext_proc_dir, '2nexml')
+        if not os.path.exists(to_nexml_dir):
+            os.makedirs(to_nexml_dir)
+            _LOG.info('Created directory "%s"' % to_nexml_dir)
+        block = True
+        timeout_duration = 0.1 #@TEMPORARY should not be hard coded
+
+        out_filename = 'out.xml'
+        err_filename = 'err.txt'
+
+        #@TEMPORARY could be refactored into a launch_or_get_status() call
+        status = invoc_status(request, to_nexml_dir)
+        launched_this_call = False
+        if status == ExternalProcStatus.NOT_FOUND:
+            try:
+                try:
+                    exe_path = get_conf(request).get("external", "2nexml")
+                except:
+                    _LOG.warn("Config does not have external/2nexml setting")
+                    raise
+                assert(os.path.exists(exe_path))
+            except:
+                _LOG.warn("Could not find the 2nexml executable")
+                raise HTTP(501, T("Server is not configured to allow 2nexml conversion"))
+            try:
+                (filename, upload_stream) = field.retrieve(name)
+            except IOError:
+                sys.stderr.write('not found\n')
+                raise HTTP(404)
+            do_ext_proc_launch(request,
+                               to_nexml_dir,
+                               [exe_path, 'in.nex'],
+                               out_filename,
+                               err_filename,
+                               [('in.nex', upload_stream)],
+                               wait=block)
+            if not block:
+                time.sleep(timeout_duration)
+            status = invoc_status(request, to_nexml_dir)
+            assert(status != ExternalProcStatus.NOT_FOUND)
+            launched_this_call = True
+        if status == ExternalProcStatus.RUNNING:
+            if not launched_this_call:
+                time.sleep(timeout_duration)
+                status = invoc_status(request, to_nexml_dir)
+            if status == ExternalProcStatus.RUNNING:
+                return HTTP(102, T("Process still running"))
+        #@TEMPORARY /end of potential launch_or_get_status call...
+        
+        if status == ExternalProcStatus.FAILED:
+            try:
+                err_file = os.path.join(to_nexml_dir, err_filename)
+                err_content = 'Error message:\n ' + open(err_file, 'rU').read()
+            except:
+                err_content = ''
+            response.headers['Content-Type'] = 'text/xml'
+            raise HTTP(501, T("Conversion to NeXML failed.\n" + err_content))
+        output = os.path.join(to_nexml_dir, 'out.xml')
+        response.headers['Content-Type'] = 'text/xml'
+        return open(output, 'rU').read()
+        
+    else:
+        raise HTTP(301)
+    return response.download(request, db)
+
 def strees():
     rows = db(db.stree.study==int(request.args(0) or 0)).select()
     return dict(trees=rows)
@@ -446,8 +533,10 @@ def tbimport():
                 nexml = { }
                 status = "Valid study id required"
         elif form.vars.nexml_file:
+            ## print form.vars.nexml_file
             path = os.path.join(uploadfolder,
-                                form.vars.nexml_file_newfilename)
+                                form.vars.nexml_file)
+                                ## form.vars.nexml_file_newfilename)
             nexml = treebase.parse_nexml(path)
             os.remove(path)
         else:
@@ -669,11 +758,14 @@ def ref_from_doi():
     cross-site scripting in the AJAX code for updating the create form.
     """
     def normalize_doi_for_url(raw):
-        if raw.startswith('doi:'):
+        lowercase = raw.lower()
+        if lowercase.startswith('doi:'):
             raw = raw[4:]
-        elif raw.startswith('doi'):
+        elif lowercase.startswith('doi'):
             raw = raw[3:]
-        if raw.endswith('.json'):
+        elif lowercase.startswith('http://dx.doi.org/'):
+            raw = raw[18:]
+        if lowercase.endswith('.json'):
             raw = raw[:-5]
         return raw
     def format_citation(d):
@@ -685,52 +777,54 @@ def ref_from_doi():
         authors_written = False
         for n, author in enumerate(d.get("author", [])):
             if n != 0:
-                o.write(", ")
-            given_name = author.get("given", "") 
-            family_name = author.get("family", "")
+                o.write(u", ")
+            given_name = unicode(author.get("given", ""))
+            family_name = unicode(author.get("family", ""))
             if family_name:
                 if given_name:
-                    o.write("%s %s" % (given_name, family_name))
-                else:
-                    o.write("%s" % (family_name))
+                    o.write(given_name)
+                    o.write(u" ")
+                o.write(family_name)
             elif given_name:
-                o.write("%s" % (give_name))
+                o.write(given_name)
             authors_written = True
         if authors_written:
-            o.write(". ")
+            o.write(u". ")
         # issue["date-parts"] is as list of [year, month] objects, I think...
-        year = str(d.get("issued",{}).get("date-parts",[[""],])[0][0])
+        year = unicode(d.get("issued",{}).get("date-parts",[[""],])[0][0])
         if year:
-            o.write(year + ". ")
-        title = d.get("title", "")
+            o.write(year)
+            o.write(u". ")
+        title = unicode(d.get("title", ""))
         if title:
-            o.write('%s. ' % title.strip())
-        journal = d.get("container-title", "")
+            o.write(title)
+            o.write(u'. ')
+        journal = unicode(d.get("container-title", ""))
         if journal:
             o.write(journal)
-            o.write(" ")
-        volume = d.get("volume", "")
+            o.write(u" ")
+        volume = unicode(d.get("volume", ""))
         if volume:
             o.write(volume)
-        issue = d.get("issue", "")
+        issue = unicode(d.get("issue", ""))
         if issue:
-            o.write("(" + issue + ")")
+            o.write(u"(" + issue + u")")
         if issue or volume:
-            o.write(":")
-        page = d.get("page", "")
+            o.write(u":")
+        page = unicode(d.get("page", ""))
         if page:
             o.write(page)
-            o.write(".")
-        return ' '.join(o.getvalue().split()), year
+            o.write(u".")
+        return u' '.join(o.getvalue().split()), year
 
-    if len(request.args) != 2:
+    if len(request.args) < 2:
         response.status = 404
-        response.write('Execting a DOI with one / in it')
+        response.write('Execting a DOI with at least one / in it')
         return
-    raw = '/'.join([request.args(0), request.args(1)])
+    raw = '/'.join(list(request.args))
     DOMAIN = 'http://dx.doi.org'
     doi = normalize_doi_for_url(raw)
-    sys.stderr.write('About look up reference for the doi "%s"\n' % doi)
+    #sys.stderr.write('About look up reference for the doi "%s"\n' % doi)
     RETURNS_OBJECT = True
     SUBMIT_URI = DOMAIN + '/' + doi
     payload = {
@@ -766,8 +860,12 @@ def ref_from_doi():
     resp.raise_for_status()
     if RETURNS_OBJECT:
         results = resp.json
-        sys.stderr.write('%s\n' % json.dumps(results, sort_keys=True, indent=4))
-        sys.stderr.write('%s\n' % str(dict(results)))
+        #sys.stderr.write('%s\n' % json.dumps(results, sort_keys=True, indent=4))
+        #sys.stderr.write('%s\n' % str(dict(results)))
+        if results is None:
+            sys.stderr.write('Requested DOI, "%s", does not exist\n' % doi)
+            response.status = 404
+            return
         d = dict(results)
         citation, year = format_citation(d)
         d['citation'] = citation

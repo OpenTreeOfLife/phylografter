@@ -2,10 +2,13 @@
 ###
 # response._vars contains the dictionary returned by the controller action
 ###
-try:
-   from gluon.serializers import json
-   response.write(json(response._vars),escape=False)
-   response.headers['Content-Type']='application/json'
-except:
-   raise HTTP(405,'no json')
+## try:
+##    from gluon.serializers import json
+##    response.write(json(response._vars),escape=False)
+##    response.headers['Content-Type']='application/json'
+## except:
+##    raise HTTP(405,'no json')
+from gluon.serializers import json
+response.write(json(response._vars),escape=False)
+response.headers['Content-Type']='application/json'
 }}
