@@ -23,7 +23,7 @@ BioSync.TreeViewer.ControlPanel.prototype = {
             return this;
         },
 
-        graftAudit: function( controlPanel ) {
+        graftOption: function( controlPanel ) {
 
             this.controlPanel = controlPanel;
             this.make = controlPanel.make;
@@ -72,6 +72,8 @@ BioSync.TreeViewer.ControlPanel.prototype = {
         return this;
     },
 
+
+    //don't think this is being used
     addViewOption: function( p ) {
 
         var viewOption;
@@ -97,6 +99,7 @@ BioSync.TreeViewer.ControlPanel.prototype = {
             .bind( 'click', { }, $.proxy( this.viewer.togglePanel, this.viewer ) ) );
     },
 
+    //don't think this is being used 
     toggleCheck: function() {
 
         var that = $(this);
@@ -199,13 +202,115 @@ BioSync.TreeViewer.ControlPanel.prototype = {
                 .appendTo( container );
 
         return [ container, label ];
+    },
+
+    checkOptionContainerHeight: function( p ) { 
+        
+        var optionContainerOffset = this.optionContainer.offset();
+        var subOptionContainerOffset = p.subOptionContainer.offset();
+
+        var difference =
+            ( subOptionContainerOffset.top + p.subOptionContainer.outerHeight( true ) ) -
+            ( optionContainerOffset.top + this.optionContainer.outerHeight( true ) );
+
+        if( difference > 0 ) {
+        
+            this.optionContainer.height(
+                this.optionContainer.height() +
+                difference );
+        }
     }
 }
 
 
-BioSync.TreeViewer.ControlPanel.prototype.options.graftAudit.prototype = {
+BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
 
-    initialize: function() { }
+    config: {
+
+        padding: 5    
+    },
+
+    initialize: function() {
+
+        if( this.controlPanel.viewer.treeType == 'grafted' ) {
+
+            var rv =
+                this.controlPanel.makeOptionContainer( {
+                    obj: this,
+                    label: 'graft options > ' } );
+       
+            this.container = rv[0];
+            this.label = rv[1];
+
+            this.graftAudit =
+                this.make('span').text( 'View Tree Edits' )
+                                 .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                 .bind( 'click', { }, $.proxy( this.handleViewTreeEditClick, this ) );
+
+            this.shareTree =
+                this.make('span').html( 'Share Tree With Others' )
+                                 .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                 .bind( 'click', { }, $.proxy( this.handleShareTreeClick, this ) );
+
+            this.selectionContainer =
+                this.make('div').css( { 'padding': [ '0px ', this.config.padding, 'px' ].join(''),
+                                        'position': 'absolute',
+                                        'top': 0,
+                                        'left': this.label.outerWidth( true ) } ).append(
+                    this.make('div').css( { 'padding': this.config.padding } ).append( this.graftAudit ),
+                    this.make('div').css( { 'padding': this.config.padding } ).append( this.shareTree ) )
+                .hoverIntent( function() { }, $.proxy( this.handleMouseOutOfSelectionContainer, this ) )
+                .appendTo( this.container )
+                .hide();
+        }
+
+        return this;
+    },
+
+    handleViewTreeEditClick: function( e ) {
+    },
+    
+    handleShareTreeClick: function( e ) {
+    },
+
+    handleMouseOutOfSelectionContainer: function( e ) {
+
+        if( ( ! BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: this.container } ) ) ) {
+            
+            this.hideOption();
+        }
+    },
+
+    handleMouseOverContainer: function( e ) {
+
+        this.label.css( { 'background-color': 'lightGrey' } );
+
+        this.selectionContainer.show();
+
+        this.controlPanel.optionContainer.width(
+            this.label.outerWidth( true ) +
+            this.selectionContainer.outerWidth( true ) + 
+            this.controlPanel.config.optionContainerLeftBuffer );
+
+        this.controlPanel.checkOptionContainerHeight( { subOptionContainer: this.selectionContainer } );
+    },
+
+    handleMouseOutOfContainer: function( e ) {
+        
+        if( ( ! BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: this.selectionContainer } ) ) ) {
+            
+            this.hideOption();
+        }
+    },
+
+    hideOption: function( e ) {
+
+        this.label.css( { 'background-color': 'white' } );
+        
+        this.selectionContainer.hide();
+       
+        this.controlPanel.optionContainer.css( { 'width': '' } );
+    },
 }
 
 BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {

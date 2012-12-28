@@ -625,7 +625,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
                 this.make( 'div' ).attr( { 'class': 'actionRow' } ).css( { 'padding-bottom': '10px' } ).append(
                     this.make('div').attr( { 'class': 'twoOpt modalBoxSubmit' } )
                                     .css( { 'float': 'left' } ).append(
-                        this.graftButton ),
+                        this.clipboardSubmitButton ),
                     this.make('div').attr( { 'class': 'twoOpt' } )
                                     .css( { 'float': 'left', 'color': 'steelBlue' } ).append(
                         this.make('span').attr( { 'class': 'modalBoxCancel' } )
