@@ -138,12 +138,13 @@ def getStudyOTUs():
         q &= db.ottol_name.name.like( '%' + request.vars.taxonSearch + '%' )
 
     def tx(otu):
+        name_or_blank = otu.ottol_name.name if otu.ottol_name else ''
         if auth.has_membership(role="contributor"):
-            u = URL(c="otu",f="taxon_edit.load",args=[row.otu.id])
+            u = URL(c="otu",f="taxon_edit.load",args=[otu.id])
             uid = uuid4().hex
-            return SPAN(A(str( row.ottol_name.name ), _href=u, cid=uid), _id=uid)
+            return SPAN(A(str(name_or_blank), _href=u, cid=uid), _id=uid)
         else:
-            return SPAN(otu.ottol_name.name if otu.ottol_name else '')
+            return SPAN(name_or_blank)
 
     rows = db( q ).select( otuTable.id, otuTable.label, otuTable.ottol_name,
                            left = left,
