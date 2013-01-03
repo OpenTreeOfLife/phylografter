@@ -1,26 +1,10 @@
 {{extend 'layout.html'}}
 
+<div id="gtreeTable"></div>
 
-<div class="blackBorder width98 fullHeight">
+<script type="text/javascript" charset="utf-8">
 
-    <div style="height:50%; overflow:auto;">
-        <div class="centerText" style="font-size:x-large; padding: 10px;">Grafted Tables You Own</div>
-        {{=ownedByUser}}
-    </div>
-
-    <div style="height:50%; overflow:auto;">
-        <div class="centerText" style="font-size:x-large; padding: 10px;">Grafted Tables Shared With You</div>
-    </div>
-
-
-</div>
-
-
-<script type="text/javascript">
-
-$('#content').height( $(window).height()
-             - $('#header').outerHeight( { margin: true } )
-             - $('#statusbar').outerHeight( { margin: true } )
-             - 65 - 15 );
+    BioSync.Common.loadScript( { name: 'gtreeTable' } );
+    BioSync.gtreeTable = new BioSync.GtreeTable( { id: 'gtreeTable' } ).initialize();
 
 </script>

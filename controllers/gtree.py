@@ -12,87 +12,7 @@ response.subtitle = "Grafted trees"
 
 @auth.requires_login()
 def index():
-  
-    #### 
-    ownDataSource = db( db.gtree.contributor == ' '.join( [ auth.user.first_name, auth.user.last_name ] ) ).select()
-
-    class ownVirtualFields(object):
-        @virtualsettings(label='Tree')
-        def tree_url(self):
-            gtree = self.gtree.id
-            u = URL(c="gtree",f="backbone",args=self.gtree.id, vars=dict(treeType='grafted'))
-            return A('grafted', _href=u)
-
-    ownTable = plugins.powerTable
-    ownTable._id = 'ownTableId'
-    ownTable._class = 'ownTableClass'
-    #ownTable.dtfeatures['aoColumns'] = [ '', '', '', '', '' ]
-    ownTable.datasource = ownDataSource
-    ownTable.dtfeatures["sScrollY"] = "200px"
-    ownTable.dtfeatures["sScrollX"] = "100%"
-    ownTable.virtualfields = ownVirtualFields()
-    ownTable.headers = "labels"
-    ownTable.showkeycolumn = False
-    ownTable.dtfeatures["bJQueryUI"] = request.vars.get("jqueryui",True)
-    ## ownTable.uitheme = request.vars.get("theme","cupertino")
-    ownTable.uitheme = request.vars.get("theme","smoothness")
-    ownTable.dtfeatures["iDisplayLength"] = 25
-    ownTable.dtfeatures["aaSorting"] = [[6,'desc']]
-    ownTable.dtfeatures["sPaginationType"] = request.vars.get(
-        "pager","full_numbers"
-        ) # two_button scrolling
-    ownTable.columns = ["gtree.id",
-                        "virtual.tree_url",
-                        "gtree.mtime",
-                        "gtree.title",
-                        "gtree.comment" ]
-
-    ownTable.extra = dict(autoresize=True)
-    
-    return dict( ownedByUser = ownTable.create() )
-    
-    #### 
-
-    uniqueUserId = db( db.user_map.auth_user_id == auth.user.id ).select()[0].unique_user_id
-
-    shareDataSource = db( ( db.gtree.id == db.gtree_share.gtree ) &
-                          ( db.gtree_share.user == uniqueUserId ) ).select()
-
-    class shareVirtualFields(object):
-        @virtualsettings(label='Tree')
-        def tree_url(self):
-            gtree = self.gtree.id
-            u = URL(c="gtree",f="view",args=self.gtree.id, vars=dict(treeType='grafted'))
-            return A('grafted', _href=u)
-
-    shareTable = plugins.powerTable
-    shareTable._id = 'shareTableId'
-    shareTable._class = 'shareTableClass'
-    #shareTable.dtfeatures['aoColumns'] = [ '', '', '', '', '' ]
-    shareTable.datasource = shareDataSource
-    shareTable.dtfeatures["sScrollY"] = "200px"
-    shareTable.dtfeatures["sScrollX"] = "100%"
-    shareTable.virtualfields = shareVirtualFields()
-    shareTable.headers = "labels"
-    shareTable.showkeycolumn = False
-    shareTable.dtfeatures["bJQueryUI"] = request.vars.get("jqueryui",True)
-    ## shareTable.uitheme = request.vars.get("theme","cupertino")
-    shareTable.uitheme = request.vars.get("theme","smoothness")
-    shareTable.dtfeatures["iDisplayLength"] = 25
-    shareTable.dtfeatures["aaSorting"] = [[6,'desc']]
-    shareTable.dtfeatures["sPaginationType"] = request.vars.get(
-        "pager","full_numbers"
-        ) # two_button scrolling
-    shareTable.columns = ["gtree.id",
-                          "virtual.tree_url",
-                          "gtree.mtime",
-                          "gtree.title",
-                          "gtree.comment" ]
-
-    shareTable.extra = dict(autoresize=True)
-
-    return dict( ownedByUser = ownTable.create(), sharedWithUser = shareTable.create() )
-
+    return dict()
 
 @auth.requires_login()
 def backbone():
@@ -111,3 +31,47 @@ def backbone():
         session.TreeViewer.strNodeTable = 'snode'
     
     return dict()
+
+
+def getGtrees():
+
+    orderby = []
+
+    if request.vars.nameSort:
+        orderby.append( db.gtree.title if request.vars.nameSort == 'ascending' else ~db.gtree.title )
+    
+    if request.vars.creatorSort:
+        orderby.append( db.gtree.contributor if request.vars.creatorSort == 'ascending' else ~db.gtree.contributor )
+    
+    if request.vars.dateSort:
+        orderby.append( db.gtree.date if request.vars.dateSort == 'ascending' else ~db.gtree.date )
+
+    start = ( ( int( request.vars.page ) - 1  ) * int( request.vars.rowsOnPage ) )
+    end = start + int( request.vars.rowsOnPage )
+
+    limitby = ( start, end )
+
+    q = ( )
+
+    if len( request.vars.nameSearch ):
+        q &= db.gtree.title.like( '%' + request.vars.nameSearch + '%' )
+    
+    if len( request.vars.descriptionSearch ):
+        q &= db.gtree.comment.like( '%' + request.vars.descriptionSearch + '%' )
+    
+    if len( request.vars.creatorSearch ):
+        q &= db.gtree.contributor.like( '%' + request.vars.creatorSearch + '%' )
+
+    rows = db( q ).select( db.gtree.id, db.gtree.title, db.gtree.comment, db.gtree.contributor, db.gtree.date,
+                           orderby = orderby,
+                           limitby = limitby ).as_list()
+
+    totalrecs = db().select( db.gtree.id.count() )[0]._extra['COUNT(gtree.id)']
+
+    disprecs = db( q ).select( db.gtree.id.count() )[0]._extra['COUNT(gtree.id)']
+
+    return response.json( \
+        dict( data = rows,
+              totalRecords = totalrecs,
+              recordsInData = disprecs ) )
+

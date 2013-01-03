@@ -48,7 +48,6 @@ except:
 
 import sequtil
 #from . import chars, align, sequtil
-"""
 
 from ivy import ages
 from ivy import bipart
@@ -62,6 +61,7 @@ from ivy import sequtil
 from ivy import storage
 from ivy import tree
 from ivy import treebase
+"""
 
 #from ivy import data
 
