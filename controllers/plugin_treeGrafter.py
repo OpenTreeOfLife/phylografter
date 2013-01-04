@@ -19,6 +19,16 @@ def treeGrafter():
     return util.handleViewerInstantiation( request, response, session, db, auth )
 
 
+def getCreator():
+
+    return db( db.gtree.id == session.TreeViewer.treeId ).select( db.gtree.contributor )[0].contributor
+
+
+def getUserInfo():
+
+    return response.json( dict( firstName = auth.user.first_name, lastName = auth.user.last_name ) )
+
+
 def pruneClade():
 
     return response.json( util.getRenderModule( request, session, 'Graft' ).pruneClade( db, session, request, auth ) )

@@ -153,6 +153,11 @@ BioSync.TreeViewer.ControlPanel.prototype = {
         for( var i = 0, ii = p.options.length; i < ii; i++ ) {
 
             this.optionObjs[ p.options[i].name ] = new this.options[ p.options[i].name ]( this ).initialize();
+
+            if( this.optionObjs[ p.options[i].name ].multiLineOptionContainer ) {
+
+                this.optionObjs[ p.options[i].name ].multiLineOptionContainer.css( { 'left': this.rightMostContainer } );
+            }
         }
 
         this.optionContainer.hide();
@@ -201,6 +206,12 @@ BioSync.TreeViewer.ControlPanel.prototype = {
                 .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
                 .appendTo( container );
 
+        if( ! this.rightMostContainer ) { this.rightMostContainer = 0; }
+
+        var containerWidth = container.outerWidth( true );
+
+        if( ( containerWidth ) > this.rightMostContainer ) { this.rightMostContainer = containerWidth; }
+
         return [ container, label ];
     },
 
@@ -247,10 +258,17 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                                  .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
                                  .bind( 'click', { }, $.proxy( this.handleViewTreeEditClick, this ) );
 
-            this.shareTree =
-                this.make('span').html( 'Share Tree With Others' )
-                                 .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
-                                 .bind( 'click', { }, $.proxy( this.handleShareTreeClick, this ) );
+            console.log( this.controlPanel.viewer );
+
+            if( ( this.controlPanel.viewer.isLoggedIn ) &&
+                ( this.controlPanel.viewer.treeCreator == [ this.controlPanel.viewer.userInfo.firstName,
+                                                            this.controlPanel.viewer.userInfo.lastName ].join(' ') ) ) {
+            
+                this.shareTree =
+                    this.make('span').html( 'Share Tree With Others' )
+                                     .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                     .bind( 'click', { }, $.proxy( this.handleShareTreeClick, this ) );
+            }
 
             this.selectionContainer =
                 this.make('div').css( { 'padding': [ '0px ', this.config.padding, 'px' ].join(''),
@@ -262,6 +280,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                 .hoverIntent( function() { }, $.proxy( this.handleMouseOutOfSelectionContainer, this ) )
                 .appendTo( this.container )
                 .hide();
+
+            this.multiLineOptionContainer = this.selectionContainer;
         }
 
         return this;
@@ -375,6 +395,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
                                       'left': this.label.outerWidth( true ) } )
                               .hoverIntent( $.proxy( this.handleMouseOverOptionList, this ), $.proxy( this.handleMouseOutOfOptionList, this ) )
                               .appendTo( this.container );
+            
+        this.multiLineOptionContainer = this.sizingOptionsContainer;
 
         for( var optionName in this.config.options ) {
 
@@ -630,6 +652,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.branchLength.prototype = {
                 .hoverIntent( function() { }, $.proxy( this.handleMouseOutOfSelectionContainer, this ) )
                 .appendTo( this.container )
                 .hide();
+
+            this.multiLineOptionContainer = this.selectionContainer;
         }
 
         return this;

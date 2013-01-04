@@ -45,8 +45,34 @@ BioSync.TreeGrafter.viewer.prototype.onWindowLoad = function() {
 
     $.proxy( this.super.onWindowLoad, this )();
 
+    if( this.treeType == 'grafted' ) {
+        
+        $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getCreator' ] } ),
+                  type: "GET",
+                  success: $.proxy( this.handleCreatorInfo, this ) } );
+
+        if( this.isLoggedIn ) {
+
+            $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getUserInfo' ] } ),
+                  type: "GET",
+                  success: $.proxy( this.handleUserInfo, this ) } );
+
+        }
+    }
+
     //if( this.treeType == 'grafted' ) { this.getGraftHistory(); }
 
+}
+
+BioSync.TreeGrafter.viewer.prototype.handleCreatorInfo = function( response ) {
+
+    this.treeCreator = response;
+}
+
+BioSync.TreeGrafter.viewer.prototype.handleUserInfo = function( response ) {
+
+    this.userInfo = eval( '(' + response + ')' );
+    console.log( userInfo );
 }
 
 BioSync.TreeGrafter.viewer.prototype.getGraftHistory = function() {

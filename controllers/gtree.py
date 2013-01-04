@@ -10,11 +10,9 @@ from gluon.storage import Storage
 
 response.subtitle = "Grafted trees"
 
-@auth.requires_login()
 def index():
     return dict()
 
-@auth.requires_login()
 def backbone():
 
     #used for testing

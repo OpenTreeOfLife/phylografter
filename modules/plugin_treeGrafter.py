@@ -643,6 +643,7 @@ def insertSnodesToGtree( db, gtreeId, node, parentId, reference=None ):
 
 def createGTreeRecord( db, auth, name, desc ):
 
+    #The contributor field is probably better as a user id.  I joined the first and last names in an attempt to normalize users logging in with multiple email addresses.
     return db.gtree.insert(
         contributor = ' '.join( [ auth.user.first_name, auth.user.last_name ] ),
         title = name,
