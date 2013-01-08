@@ -43,25 +43,29 @@ BioSync.TreeGrafter.viewer.prototype.super = BioSync.TreeViewer.viewer.prototype
 
 BioSync.TreeGrafter.viewer.prototype.onWindowLoad = function() {
 
-    $.proxy( this.super.onWindowLoad, this )();
+    if( this.treeType == 'grafted' && this.isLoggedIn ) {
 
-    if( this.treeType == 'grafted' ) {
-        
-        $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getCreator' ] } ),
-                  type: "GET",
-                  success: $.proxy( this.handleCreatorInfo, this ) } );
+        this.getUserInfo();
 
-        if( this.isLoggedIn ) {
-
-            $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getUserInfo' ] } ),
-                  type: "GET",
-                  success: $.proxy( this.handleUserInfo, this ) } );
-
-        }
+    } else {
+    
+        $.proxy( this.super.onWindowLoad, this )();
     }
+}
 
-    //if( this.treeType == 'grafted' ) { this.getGraftHistory(); }
 
+BioSync.TreeGrafter.viewer.prototype.getCreatorInfo = function() {
+
+    $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getCreator' ] } ),
+              type: "GET",
+              success: new Array( $.proxy( this.handleCreatorInfo, this ), $.proxy( this.super.onWindowLoad, this ) ) } );
+}
+
+BioSync.TreeGrafter.viewer.prototype.getUserInfo = function() {
+        
+    $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getUserInfo' ] } ),
+              type: "GET",
+              success: new Array( $.proxy( this.handleUserInfo, this ), $.proxy( this.getCreatorInfo, this ) ) } );
 }
 
 BioSync.TreeGrafter.viewer.prototype.handleCreatorInfo = function( response ) {
@@ -72,16 +76,9 @@ BioSync.TreeGrafter.viewer.prototype.handleCreatorInfo = function( response ) {
 BioSync.TreeGrafter.viewer.prototype.handleUserInfo = function( response ) {
 
     this.userInfo = eval( '(' + response + ')' );
-    console.log( userInfo );
 }
 
-BioSync.TreeGrafter.viewer.prototype.getGraftHistory = function() {
 
-    $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getGtreeGraftHistory' ] } ),
-              type: "GET",
-              data: { treeId: this.treeId },
-              success: $.proxy( this.renderObj.handleGraftHistory, this.renderObj ) } );
-}
 
 BioSync.TreeGrafter.viewer.prototype.getRenderObj = function() {
 

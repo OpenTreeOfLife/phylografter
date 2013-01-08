@@ -49,6 +49,28 @@ def updateUrl():
     return response.json( dict( treeId = session.TreeViewer.treeId, treeType = session.TreeViewer.treeType ) )
 
 
+def getGtreeSharingInfo():
+
+    return response.json( \
+        dict( sharedWith = db(
+                ( db.gtree_share.gtree == session.TreeViewer.treeId ) &
+                ( db.gtree_share.user == db.auth_user.id ) &
+                ( db.gtree_share.user != auth.user.id ) ).select( db.auth_user.ALL ).as_list(),
+
+              notSharedWith = db( ~db.auth_user.id.belongs(
+                    db( ( db.gtree_share.gtree == session.TreeViewer.treeId ) &
+                        ( db.gtree_share.user == db.auth_user.id ) |
+                        ( db.auth_user.id == auth.user.id ) )._select( db.auth_user.id ) ) )
+                            .select( db.auth_user.first_name, db.auth_user.last_name, db.auth_user.id ).as_list() ) )
+
+
+def getGtreeGraftHistory():
+
+    return response.json( \
+        db( ( db.gtree_edit.gtree == session.TreeViewer.treeId ) &
+            ( db.gtree.user == db.auth_user.id ) )
+            .select( orderby = db.gtree_edit.mtime ).as_list() )
+
 
 def getPreEditClade():
 
@@ -67,11 +89,7 @@ def getPreEditClade():
     return util.getRenderResponse( response, session, clade )
 
 
-def getGtreeGraftHistory():
 
-    return response.json( \
-        db( ( db.gtree_edit.gtree == session.TreeViewer.treeId ) &
-            ( db.auth_user.id == db.gtree_edit.user ) ).select( orderby = db.gtree_edit.mtime ).as_list() )
 
 
 def deleteGtree():

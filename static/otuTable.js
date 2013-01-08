@@ -253,6 +253,8 @@ BioSync.OtuTable.prototype = {
 
         this.rowsOnPage = this.rowsOnPageSelector.val();
 
+        this.page = 1;
+
         this.getTheInfo();
     },
 

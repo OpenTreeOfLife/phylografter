@@ -49,16 +49,26 @@ def getGtrees():
 
     limitby = ( start, end )
 
-    q = ( )
+    q = None
 
     if len( request.vars.nameSearch ):
-        q &= db.gtree.title.like( '%' + request.vars.nameSearch + '%' )
+        if( q is None ):
+            q = db.gtree.title.like( '%' + request.vars.nameSearch + '%' )
+        else:
+            q &= db.gtree.title.like( '%' + request.vars.nameSearch + '%' )
     
     if len( request.vars.descriptionSearch ):
-        q &= db.gtree.comment.like( '%' + request.vars.descriptionSearch + '%' )
-    
+        if( q is None ):
+            q = db.gtree.comment.like( '%' + request.vars.descriptionSearch + '%' )
+        else:
+            q &= db.gtree.comment.like( '%' + request.vars.descriptionSearch + '%' )
+
     if len( request.vars.creatorSearch ):
-        q &= db.gtree.contributor.like( '%' + request.vars.creatorSearch + '%' )
+        if( q is None ):
+            q = db.gtree.contributor.like( '%' + request.vars.creatorSearch + '%' )
+        else:
+            q &= db.gtree.contributor.like( '%' + request.vars.creatorSearch + '%' )
+
 
     rows = db( q ).select( db.gtree.id, db.gtree.title, db.gtree.comment, db.gtree.contributor, db.gtree.date,
                            orderby = orderby,

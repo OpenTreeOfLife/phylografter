@@ -398,8 +398,6 @@ def define_tables(db, migrate=False):
         Field( 'gtree', db.gtree ),
         Field( 'action', 'string',requires=IS_IN_SET(["prune","graft","replace"]), required=True ),
         Field( 'target_gnode', db.gnode ),
-        Field( 'source_node', db.snode ),
-        Field( 'clipboard_node', "integer" ),
         Field( 'affected_clade_id', "integer" ),
         Field( 'affected_node_id', "integer" ),
         Field( 'comment', 'text' ),
@@ -435,7 +433,7 @@ def define_tables(db, migrate=False):
 
     db.define_table(
         'gtree_share',
-        Field( 'user', db.unique_user ),
+        Field( 'user', db.auth_user ),
         Field( 'gtree', db.gtree ),
         migrate=migrate
         )

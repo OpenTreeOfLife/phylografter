@@ -256,9 +256,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
             this.graftAudit =
                 this.make('span').text( 'View Tree Edits' )
                                  .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                 .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
                                  .bind( 'click', { }, $.proxy( this.handleViewTreeEditClick, this ) );
-
-            console.log( this.controlPanel.viewer );
 
             if( ( this.controlPanel.viewer.isLoggedIn ) &&
                 ( this.controlPanel.viewer.treeCreator == [ this.controlPanel.viewer.userInfo.firstName,
@@ -267,6 +266,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                 this.shareTree =
                     this.make('span').html( 'Share Tree With Others' )
                                      .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                     .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
                                      .bind( 'click', { }, $.proxy( this.handleShareTreeClick, this ) );
             }
 
@@ -288,9 +288,26 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
     },
 
     handleViewTreeEditClick: function( e ) {
+
+        $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getGtreeGraftHistory' ] } ),
+                  type: "GET",
+                  success: $.proxy( this.showModalTreeEdits, this ) } );
+    },
+
+    showModalTreeEdits: function( response ) {
+
+        console.log( response );        
     },
     
     handleShareTreeClick: function( e ) {
+
+        $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getGtreeSharingInfo' ] } ),
+                  type: "GET",
+                  success: $.proxy( this.showModalTreeSharingDialogue, this ) } );
+    },
+
+    showModalTreeSharingDialogue: function( response ) {
+
     },
 
     handleMouseOutOfSelectionContainer: function( e ) {

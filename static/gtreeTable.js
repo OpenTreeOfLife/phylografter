@@ -90,15 +90,21 @@ BioSync.GtreeTable.prototype = {
                     .attr( { 'bc': backgroundColor } )
                     .text( ( responseObj.data[ i ].title != null ) ? responseObj.data[ i ].title : '' );
 
+            var descriptionText = ( responseObj.data[ i ].comment != null ) ? responseObj.data[ i ].comment : '';
+
             var descriptionItem =
                 this.makeEl( 'div' )
+                    .attr( { 'title': descriptionText } )
                     .css( {
                         'float': 'left',
                         'padding': '3px 0px 3px 5px',
                         'text-align': 'center',
+                        'white-space': 'nowrap',
+                        'overflow': 'hidden',
+                        'text-overflow': 'ellipsis',
                         'background-color': backgroundColor } )
                     .attr( { 'bc': backgroundColor } )
-                    .text( ( responseObj.data[ i ].comment != null ) ? responseObj.data[ i ].comment : '' );
+                    .text( descriptionText );
 
             var creatorItem =
                 this.makeEl( 'div' )
@@ -349,6 +355,8 @@ BioSync.GtreeTable.prototype = {
     changeRowsOnPage: function( e ) {
 
         this.rowsOnPage = this.rowsOnPageSelector.val();
+
+        this.page = 1;
 
         this.getTheInfo();
     },
