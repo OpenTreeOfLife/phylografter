@@ -264,7 +264,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                                                             this.controlPanel.viewer.userInfo.lastName ].join(' ') ) ) {
             
                 this.shareTree =
-                    this.make('span').html( 'Share Tree With Others' )
+                    this.make('span').html( 'Let Colleagues Edit Tree' )
                                      .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
                                      .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
                                      .bind( 'click', { }, $.proxy( this.handleShareTreeClick, this ) );
@@ -296,7 +296,6 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
 
     showModalTreeEdits: function( response ) {
 
-        console.log( response );        
     },
     
     handleShareTreeClick: function( e ) {
@@ -306,8 +305,144 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                   success: $.proxy( this.showModalTreeSharingDialogue, this ) } );
     },
 
+    giveGreyBackground: function( e ) {
+        $( e.delegateTarget ).css( { 'background-color': '#F0F0F0' } );
+    },
+
+    removeGreyBackground: function( e ) {
+
+        if( ( this.selectedUser ) && ( e.delegateTarget == this.selectedUser.get(0) ) ) { return; }
+
+        $( e.delegateTarget ).css( { 'background-color': '' } );
+    },
+
+    selectUser: function( e ) {
+
+        var el = $( e.delegateTarget );
+
+        if( this.selectedUser ) { this.selectedUser.css( { 'background-color': '' } ); }
+        
+        if( ( this.selectedUser ) && ( this.selectedUser.get(0) == e.delegateTarget ) ) {
+
+            delete this.selectedUser;
+
+        } else {
+           
+            this.selectedUser = el.css( { 'background-color': '#F0F0F0' } );
+        }
+    },
+
     showModalTreeSharingDialogue: function( response ) {
 
+        var data = eval( '(' + response + ')' );
+
+        var modal = BioSync.ModalBox;
+
+        this.nonEditUserBox =
+            this.make( 'div' ).height( this.controlPanel.viewer.windowHeight * .40 )
+                              .css( { 'overflow': 'auto',
+                                      'margin': '10px 5px',
+                                      'border': '1px solid black' } );
+
+        this.editUserBox =
+            this.make( 'div' ).height( this.controlPanel.viewer.windowHeight * .40 )
+                              .css( { 'overflow': 'auto',
+                                      'margin': '10px 5px',
+                                      'border': '1px solid black' } );
+
+        for( var i = 0, ii = data.notSharedWith.length; i < ii; i++ ) {
+
+            this.nonEditUserBox.append(
+                this.make( 'div' )
+                    .attr( { 'userId': data.notSharedWith[i].id } )
+                    .text( [ data.notSharedWith[i].first_name, data.notSharedWith[i].last_name ].join(' ') )
+                    .css( { 'padding': '5px', 'text-align': 'center' } )
+                    .bind( 'click', { }, $.proxy( this.selectUser, this ) )
+                    .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                    .hover( $.proxy( this.giveGreyBackground, this ), $.proxy( this.removeGreyBackground, this ) )
+            );
+        }
+
+        for( var i = 0, ii = data.sharedWith.length; i < ii; i++ ) {
+
+            this.editUserBox.append(
+                this.make( 'div' )
+                    .attr( { 'userId': data.notSharedWith[i].id } )
+                    .text( [ data.sharedWith[i].first_name, data.sharedWith[i].last_name ].join(' ') )
+                    .css( { 'padding': '5px', 'text-align': 'center' } )
+                    .bind( 'click', { }, $.proxy( this.selectUser, this ) )
+                    .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                    .hover( $.proxy( this.giveGreyBackground, this ), $.proxy( this.removeGreyBackground, this ) )
+
+            );
+        }
+
+
+        tihs.searchContainer =
+            this.make( 'div' )
+                .css( { 'padding-top': '20px',
+                        'margin': '0 auto' } ).append(
+                    this.make( 'span' ).text( 'Search : ' ),
+                    this.make( 'input' ).attr( { 'type': 'text' } ) );
+
+        $('#modalBoxForm').append(
+            this.make( 'div' ).append(
+                this.make('div').css( { 'float': 'left',
+                                        'font-weight': 'bold',
+                                        'font-size': '16px',
+                                        'text-align': 'center' } )
+                                  .width( '50%' )
+                                  .text( 'Read Only' ),
+                this.make('div').css( { 'float': 'left',
+                                        'font-weight': 'bold',
+                                        'font-size': '16px',
+                                        'text-align': 'center' } )
+                                  .width( '50%' )
+                                  .text( 'Able to Edit' ),
+                this.make('div').css( { 'clear': 'both' } ) ),
+            this.make( 'div' ).append(
+                this.make('div').css( { 'float': 'left' } )
+                                  .width( '50%' ).append(
+                    this.nonEditUserBox ),
+                this.make('div').css( { 'float': 'left' } )
+                                  .width( '50%' ).append(
+                    this.editUserBox ),
+                this.make('div').css( { 'clear': 'both' } ) ),
+            this.make( 'div' ).append(
+                this.make('div').css( { 'float': 'left' } )
+                                  .width( '50%' ).append(
+                    this.make( 'div' ).css( { 'text-align': 'center',
+                                              'font-weight': 'bold',
+                                              'border': '1px solid green',
+                                              'border-radius': '10px',
+                                              'margin': '0 auto',
+                                              'padding': '3px 0px',
+                                              'font-size': '20px' } )
+                                      .width( '50%' )
+                                      .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                      .hover( function() { $(this).css( { 'background-color': '#F0F0F0' } ) }, function() { $(this).css( { 'background-color': 'white' } ) } )
+                                      .text(' > ') ),
+                this.make('div').css( { 'float': 'left' } )
+                                  .width( '50%' ).append(
+                    this.make( 'div' ).css( { 'text-align': 'center',
+                                              'font-weight': 'bold',
+                                              'border': '1px solid green',
+                                              'border-radius': '10px',
+                                              'margin': '0 auto',
+                                              'padding': '3px 0px',
+                                              'font-size': '20px' } )
+                                      .width( '50%' )
+                                      .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                      .hover( function() { $(this).css( { 'background-color': '#F0F0F0' } ) }, function() { $(this).css( { 'background-color': 'white' } ) } )
+                                      .text(' < ') ),
+                this.make('div').css( { 'clear': 'both' } ) ),
+            this.make('div').append(
+                 ) );
+
+            BioSync.ModalBox.showModalBox( {
+                width: this.controlPanel.viewer.windowWidth * .75,
+                height: this.controlPanel.viewer.windowHeight * .75,
+                title: 'Give Edit Permission to Others' } );
     },
 
     handleMouseOutOfSelectionContainer: function( e ) {
