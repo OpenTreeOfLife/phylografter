@@ -9,6 +9,16 @@ BioSync.TreeGrafter.RenderUtil.Column.prototype = new BioSync.TreeViewer.RenderU
 BioSync.TreeGrafter.RenderUtil.Column.constructor = BioSync.TreeGrafter.RenderUtil.Column;
 BioSync.TreeGrafter.RenderUtil.Column.prototype.super = BioSync.TreeViewer.RenderUtil.Column.prototype;
 
+
+BioSync.TreeGrafter.RenderUtil.Column.prototype.canUserEditTree = function( p ) {
+
+    if( this.renderObj.viewer.isLoggedIn == false ) { return false; }
+
+    return ( ( this.renderObj.viewer.userInfo.canEdit ) || 
+             ( this.renderObj.viewer.treeCreator == [ this.renderObj.viewer.userInfo.firstName,
+                                                      this.renderObj.viewer.userInfo.lastName ].join(' ') ) )
+}
+
 BioSync.TreeGrafter.RenderUtil.Column.prototype.handlePruneCladeOptionClick = function() {
 
     this.nodeIdToPrune = this.closestNodeToMouse.id;

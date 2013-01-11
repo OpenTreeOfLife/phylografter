@@ -26,7 +26,11 @@ def getCreator():
 
 def getUserInfo():
 
-    return response.json( dict( firstName = auth.user.first_name, lastName = auth.user.last_name ) )
+    canEdit = len( \
+        db( ( ( db.gtree_share.user == auth.user.id ) & ( db.gtree_share.gtree == session.TreeViewer.treeId ) ) |
+            ( ( db.gtree.id == session.TreeViewer.treeId ) & ( db.gtree.contributor == ' '.join( [ auth.user.first_name, auth.user.last_name ] ) ) ) ).select().as_list() )
+
+    return response.json( dict( firstName = auth.user.first_name, lastName = auth.user.last_name, canEdit = canEdit ) )
 
 
 def pruneClade():
@@ -68,8 +72,20 @@ def getGtreeGraftHistory():
 
     return response.json( \
         db( ( db.gtree_edit.gtree == session.TreeViewer.treeId ) &
-            ( db.gtree.user == db.auth_user.id ) )
+            ( db.gtree_edit.user == db.auth_user.id ) )
             .select( orderby = db.gtree_edit.mtime ).as_list() )
+
+
+def giveEditPermission():
+
+    db.gtree_share.insert( user = request.vars.userId, gtree = session.TreeViewer.treeId )
+
+
+def removeEditPermission():
+
+    print db( ( db.gtree_share.user == request.vars.userId ) & ( db.gtree_share.gtree == session.TreeViewer.treeId ) ).select().as_list()
+
+    db( ( db.gtree_share.user == request.vars.userId ) & ( db.gtree_share.gtree == session.TreeViewer.treeId ) ).delete()
 
 
 def getPreEditClade():

@@ -296,6 +296,107 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
 
     showModalTreeEdits: function( response ) {
 
+        var data = eval( '(' + response + ')' );
+
+        this.treeEditContainer =
+            this.make('div').append(
+                this.make('div').css( { 'padding-bottom': '20px' } ).append(
+                    this.make('div')
+                      .text( 'Edit Type' )
+                      .width( '10%' )
+                      .css( { 'float': 'left',
+                              'text-align': 'center',
+                              'font-weight': 'bold',
+                              'font-size': '16px' } ),
+                    this.make('div')
+                      .text( 'Comment' )
+                      .width( '50%' )
+                      .css( { 'float': 'left',
+                              'text-align': 'center',
+                              'font-weight': 'bold',
+                              'font-size': '16px' } ),
+                    this.make('div')
+                      .text( 'User' )
+                      .width( '15%' )
+                      .css( { 'float': 'left',
+                              'text-align': 'center',
+                              'font-weight': 'bold',
+                              'font-size': '16px' } ),
+                    this.make('div')
+                      .text( 'Date' )
+                      .width( '15%' )
+                      .css( { 'float': 'left',
+                              'text-align': 'center',
+                              'font-weight': 'bold',
+                              'font-size': '16px' } ),
+                    this.make('div')
+                      .width( '10%' )
+                      .css( { 'clear': 'both' } ) ) );
+
+        for( var i = 0, ii = data.length; i < ii; i++ ) {
+
+            var dataRow = this.make( 'div' ).css( { 'padding': '5px' } ).append(
+                    this.make('div')
+                      .css( { 'float': 'left',
+                              'text-align': 'center' } )
+                      .width( '10%' )
+                      .text( BioSync.Common.capitalizeFirstLetter( data[i].gtree_edit.action ) ),
+                    this.make('div')
+                      .css( { 'float': 'left',
+                              //'white-space': 'nowrap',
+                              //'overflow': 'hidden',
+                              //'text-overflow': 'ellipsis',
+                              'text-align': 'center' } )
+                      .width( '50%' )
+                      .text( data[i].gtree_edit.comment ),
+                    this.make('div')
+                      .css( { 'float': 'left',
+                              'text-align': 'center' } )
+                      .width( '15%' )
+                      .text( [ data[i].auth_user.first_name, data[i].auth_user.last_name ].join(' ') ),
+                    this.make('div')
+                      .css( { 'float': 'left',
+                              'text-align': 'center' } )
+                      .width( '15%' )
+                      .text( data[i].gtree_edit.mtime )
+                );
+
+            if( this.controlPanel.viewer.userInfo && this.controlPanel.viewer.userInfo.canEdit ) {
+                
+                dataRow.append(
+                    this.make('div')
+                      .css( { 'float': 'left',
+                              'color': 'green',
+                              'text-align': 'center' } )
+                      .text( 'Revert Edit' )
+                      .width( '10%' )
+                      .bind( 'click', { editId: data[i].gtree_edit.id }, $.proxy( this.revertEdit, this ) )
+                      .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                      .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline ),
+                    
+                    this.make('div').css( { 'clear': 'both' } )
+                );
+
+            } else {
+               
+                dataRow.append( this.make('div').css( { 'clear': 'both' } ).width('10%') );
+            }
+
+            this.treeEditContainer.append( dataRow );
+        }
+
+        var content = this.make('div').append( this.treeEditContainer );
+
+        BioSync.ModalBox.showModalBox( {
+            content: content,
+            width: this.controlPanel.viewer.windowWidth * .75,
+            height: this.controlPanel.viewer.windowHeight * .75,
+            title: 'Tree Edits' } );
+
+        setTimeout(
+            function() { $( dataRow.children() ).css( { 'position': 'relative', top: $( dataRow.children()[1] ).height() / 2 } ) },
+            2000 );
+
     },
     
     handleShareTreeClick: function( e ) {
@@ -367,7 +468,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
 
             this.editUserBox.append(
                 this.make( 'div' )
-                    .attr( { 'userId': data.notSharedWith[i].id } )
+                    .attr( { 'userId': data.sharedWith[i].id } )
                     .text( [ data.sharedWith[i].first_name, data.sharedWith[i].last_name ].join(' ') )
                     .css( { 'padding': '5px', 'text-align': 'center' } )
                     .bind( 'click', { }, $.proxy( this.selectUser, this ) )
@@ -377,13 +478,18 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
             );
         }
 
+        this.searchInput =
+            this.make( 'input' ).attr( { 'type': 'text' } )
+                                .bind( 'keyup', { }, $.proxy( this.handleUserSearchKeyUp, this ) );
 
-        tihs.searchContainer =
+        var searchContainer = this.searchContainer =
             this.make( 'div' )
-                .css( { 'padding-top': '20px',
+                .css( { 'padding-top': '40px',
+                        'position': 'relative',
+                        'float': 'left',
                         'margin': '0 auto' } ).append(
                     this.make( 'span' ).text( 'Search : ' ),
-                    this.make( 'input' ).attr( { 'type': 'text' } ) );
+                    this.searchInput );
 
         $('#modalBoxForm').append(
             this.make( 'div' ).append(
@@ -421,6 +527,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                                       .width( '50%' )
                                       .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
                                       .hover( function() { $(this).css( { 'background-color': '#F0F0F0' } ) }, function() { $(this).css( { 'background-color': 'white' } ) } )
+                                      .bind( 'click', { }, $.proxy( this.giveEditPermission, this ) )
                                       .text(' > ') ),
                 this.make('div').css( { 'float': 'left' } )
                                   .width( '50%' ).append(
@@ -434,15 +541,114 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                                       .width( '50%' )
                                       .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
                                       .hover( function() { $(this).css( { 'background-color': '#F0F0F0' } ) }, function() { $(this).css( { 'background-color': 'white' } ) } )
+                                      .bind( 'click', { }, $.proxy( this.removeEditPermission, this ) )
                                       .text(' < ') ),
                 this.make('div').css( { 'clear': 'both' } ) ),
-            this.make('div').append(
-                 ) );
+            this.make('div').append( this.searchContainer, this.make('div').css({'clear':'both'}) ) );
 
             BioSync.ModalBox.showModalBox( {
                 width: this.controlPanel.viewer.windowWidth * .75,
                 height: this.controlPanel.viewer.windowHeight * .75,
                 title: 'Give Edit Permission to Others' } );
+
+            var controlPanel = this.controlPanel;
+
+            setTimeout(
+
+                function() {
+                    
+                    var searchContainerWidth = searchContainer.outerWidth( true );
+
+                    searchContainer.css( { 'left': ( ( controlPanel.viewer.windowWidth * .75 ) - searchContainerWidth ) / 2 } );
+
+                }, 2000 );
+    },
+
+    handleUserSearchKeyUp: function( e ) {
+
+        //enter
+        if( e.keyCode == 13 ) {
+
+            this.currentlySelected.click();
+
+        } else if( e.keyCode == 8 || e.keyCode == 46 || String.fromCharCode( e.keyCode ).match( /\w/ ) ) {
+
+            if( this.userInputTimeout ) { clearTimeout( this.userInputTimeout ); }
+
+            this.userInputTimeout = setTimeout( $.proxy( this.showOnlyMatchingUsers, this ), 500 );
+        }
+    },
+
+    showOnlyMatchingUsers: function( e ) {
+
+        var value = this.searchInput.val().toLowerCase();
+
+        var boxes = [ 'nonEditUserBox', 'editUserBox' ];
+
+        for( var j = 0, jj = 2; j < jj; j++ ) {
+
+            var userDivs = this[ boxes[j] ].children();
+
+            for( var i = 0, ii = userDivs.length; i < ii; i++ ) {
+           
+                var div = $( userDivs[i] );
+
+                if( div.text().toLowerCase().indexOf( value ) == -1 ) {
+
+                    div.hide();
+
+                } else {
+                    
+                    div.show();
+
+                }
+                
+            }
+        }
+    },
+
+    removeEditPermission: function( e ) {
+
+       if( ! this.selectedUser ) { return; } 
+
+       if( this.editUserBox.find( this.selectedUser ).length ) {
+
+            $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'removeEditPermission' ] } ),
+                      data: { userId: this.selectedUser.attr('userId') },
+                      type: "POST",
+                      success: $.proxy( this.removeEditPermissionSuccess, this ) } );
+       }
+    },
+
+    giveEditPermission: function( e ) {
+
+       if( ! this.selectedUser ) { return; } 
+
+       if( this.nonEditUserBox.find( this.selectedUser ).length ) {
+
+            $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'giveEditPermission' ] } ),
+                      data: { userId: this.selectedUser.attr('userId') },
+                      type: "POST",
+                      success: $.proxy( this.giveEditPermissionSuccess, this ) } );
+       }
+    },
+
+    removeEditPermissionSuccess: function() {
+
+        var optionObj = this;
+
+        this.selectedUser.hide( 'slow',
+            function() { optionObj.selectedUser.appendTo( optionObj.nonEditUserBox ).show( 'slow' ); }
+        );
+    },
+
+    giveEditPermissionSuccess: function() {
+
+        var optionObj = this;
+
+        this.selectedUser.hide( 'slow',
+            function() { optionObj.selectedUser.appendTo( optionObj.editUserBox ).show( 'slow' ); }
+        );
     },
 
     handleMouseOutOfSelectionContainer: function( e ) {
@@ -1056,6 +1262,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
     handleKeyUp: function( e ) {
 
         var that = this;
+
         //enter
         if( e.keyCode == 13 ) {
 
