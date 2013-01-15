@@ -75,7 +75,6 @@ def getGtreeGraftHistory():
             ( db.gtree_edit.user == db.auth_user.id ) )
             .select( orderby = db.gtree_edit.mtime ).as_list() )
 
-
 def giveEditPermission():
 
     db.gtree_share.insert( user = request.vars.userId, gtree = session.TreeViewer.treeId )
@@ -88,26 +87,34 @@ def removeEditPermission():
     db( ( db.gtree_share.user == request.vars.userId ) & ( db.gtree_share.gtree == session.TreeViewer.treeId ) ).delete()
 
 
-def getPreEditClade():
+def showTreeBeforeEdit():
 
     editRow = db( db.gtree_edit.id == request.vars.editId ).select()[0]
 
-    clade = build.node2tree( db, editRow.affected_clade_id, 'grafted' )
+    columns = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ].columns
+
+    tree = getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, columns[0].rootNodeId, Storage() )
 
     grafts = db( ( db.gtree_edit.gtree == session.TreeViewer.treeId ) &
                  ( db.gtree_edit.mtime >= editRow.mtime ) ).select( orderby = "mtime DESC" )
 
     for graft in grafts:
-        graftUtil.revertEdit( db, session, clade, graft )
+        graftUtil.revertEdit( db, session, tree, graft )
 
-    util.autoCollapse( clade, session, db, 'cladogram', [ ] )
+    return response.json( util.getRenderModule( request, session ).getRenderResponse( \
+        tree,
+        session,
+        Storage( rootNodeId = columns[0].rootNodeId,
+                 keepVisibleNodeStorage = Storage(),
+                 collapsedNodeStorage = Storage() ) ) )
 
-    return util.getRenderResponse( response, session, clade )
+
+def revertEdit():
+    db( db.gtree_edit.id == request.vars.editId ).delete()
 
 
 
-
-
+#### below this line is old
 def deleteGtree():
     #if we allow deleting gtrees, then we have to know what to do with clipboard items referring to those gtrees
     return response.json( dict() )

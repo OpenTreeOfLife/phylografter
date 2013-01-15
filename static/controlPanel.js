@@ -370,7 +370,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                               'text-align': 'center' } )
                       .text( 'Revert Edit' )
                       .width( '10%' )
-                      .bind( 'click', { editId: data[i].gtree_edit.id }, $.proxy( this.revertEdit, this ) )
+                      .bind( 'click', { editId: data[i].gtree_edit.id }, $.proxy( this.showTreeBeforeEdit, this ) )
+                      .bind( 'click', { }, BioSync.ModalBox.closeBox )
                       .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
                       .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline ),
                     
@@ -398,7 +399,71 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
             2000 );
 
     },
+
+    showTreeBeforeEdit: function( e ) {
     
+        var renderObj = this.controlPanel.viewer.renderObj;
+
+        this.currentEditId = e.data.editId;
+
+        $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'showTreeBeforeEdit' ] } ),
+                  type: "GET",
+                  data: e.data,
+                  success: new Array( function() { renderObj.removeColumns( { start: 1, end: renderObj.columns.length - 1, keepInSession: true } ); },
+                           $.proxy( renderObj.columns[0].renderReceivedClade, renderObj.columns[0] ),
+                           $.proxy( this.showRevertEditDialogue, this ) ) } );
+    },
+
+    showRevertEditDialogue: function( ) {
+
+        this.controlPanel.renderObj.disableNodeSelector();
+
+        this.revertEditContainer =
+            this.make( 'div' ).css( { 'position': 'absolute', 'z-index': '10000' } ).append(
+                this.make( 'span' )
+                  .text( 'Revert tree to this state ?' )
+                  .css( { 'font-weight': 'bold',
+                          'padding-right': '20px',
+                          'font-size': '16px' } ),
+                this.make( 'span' )
+                  .text( 'Yes' )
+                  .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                  .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                  .bind( 'click', { }, $.proxy( this.revertEdit, this ) )
+                  .css( { 'color': 'green',
+                           'margin': '5px 10px' } ),
+                this.make( 'span' )
+                  .text( 'Cancel' )
+                  .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                  .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                  .bind( 'click', { }, $.proxy( this.controlPanel.viewer.renderObj.redrawTree, this ) )
+                  .css( { 'color': 'green',
+                          'margin': '5px 10px' } ) ).appendTo( this.controlPanel.viewer.renderObj.viewPanel );
+
+        this.revertEditContainer.css( {
+            'left': ( this.controlPanel.viewer.renderObj.viewPanel.myWidth - this.revertEditContainer.outerWidth( true ) ) / 2,
+            'top': 10 } );
+    },
+
+    revertEdit: function() {
+
+        $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'revertEdit' ] } ),
+                  type: "GET",
+                  data: { editId: this.currentEditId },
+                  success: $.proxy( this.revertEditSuccess, this ) } );
+    },
+
+    revertEditSuccess: function() {
+
+        this.controlPanel.renderObj.enableNodeSelector();
+
+        BioSync.Common.notify( {
+            text: 'Edit Reverted.',
+            timeout: 5000,
+            x: this.controlPanel.viewer.renderObj.viewPanel.myWidth / 2,
+            y: 10 } );
+    },
+
     handleShareTreeClick: function( e ) {
 
         $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getGtreeSharingInfo' ] } ),

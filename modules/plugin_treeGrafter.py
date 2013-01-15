@@ -6,45 +6,27 @@ import build as build
 
 def revertEdit( db, session, tree, editInfo ):
 
-    getattr( sys.modules[__name__], ''.join( [ 'revert', editInfo.action[0].capitalize(), editInfo.action[1:] ] ) )( db, session, tree, editInfo )
+    getattr( sys.modules[__name__], ''.join( [ 'revert', editInfo.action.capitalize() ] ) )( db, session, tree, editInfo )
 
    
-def revertPrune( db, session, clade, editInfo ):
+def revertPrune( db, session, tree, editInfo ):
 
-    if( editInfo.originalTreeType == 'source' ):
-        
-        prunedClade = build.snode2tree( db, editInfo.affected_node_id )
-        
-    else:
-        
-        prunedClade = build.gnode2tree( db, editInfo.affected_node_id, ( ( db.gnode.id == db.prune_detail.pruned_gnode ) &
-                                                                         ( db.gnode.pruned == True ) &
-                                                                         ( db.prune_detail.gtree_edit == editInfo.id ) ) )
+    prunedClade = \
+        getattr( build, ''.join( [ editInfo.originalTreeType, 'Clade' ] ) )\
+            ( db, editInfo.affected_node_id, Storage(), Storage( pruned = True, editId = editInfo.id ) )
 
-    parentNode = util.getNodeById( clade, editInfo.affected_clade_id )
-
-    if( parentNode is None ):
-        return
+    parentNode = util.getNodeById( tree, editInfo.affected_clade_id )
 
     parentNode.add_child( prunedClade );
 
 
 def revertReplace( db, session, tree, editInfo ):
 
-    if( editInfo.originalTreeType == 'source' ):
+    replacedClade = \
+        getattr( build, ''.join( [ editInfo.originalTreeType, 'Clade' ] ) )\
+            ( db, editInfo.affected_node_id, Storage(), Storage( pruned = True, editId = editInfo.id ) )
 
-        replacedClade = build.snode2tree( db, editInfo.affected_node_id )
-        
-    else:
-    
-        replacedClade = build.gnode2tree( db, editInfo.affected_node_id, ( ( db.gnode.id == db.prune_detail.pruned_gnode ) &
-                                                                            ( db.prune_detail.gtree_edit == editInfo.id ) ) )
-    
     replacingClade = util.getNodeById( tree, editInfo.target_gnode )
-    #replacingClade = build.gnode2tree( db, editInfo.target_gnode )
-
-    if( replacingClade is None ):
-        return
 
     parentNode = replacingClade.parent
 
@@ -55,10 +37,6 @@ def revertReplace( db, session, tree, editInfo ):
 def revertGraft( db, session, tree, editInfo ):
 
     graftedClade = util.getNodeById( tree, editInfo.target_gnode )
-    #graftedClade = build.gnode2tree( db, editInfo.target_gnode )
-
-    if( graftedClade is None ):
-        return
 
     parentNode = graftedClade.parent
     parentNode.remove_child( graftedClade )

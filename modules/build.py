@@ -3,8 +3,9 @@ module for building trees of ivy.tree.Nodes from database tables
 """
 from ivy.tree import Node
 from collections import defaultdict
+from gluon.storage import Storage
 
-#the tree viewer does not use this function
+#the tree viewer is deprecating this function
 def node2tree( db, session, nodeId ):
     if session.TreeViewer.treeType == 'source':
         return sourceClade( db, session, nodeId, session.collapsedNodeStorage[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ] )
@@ -17,9 +18,9 @@ def getRootRecord( db, strNodeTable, rootNodeId ):
     return db( db[ strNodeTable ].id == rootNodeId ).select()[0]
 
 
-def getCladeSqlString( nodeTable, rootRec, collapsedNodeStorage ):
+def getCladeSqlString( nodeTable, rootRec, collapsedNodeStorage, extra = Storage() ):
 
-    joinString = notPruned = ''
+    joinString = pruneClause = ''
 
     if( nodeTable == 'snode' ):
 
@@ -30,7 +31,14 @@ def getCladeSqlString( nodeTable, rootRec, collapsedNodeStorage ):
         joinString = ''.join( [ 'FROM gnode LEFT JOIN snode on gnode.snode = snode.id ',
                                 'LEFT JOIN ottol_name on snode.ottol_name = ottol_name.id ' ] )
 
-        notPruned = 'gnode.pruned = "F" AND '
+        if( 'pruned' in extra and extra['pruned'] == True ):
+
+            pruneClade = ''.join( [ 'gnode.pruned = "T" AND prune_detail.gtree_edit = ', str( extra['editId'] ) ] )
+
+            joinString = ''.join( [ joinString, 'LEFT JOIN prune_detail on gnode.id = prune_detail.pruned_gnode ' ] )
+
+        else:
+            pruneClause = 'gnode.pruned = "F" AND '
 
     stringList = [ \
         'SELECT ', nodeTable, '.id, ',
@@ -41,7 +49,7 @@ def getCladeSqlString( nodeTable, rootRec, collapsedNodeStorage ):
                    'ottol_name.name ',
         joinString,
         'WHERE ', nodeTable, '.tree = ', str( rootRec.tree ), ' AND ',
-        notPruned,
+        pruneClause,
         nodeTable, '.next >= ', str( rootRec.next ), ' AND ',
         nodeTable, '.back <= ', str( rootRec.back ) ]
 
@@ -83,16 +91,16 @@ def getIvyTreeFromNodeList( resultList ):
     return cladeRoot
 
 
-def graftedClade( db, rootNodeId, collapsedNodeStorage ):
+def graftedClade( db, rootNodeId, collapsedNodeStorage, extra = Storage() ):
 
     rootRec = getRootRecord( db, 'gnode', rootNodeId )
 
-    resultList = db.executesql( getCladeSqlString( 'gnode', rootRec, collapsedNodeStorage ) )
+    resultList = db.executesql( getCladeSqlString( 'gnode', rootRec, collapsedNodeStorage, extra ) )
 
     return getIvyTreeFromNodeList( resultList )
 
 
-def sourceClade( db, rootNodeId, collapsedNodeStorage ):
+def sourceClade( db, rootNodeId, collapsedNodeStorage, extra = Storage() ):
 
     rootRec = getRootRecord( db, 'snode', rootNodeId )
 
