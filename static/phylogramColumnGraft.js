@@ -13,6 +13,7 @@ BioSync.TreeGrafter.RenderUtil.Column.prototype.super = BioSync.TreeViewer.Rende
 BioSync.TreeGrafter.RenderUtil.Column.prototype.canUserEditTree = function( p ) {
 
     if( this.renderObj.viewer.isLoggedIn == false ) { return false; }
+    else if( this.renderObj.viewer.treeType == 'source'  ) { return true; }
 
     return ( ( this.renderObj.viewer.userInfo.canEdit ) || 
              ( this.renderObj.viewer.treeCreator == [ this.renderObj.viewer.userInfo.firstName,

@@ -597,7 +597,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
                     this.make( 'div' ).width( modalBoxWidth * .25 ).css( css ).text( 'Name' ),
                     this.make( 'div' ).width( modalBoxWidth * .10 ).css( css ).text( 'Descendants' ),
                     this.make( 'div' ).width( modalBoxWidth * .15 ).css( css ).text( 'Date Created' ),
-                    this.make( 'div' ).width( modalBoxWidth * .45 ).css( css ).text( 'Study' ),
+                    this.make( 'div' ).width( modalBoxWidth * .44 ).css( css ).text( 'Study' ),
                     this.make( 'div' ).css( { 'clear': 'both' } ),
                     clipboardItems
                 ),
@@ -710,8 +710,9 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
 
     setTimeout( function() {
 
-        var modalBoxContent = $('#modalBoxContent');
-        var heightDifference = modalBoxContent.outerHeight( true ) - viewer.windowHeight;
+        var modalBoxForm = $('#modalBoxForm');
+
+        var heightDifference = modalBoxForm.outerHeight( true ) - viewer.windowHeight;
 
         if( heightDifference > 0 ) {
 
@@ -735,7 +736,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
                 }
            }
 
-           modalBoxContent.css( { top: ( ( $(document).height() - ( modalBoxContent.outerHeight( true ) ) ) / 2 ) } );
+           modalBoxForm.css( { top: ( ( $(document).height() - ( modalBoxForm.outerHeight( true ) ) ) / 2 ) } );
 
         } }, 2000 );
 }

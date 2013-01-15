@@ -860,7 +860,9 @@ BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype = {
 
         for( var i = 0, ii = this.columns.length; i < ii; i++ ) {
 
-            this.columns[i].container.unbind( 'mousemove', { }, $.proxy( this.updateNodeSelectorPosition, this ) );
+            var column = this.columns[i];
+
+            column.container.unbind( 'mousemove' );
         }
     },
 
@@ -868,7 +870,9 @@ BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype = {
 
         for( var i = 0, ii = this.columns.length; i < ii; i++ ) {
 
-            this.columns[i].container.bind( 'mousemove', { }, $.proxy( this.updateNodeSelectorPosition, this ) );
+            var column = this.columns[i];
+
+            column.container.bind( 'mousemove', { }, $.proxy( column.updateNodeSelectorPosition, column ) );
         }
     },
 

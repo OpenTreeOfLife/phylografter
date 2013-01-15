@@ -45,7 +45,7 @@ BioSync.TreeGrafter.viewer.prototype.onWindowLoad = function() {
 
     if( this.treeType == 'grafted' && this.isLoggedIn ) {
 
-        this.getUserInfo();
+        this.getUserInfo( { success: $.proxy( this.super.onWindowLoad, this ) } );
 
     } else {
     
@@ -56,12 +56,20 @@ BioSync.TreeGrafter.viewer.prototype.onWindowLoad = function() {
 
 BioSync.TreeGrafter.viewer.prototype.getCreatorInfo = function() {
 
+    var successArray = new Array( $.proxy( this.handleCreatorInfo, this ) );
+
+    if( this.getUserSuccess ) { successArray.push( this.getUserSuccess ); }
+
     $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getCreator' ] } ),
               type: "GET",
-              success: new Array( $.proxy( this.handleCreatorInfo, this ), $.proxy( this.super.onWindowLoad, this ) ) } );
+              success: successArray } );
+
+    this.getUserSuccess = undefined;
 }
 
-BioSync.TreeGrafter.viewer.prototype.getUserInfo = function() {
+BioSync.TreeGrafter.viewer.prototype.getUserInfo = function( p ) {
+
+    if( p.success ) { this.getUserSuccess = p.success; }
         
     $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getUserInfo' ] } ),
               type: "GET",
@@ -87,6 +95,29 @@ BioSync.TreeGrafter.viewer.prototype.getRenderObj = function() {
         BioSync.Common.loadScript( { name: [ this.renderType, 'Graft' ].join('') } );
 
         return new BioSync.TreeGrafter.RenderUtil[ this.renderType ][ this.viewMode ]().start( this );
+}
+
+
+BioSync.TreeViewer.viewer.prototype.updateUrl = function() { 
+
+    $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'updateUrl' ] } ),
+              type: "GET",
+              success: $.proxy( this.handleUpdateUrlResponse, this ) } );
+}
+
+BioSync.TreeViewer.viewer.prototype.handleUpdateUrlResponse = function( response ) { 
+
+    var responseObj = eval( [ "(", response, ")" ].join('') );
+    
+    this.treeId = responseObj.treeId;
+    this.treeType = responseObj.treeType;
+
+    window.history.replaceState(
+        { },
+        'Phylografter',
+        BioSync.Common.makeUrl( { 'controller': 'gtree', argList: [ 'backbone', [ this.treeId, '?treeType=', this.treeType ].join('') ] } ) ); 
+
+    this.getUserInfo( { success: $.proxy( this.refreshControlPanel, this ) } );
 }
 
 //older stuff down below
@@ -227,25 +258,7 @@ BioSync.TreeViewer.viewer.prototype.clipboardGraft = function( p ) {
               success: viewer.getGraftConfirmation } );
 }
 
-BioSync.TreeViewer.viewer.prototype.updateUrl = function() { 
 
-    $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'updateUrl' ] } ),
-              type: "GET",
-              success: $.proxy( this.handleUpdateUrlResponse, this ) } );
-}
-
-BioSync.TreeViewer.viewer.prototype.handleUpdateUrlResponse = function( response ) { 
-
-    var responseObj = eval( [ "(", response, ")" ].join('') );
-    
-    this.treeId = responseObj.treeId;
-    this.treeType = responseObj.treeType;
-
-    window.history.pushState(
-        { },
-        'Phylografter',
-        BioSync.Common.makeUrl( { 'controller': 'gtree', argList: [ 'backbone', [ this.treeId, '?treeType=', this.treeType ].join('') ] } ) ); 
-}
 
 BioSync.TreeViewer.viewer.prototype.handleGraftResponse = function( response ) { 
 

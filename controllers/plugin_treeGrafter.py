@@ -110,7 +110,22 @@ def showTreeBeforeEdit():
 
 
 def revertEdit():
+
+    editInfo = db( db.gtree_edit.id == request.vars.editId ).select()[0]
+
+    if( editInfo.action == 'prune' ):
+    
+        nodesToPrune = db( db.prune_detail.gtree_edit == editInfo.id ).select( db.prune_detail.pruned_gnode )
+
+        for node in nodesToPrune:
+            
+            db( db.gnode.id == node.pruned_gnode ).update( pruned = False )
+    
+        db( db.prune_detail.gtree_edit == editInfo.id ).delete()
+
+
     db( db.gtree_edit.id == request.vars.editId ).delete()
+
 
 
 

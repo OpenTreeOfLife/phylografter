@@ -52,10 +52,6 @@ BioSync.GtreeTable.prototype = {
                       dateSort: this.dateSort
                   },
                   success: $.proxy( this.handleTheInfo, this ) } );
-
-        this.nameSort = undefined;
-        this.creatorSort = undefined;
-        this.dateSort = undefined;
     },
 
     handleTheInfo: function( response ) {
@@ -262,22 +258,16 @@ BioSync.GtreeTable.prototype = {
         this.container.append( this.table );
     },
 
-    sortLabelColumn: function() {
-
-        this.labelSort =
-            ( ( this.labelSort == undefined ) || ( this.labelSort == 'descending' ) )
-                ? 'ascending'
-                : 'descending';
-
-        this.getTheInfo();
-    },
-
-    sortTaxonColumn: function() {
+    sortColumn: function( p ) {
     
-        this.taxonSort =
-            ( ( this.taxonSort == undefined ) || ( this.taxonSort == 'descending' ) )
+        console.log( this[ p.data.sort ] );
+
+        this[ p.data.sort ] =
+            ( ( this[ p.data.sort ] == undefined ) || ( this[ p.data.sort ] == 'descending' ) )
                 ? 'ascending'
                 : 'descending';
+
+        console.log( this[ p.data.sort ] );
 
         this.getTheInfo();
     },
@@ -295,7 +285,8 @@ BioSync.GtreeTable.prototype = {
                             'font-weight': 'bold',
                             'border': '1px solid gray' } )
                     .text( 'Name' )
-                    .bind( 'click', { }, $.proxy( this.sortNameColumn, this ) )
+                    .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                    .bind( 'click', { sort: 'nameSort' }, $.proxy( this.sortColumn, this ) )
                     .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault );
 
         var descriptionSubHeader =
@@ -306,8 +297,7 @@ BioSync.GtreeTable.prototype = {
                             'color': '#555',
                             'font-weight': 'bold',
                             'border': '1px solid gray' } )
-                    .text( 'Description' )
-                    .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault );
+                    .text( 'Description' );
 
         var creatorSubHeader =
             this.makeEl( 'div' )
@@ -318,7 +308,8 @@ BioSync.GtreeTable.prototype = {
                             'font-weight': 'bold',
                             'border': '1px solid gray' } )
                     .text( 'Created By' )
-                    .bind( 'click', { }, $.proxy( this.sortCreatorColumn, this ) )
+                    .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                    .bind( 'click', { sort: 'creatorSort' }, $.proxy( this.sortColumn, this ) )
                     .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault );
 
         var dateSubHeader =
@@ -330,7 +321,8 @@ BioSync.GtreeTable.prototype = {
                             'font-weight': 'bold',
                             'border': '1px solid gray' } )
                     .text( 'Creation Date' )
-                    .bind( 'click', { }, $.proxy( this.sortDateColumn, this ) )
+                    .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                    .bind( 'click', { sort: 'dateSort' }, $.proxy( this.sortColumn, this ) )
                     .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault );
 
         var clear = this.makeEl( 'div' ).css( { 'clear': 'both' } );

@@ -228,6 +228,11 @@ BioSync.TreeViewer.RenderUtil.Column.prototype = {
         return this.renderObj.viewer.isLoggedIn;
     },
 
+    returnTrue: function( p ) {
+
+        return true;
+    },
+
     doesNodeHaveChildren: function( p ) {
         
         return p.nodeInfo.children.length

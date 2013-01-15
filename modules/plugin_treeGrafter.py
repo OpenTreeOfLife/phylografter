@@ -36,7 +36,11 @@ def revertReplace( db, session, tree, editInfo ):
 
 def revertGraft( db, session, tree, editInfo ):
 
+    print editInfo.target_gnode
+
     graftedClade = util.getNodeById( tree, editInfo.target_gnode )
+
+    print graftedClade
 
     parentNode = graftedClade.parent
     parentNode.remove_child( graftedClade )
@@ -73,9 +77,9 @@ def postGraftDBUpdate( db, session, auth):
     if( session.TreeViewer.type == 'source' ):
         
         reference = \
-            dict( newCladeId = session.treeEdit.graftedCladeNodeId,
+            dict( newCladeId = int( session.treeEdit.graftedCladeNodeId ),
                   targetGNode = None,
-                  oldAffectedCladeId = graftedCladeSiblingRecord.parent,
+                  oldAffectedCladeId = int( graftedCladeSiblingRecord.parent ),
                   newAffectedCladeId = None )
         
         insertSnodesToGtree( db, session.TreeViewer.treeId, session.treeEdit.currentTree, None, reference )
@@ -88,7 +92,7 @@ def postGraftDBUpdate( db, session, auth):
 
         updateGtreeDB( db, session.treeEdit.currentTree )
         
-        reference = dict( newCladeId = session.treeEdit.graftedCladeNodeId, targetGNode = None )
+        reference = dict( newCladeId = int( session.treeEdit.graftedCladeNodeId ), targetGNode = None )
         
         insertGNodesToGtree( db, session.TreeViewer.treeId, util.getNodeById( session.treeEdit.currentTree, session.treeEdit.graftedCladeNodeId ), graftedCladeSiblingRecord.parent, session.treeEdit.graftedCladeType, reference )
         
@@ -385,7 +389,7 @@ def postPruneDBUpdate( db, session, request, auth, tree, prunedNodeRow ):
         index( tree )
 
         reference = dict( \
-            oldAffectedCladeId = prunedNodeRow.parent,
+            oldAffectedCladeId = int( prunedNodeRow.parent ),
             newAffectedCladeId = None,
             columnRootNodeIds = columnRootNodeIds,
             collapsedNodeIds = collapsedNodeIds )

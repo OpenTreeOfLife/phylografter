@@ -42,6 +42,11 @@ BioSync.TreeViewer.ControlPanel.prototype = {
               matchingLabelListZIndex: 5002,
               sliderSize: 100 },
 
+    remove: function() {
+
+        this.panelButton.remove();
+    },
+
     initialize: function( controlPanelInfo ) {
 
          this.panelButton =
@@ -289,6 +294,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
 
     handleViewTreeEditClick: function( e ) {
 
+        this.selectionContainer.hide();
+
         $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getGtreeGraftHistory' ] } ),
                   type: "GET",
                   success: $.proxy( this.showModalTreeEdits, this ) } );
@@ -335,7 +342,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
 
         for( var i = 0, ii = data.length; i < ii; i++ ) {
 
-            var dataRow = this.make( 'div' ).css( { 'padding': '5px' } ).append(
+            var dataRow = this.make( 'div' ).attr( { 'class': 'dataRow' } ).css( { 'padding': '5px' } ).append(
                     this.make('div')
                       .css( { 'float': 'left',
                               'text-align': 'center' } )
@@ -361,8 +368,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                       .text( data[i].gtree_edit.mtime )
                 );
 
-            if( this.controlPanel.viewer.userInfo && this.controlPanel.viewer.userInfo.canEdit ) {
-                
+            if( ( i != 0 ) && ( this.controlPanel.viewer.userInfo && this.controlPanel.viewer.userInfo.canEdit ) ) {
+
                 dataRow.append(
                     this.make('div')
                       .css( { 'float': 'left',
@@ -372,6 +379,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                       .width( '10%' )
                       .bind( 'click', { editId: data[i].gtree_edit.id }, $.proxy( this.showTreeBeforeEdit, this ) )
                       .bind( 'click', { }, BioSync.ModalBox.closeBox )
+                      .bind( 'click', { }, BioSync.Common.setMouseToDefault )
                       .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
                       .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline ),
                     
@@ -395,9 +403,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
             title: 'Tree Edits' } );
 
         setTimeout(
-            function() { $( dataRow.children() ).css( { 'position': 'relative', top: $( dataRow.children()[1] ).height() / 2 } ) },
-            2000 );
-
+            function() { $( $('.dataRow').children() ).css( { 'position': 'relative', top: $( dataRow.children()[1] ).height() / 2 } ) },
+            1500 );
     },
 
     showTreeBeforeEdit: function( e ) {
@@ -411,12 +418,13 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                   data: e.data,
                   success: new Array( function() { renderObj.removeColumns( { start: 1, end: renderObj.columns.length - 1, keepInSession: true } ); },
                            $.proxy( renderObj.columns[0].renderReceivedClade, renderObj.columns[0] ),
+                           $.proxy( renderObj.disableNodeSelector, renderObj ),
                            $.proxy( this.showRevertEditDialogue, this ) ) } );
     },
 
     showRevertEditDialogue: function( ) {
 
-        this.controlPanel.renderObj.disableNodeSelector();
+        this.hideOption();
 
         this.revertEditContainer =
             this.make( 'div' ).css( { 'position': 'absolute', 'z-index': '10000' } ).append(
@@ -436,13 +444,20 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                   .text( 'Cancel' )
                   .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
                   .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
-                  .bind( 'click', { }, $.proxy( this.controlPanel.viewer.renderObj.redrawTree, this ) )
+                  .bind( 'click', { }, $.proxy( this.cancelRevertEdit, this ) )
                   .css( { 'color': 'green',
                           'margin': '5px 10px' } ) ).appendTo( this.controlPanel.viewer.renderObj.viewPanel );
 
         this.revertEditContainer.css( {
             'left': ( this.controlPanel.viewer.renderObj.viewPanel.myWidth - this.revertEditContainer.outerWidth( true ) ) / 2,
             'top': 10 } );
+    },
+
+    cancelRevertEdit: function() {
+
+        this.revertEditContainer.remove();
+
+        this.controlPanel.viewer.renderObj.redrawTree();
     },
 
     revertEdit: function() {
@@ -455,13 +470,15 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
 
     revertEditSuccess: function() {
 
-        this.controlPanel.renderObj.enableNodeSelector();
+        this.revertEditContainer.remove();
+
+        this.controlPanel.viewer.renderObj.enableNodeSelector();
 
         BioSync.Common.notify( {
             text: 'Edit Reverted.',
             timeout: 5000,
             x: this.controlPanel.viewer.renderObj.viewPanel.myWidth / 2,
-            y: 10 } );
+            y: this.controlPanel.viewer.renderObj.viewPanel.myHeight / 2 } );
     },
 
     handleShareTreeClick: function( e ) {
