@@ -508,6 +508,7 @@ def stree_subgraph(G):
     sg.vtx_leaves = []
     sg.root = None
     sg.vtext = sg.new_vertex_property("string")
+    sg.vertex_properties['vtext'] = sg.vtext
     sg.isleaf = sg.new_vertex_property("bool")
     sg.snode = sg.new_vertex_property("bool")
     sg.snode_edge = sg.new_edge_property("bool")
@@ -515,6 +516,7 @@ def stree_subgraph(G):
     sg.ncbi_edge = sg.new_edge_property("bool")
     sg.edge2stree = sg.new_edge_property("int")
     sg.eweight = sg.new_edge_property("double")
+    sg.edge_properties['stree'] = sg.edge2stree
 
     def add(stree_id):
         c2p = {}
@@ -595,43 +597,43 @@ def stree_subgraph(G):
         if not sg.root: sg.root = sg.stree[stree_id]
         else:
             params = dict(anc=sg.stree[stree_id].vtx.eid, n=sg.root.vtx.eid)
-            if G.gremlin.execute(scripts.ncbi_rootpath, params).content:
+            if G.gremlin.execute(scripts.ncbi_eid_rootpath, params).content:
                 sg.root = sg.stree[stree_id]
                 ## print ('setting new sg root to', sg.stree[stree_id],
                 ##        sg.vtext[sg.stree[stree_id].sgv] or '')
 
-        taxtree = ncbi_subtree(G, sg.vtx_leaves, fetchnodes=False)
-        for n in taxtree:
-            if n.parent:
-                osgv = sg.eid2sgv.get(n.eid)
-                if not osgv:
-                    osgv = sg.add_vertex()
-                    ovtx = G.vertices.get(n.eid)
-                    sg.sgv2vtx[osgv] = ovtx
-                    sg.eid2sgv[n.eid] = osgv
-                    sg.eid2vtx[n.eid] = ovtx
-                    sg.ncbi_node[osgv] = 1
-                    sg.vtext[osgv] = ovtx.name
-                    sg.snode[osgv] = 0
-                isgv = sg.eid2sgv.get(n.parent.eid)
-                if not isgv:
-                    isgv = sg.add_vertex()
-                    ivtx = G.vertices.get(n.parent.eid)
-                    sg.sgv2vtx[isgv] = ivtx
-                    sg.eid2sgv[n.parent.eid] = isgv
-                    sg.eid2vtx[n.parent.eid] = ivtx
-                    sg.ncbi_node[isgv] = 1
-                    sg.snode[isgv] = 0
-                    sg.vtext[isgv] = ivtx.name
+        ## taxtree = ncbi_subtree(G, sg.vtx_leaves, fetchnodes=False)
+        ## for n in taxtree:
+        ##     if n.parent:
+        ##         osgv = sg.eid2sgv.get(n.eid)
+        ##         if not osgv:
+        ##             osgv = sg.add_vertex()
+        ##             ovtx = G.vertices.get(n.eid)
+        ##             sg.sgv2vtx[osgv] = ovtx
+        ##             sg.eid2sgv[n.eid] = osgv
+        ##             sg.eid2vtx[n.eid] = ovtx
+        ##             sg.ncbi_node[osgv] = 1
+        ##             sg.vtext[osgv] = ovtx.name
+        ##             sg.snode[osgv] = 0
+        ##         isgv = sg.eid2sgv.get(n.parent.eid)
+        ##         if not isgv:
+        ##             isgv = sg.add_vertex()
+        ##             ivtx = G.vertices.get(n.parent.eid)
+        ##             sg.sgv2vtx[isgv] = ivtx
+        ##             sg.eid2sgv[n.parent.eid] = isgv
+        ##             sg.eid2vtx[n.parent.eid] = ivtx
+        ##             sg.ncbi_node[isgv] = 1
+        ##             sg.snode[isgv] = 0
+        ##             sg.vtext[isgv] = ivtx.name
 
-                if not (n.eid, n.parent.eid) in sg.se_created:
-                ## if not n.edge_eid in sg.eid2sge:
-                    se = sg.add_edge(isgv, osgv)
-                    sg.se_created.add((n.parent.eid, n.eid))
-                    sg.eid2sge[n.edge_eid] = se
-                    sg.ncbi_edge[se] = 1
-                    sg.snode_edge[se] = 0
-                    sg.eweight[se] = 1.0
+        ##         if not (n.eid, n.parent.eid) in sg.se_created:
+        ##         ## if not n.edge_eid in sg.eid2sge:
+        ##             se = sg.add_edge(isgv, osgv)
+        ##             sg.se_created.add((n.parent.eid, n.eid))
+        ##             sg.eid2sge[n.edge_eid] = se
+        ##             sg.ncbi_edge[se] = 1
+        ##             sg.snode_edge[se] = 0
+        ##             sg.eweight[se] = 1.0
 
         return sg
 
@@ -882,7 +884,9 @@ def draw_stree_subgraph(sg, stree_colors=None, pos=None, pin=None,
         stree_colors = defaultdict(lambda:'#%02x%02x%02x'%(t.next()[:-1]))
    
     vcolor = sg.new_vertex_property("string")
+    sg.vertex_properties['vcolor'] = vcolor
     ecolor = sg.new_edge_property("string")
+    ## sg.edge_properties['ecolor'] = ecolor
     ewidth = sg.new_edge_property("int")
     for v in sg.vertices():
         vcolor[v] = 'red' if sg.ncbi_node[v] else 'gray'
@@ -901,10 +905,9 @@ def draw_stree_subgraph(sg, stree_colors=None, pos=None, pin=None,
             if n.vtx.type=='ncbi_node':
                 vcolor[n.sgv] = sg.ncbi_color
             if n.parent:
-                if n.sge not in seen:
-                    ecolor[n.sge] = c
-                    ewidth[n.sge] = 4
-                    seen.add(n.sge)
+                ecolor[n.sge] = c
+                ewidth[n.sge] = 2
+                ## print n, n.sge, sg.edge2stree[n.sge], ecolor[n.sge]
 
     p1 = gt.sfdp_layout(sg,
                         C=C, #0.00001,
@@ -924,7 +927,7 @@ def draw_stree_subgraph(sg, stree_colors=None, pos=None, pin=None,
     gt.graph_draw(sg,
                   pos=p1,
                   vertex_fill_color=vcolor,
-                  vertex_text=sg.vtext,
+                  ## vertex_text=sg.vtext,
                   vertex_text_position=3.1415,
                   ## vertex_halo=sg.halo,
                   ## vertex_halo_color='green',
@@ -1324,15 +1327,20 @@ G = connect()
 ##                 node.snode = snv
 ##                 node.save()
 
-## cmap = {2:'green',3:'purple',4:'orange',9:'brown',10:'cyan',
-##         212:'magenta'}
-## n = G.ncbi_node_idx.get_unique(name='rosids')
+cmap = {2:'green',3:'purple',4:'orange',9:'brown',10:'cyan',
+        212:'magenta'}
+#n = G.ncbi_node_idx.get_unique(name='rosids')
 
-t = tango()
-cmap = defaultdict(lambda:'#%02x%02x%02x'% tuple(
-    [ int(x*255) for x in t.next()[:-1] ]))
-n = G.ncbi_node_idx.get_unique(name='Spermatophyta')
-n = G.ncbi_node_idx.get_unique(name='Magnoliophyta')
-sg = named_neighborhood_subgraph(G, n.eid)
-sg.stree_colors = cmap
-draw_fan(sg)
+## t = tango()
+## cmap = defaultdict(lambda:'#%02x%02x%02x'% tuple(
+##     [ int(x*255) for x in t.next()[:-1] ]))
+#n = G.ncbi_node_idx.get_unique(name='Spermatophyta')
+## n = G.ncbi_node_idx.get_unique(name='Magnoliophyta')
+## sg = named_neighborhood_subgraph(G, n.eid)
+## sg.stree_colors = cmap
+## draw_fan(sg)
+
+sg = stree_subgraph(G)
+v = [2,3,4,9,10,212]
+for x in v: sg.add(x)
+draw_stree_subgraph(sg, stree_colors=cmap)
