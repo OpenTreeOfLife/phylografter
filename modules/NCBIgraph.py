@@ -487,7 +487,7 @@ def insert_mapped_stree(G, root):
 def insert_stree(G, db, stree_id):
     assert not stree_inserted(G, stree_id)
     r = build.stree(db, stree_id)
-    map_taxonomy(G, r)
+    map_stree(G, r)
     newnodes, newedges = insert_mapped_stree(G, r)
     return r
 
@@ -1340,7 +1340,9 @@ cmap = {2:'green',3:'purple',4:'orange',9:'brown',10:'cyan',
 ## sg.stree_colors = cmap
 ## draw_fan(sg)
 
-sg = stree_subgraph(G)
 v = [2,3,4,9,10,212]
+for i in v: insert_stree(G, db, i)
+
+sg = stree_subgraph(G)
 for x in v: sg.add(x)
 draw_stree_subgraph(sg, stree_colors=cmap)
