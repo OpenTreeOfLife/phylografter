@@ -205,22 +205,32 @@ BioSync.TreeViewer.RenderUtil.Column.prototype = {
 
         for( var i = 0, ii = p.options.length; i < ii; i++ ) {
 
-            if( ( this.nodeInfo[ this.closestNodeToMouse.id ].children.length == 0 ) &&
-                ( p.options[i].text == 'Collapse Clade' ) ) { continue; }
+            if( this[ p.options[i].test ]( { nodeInfo: this.nodeInfo[ this.closestNodeToMouse.id ] } ) ) {
 
-            this.nodeContextMenuOptionContainer.append(
-                this.make('li').css( { 'border-bottom': '1px dotted #E1E1E1',
-                                       'white-space': 'nowrap',
-                                       'padding': '5px' } )
-                               .text( p.options[i].text )
-                               .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
-                               .hover( this.highlightContextMenuOption, this.removeContextMenuOptionHighlight )
-                               .bind( 'click', { }, $.proxy( this.closeNodeContextMenu, this ) )
-                               .bind( 'click', { }, BioSync.Common.setMouseToDefault )
-                               .bind( 'click', { }, $.proxy( this[ p.options[i].handler ], this ) ) );
+                this.nodeContextMenuOptionContainer.append(
+                    this.make('li').css( { 'border-bottom': '1px dotted #E1E1E1',
+                                           'white-space': 'nowrap',
+                                           'padding': '5px' } )
+                                   .text( p.options[i].text )
+                                   .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                   .hover( this.highlightContextMenuOption, this.removeContextMenuOptionHighlight )
+                                   .bind( 'click', { }, $.proxy( this.closeNodeContextMenu, this ) )
+                                   .bind( 'click', { }, BioSync.Common.setMouseToDefault )
+                                   .bind( 'click', { }, $.proxy( this[ p.options[i].handler ], this ) ) );
+             }
         }
    
        $(document).bind( 'click', { }, $.proxy( this.checkForClickOutsideOfNodeContextMenu, this ) );
+    },
+
+    isUserLoggedIn: function( p ) {
+
+        return this.renderObj.viewer.isLoggedIn;
+    },
+
+    doesNodeHaveChildren: function( p ) {
+        
+        return p.nodeInfo.children.length
     },
 
     nodePreviouslyExpanded: function( p ) {

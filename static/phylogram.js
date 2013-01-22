@@ -856,6 +856,26 @@ BioSync.TreeViewer.RenderUtil.phylogram.navigate.prototype = {
         return { id: p.closestId, distance: p.currentDistance };
     },
 
+    disableNodeSelector: function() {
+
+        for( var i = 0, ii = this.columns.length; i < ii; i++ ) {
+
+            var column = this.columns[i];
+
+            column.container.unbind( 'mousemove' );
+        }
+    },
+
+    enableNodeSelector: function() {
+
+        for( var i = 0, ii = this.columns.length; i < ii; i++ ) {
+
+            var column = this.columns[i];
+
+            column.container.bind( 'mousemove', { }, $.proxy( column.updateNodeSelectorPosition, column ) );
+        }
+    },
+
     translateDOMToCanvas: function( p ) {
     
         var column = p.column;

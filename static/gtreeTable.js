@@ -1,17 +1,15 @@
-BioSync.OtuTable = function( p ) {
+BioSync.GtreeTable = function( p ) {
 
     this.makeEl = BioSync.Common.makeEl;
 
     this.containerId = p.id;
 
     this.container = $( '#' + p.id ).width( $('body').width() * .95 );
-
-    this.studyId = p.studyId;
-
+    
     return this;
 }
 
-BioSync.OtuTable.prototype = {
+BioSync.GtreeTable.prototype = {
 
     config: {
 
@@ -41,16 +39,17 @@ BioSync.OtuTable.prototype = {
 
     getTheInfo: function() {
 
-        $.ajax( { url: BioSync.Common.makeUrl( { controller: 'otu', argList: [ 'getStudyOTUs' ] } ),
+        $.ajax( { url: BioSync.Common.makeUrl( { controller: 'gtree', argList: [ 'getGtrees' ] } ),
                   type: "POST",
                   data: {
-                      studyId: this.studyId,
                       page: this.page,
                       rowsOnPage: this.rowsOnPage,
-                      labelSearch: $('#labelSearch').val(),
-                      taxonSearch: $('#taxonSearch').val(),
-                      taxonSort: this.taxonSort,
-                      labelSort: this.labelSort
+                      nameSearch: $('#nameSearch').val(),
+                      descriptionSearch: $('#descriptionSearch').val(),
+                      creatorSearch: $('#creatorSearch').val(),
+                      nameSort: this.nameSort,
+                      creatorSort: this.creatorSort,
+                      dateSort: this.dateSort
                   },
                   success: $.proxy( this.handleTheInfo, this ) } );
     },
@@ -67,26 +66,81 @@ BioSync.OtuTable.prototype = {
         for( var i = 0, ii = responseObj.data.length; i < ii; i++ ) {
 
             var backgroundColor = ( i % 2 == 0 ) ? '#E2E4FF' : 'white';
-    
-            var leftItem =
-                this.makeEl( 'div' ).css( {
-                    'float': 'left',
-                    'padding': '3px 0px 3px 5px',
-                    'background-color': backgroundColor  } ).text( responseObj.data[ i ][0] );
+   
+            var rowContainer =
+                this.makeEl( 'div' ).attr( { 'id': responseObj.data[i].id } )
+                    .click( function() {
+                        document.location.href =
+                            BioSync.Common.makeUrl( { controller: 'gtree', argList: [ 'backbone', [ $( this ).attr('id'), '?treeType=grafted' ].join('') ] } ) } )
+                    .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                    .hover( function() { $( $( this ).children() ).css( { 'background-color': '#CCC' } ); },
+                            function() { $( $( this ).children() ).css( { 'background-color': $( $( this ).children()[0] ).attr('bc') } ); } );
 
-            var rightItem =
-                this.makeEl( 'div' ).css( {
-                    'float': 'left',
-                    'padding': '3px 0px 3px 5px',
-                    'background-color': backgroundColor } )
-                        .width( '50%' ).append( responseObj.data[ i ][1] )
+            var nameItem =
+                this.makeEl( 'div' )
+                    .css( {
+                        'float': 'left',
+                        'padding': '3px 0px 3px 5px',
+                        'text-align': 'center',
+                        'background-color': backgroundColor  } )
+                    .attr( { 'bc': backgroundColor } )
+                    .text( ( responseObj.data[ i ].title != null ) ? responseObj.data[ i ].title : '' );
 
-            this.table.append( leftItem, rightItem, this.makeEl( 'div' ).css( { 'clear': 'both' } ) );
+            var descriptionText = ( responseObj.data[ i ].comment != null ) ? responseObj.data[ i ].comment : '';
+
+            var descriptionItem =
+                this.makeEl( 'div' )
+                    .attr( { 'title': descriptionText } )
+                    .css( {
+                        'float': 'left',
+                        'padding': '3px 0px 3px 5px',
+                        'text-align': 'center',
+                        'white-space': 'nowrap',
+                        'overflow': 'hidden',
+                        'text-overflow': 'ellipsis',
+                        'background-color': backgroundColor } )
+                    .attr( { 'bc': backgroundColor } )
+                    .text( descriptionText );
+
+            var creatorItem =
+                this.makeEl( 'div' )
+                    .css( {
+                        'float': 'left',
+                        'padding': '3px 0px 3px 5px',
+                        'text-align': 'center',
+                        'background-color': backgroundColor } )
+                    .attr( { 'bc': backgroundColor } )
+                    .text( ( responseObj.data[ i ].contributor != null ) ? responseObj.data[ i ].contributor : '' );
+
+            var dateItem =
+                this.makeEl( 'div' )
+                    .css( {
+                        'float': 'left',
+                        'padding': '3px 0px 3px 5px',
+                        'text-align': 'center',
+                        'background-color': backgroundColor } )
+                    .attr( { 'bc': backgroundColor } )
+                    .text( ( responseObj.data[ i ].date != null ) ? responseObj.data[ i ].date : '' );
+
+            this.table.append(
+                rowContainer.append( 
+                    nameItem,
+                    descriptionItem,
+                    creatorItem,
+                    dateItem,
+                    this.makeEl( 'div' ).css( { 'clear': 'both' } )
+                )
+            );
 
             var tableWidth = this.table.outerWidth( true ); 
 
-            leftItem.width( ( tableWidth / 2 ) - 5 );
-            rightItem.width( ( tableWidth / 2 ) - 5 ).height( leftItem.height() );
+            var dateItemHeight = dateItem.height();
+            var colWidth = ( tableWidth / 4 ) - 5;
+
+            dateItem.width( colWidth );
+            descriptionItem.width( colWidth ).height( dateItemHeight );
+            creatorItem.width( colWidth ).height( dateItemHeight );
+            nameItem.width( colWidth ).height( dateItemHeight );
         }
 
         var lastItemIndex = this.recordsInData;
@@ -143,37 +197,50 @@ BioSync.OtuTable.prototype = {
         this.searchFooter =
             this.makeEl( 'div' ).width( '100%' ).css( { 'background-color': '#E6E6E6' } );
 
-        this.labelSearchEl = 
+        this.nameSearchEl = 
             this.makeEl( 'div' ).css( {
               'padding': '3px',
               'border': '1px solid gray',
               'float': 'left' } ).append(
                 this.makeEl( 'input' )
-                  .attr( { 'id': 'labelSearch', 'type': 'text' } )
+                  .attr( { 'id': 'nameSearch', 'type': 'text' } )
                   .bind( 'keydown', { }, $.proxy( this.handleSearch, this ) ) );
 
-        this.taxonSearchEl =
+        this.descriptionSearchEl =
             this.makeEl( 'div' ).css( {
               'padding': '3px',
               'border': '1px solid gray',
               'float': 'left' } ).append(
                 this.makeEl( 'input' )
-                  .attr( { 'id': 'taxonSearch', 'type': 'text' } )
+                  .attr( { 'id': 'descriptionSearch', 'type': 'text' } )
                   .bind( 'keydown', { }, $.proxy( this.handleSearch, this ) ) );
+
+        this.creatorSearchEl =
+            this.makeEl( 'div' ).css( {
+              'padding': '3px',
+              'border': '1px solid gray',
+              'float': 'left' } ).append(
+                this.makeEl( 'input' )
+                  .attr( { 'id': 'creatorSearch', 'type': 'text' } )
+                  .bind( 'keydown', { }, $.proxy( this.handleSearch, this ) ) );
+
 
         this.container.append(
             this.searchFooter.append(
-                this.labelSearchEl,
-                this.taxonSearchEl,
+                this.nameSearchEl,
+                this.descriptionSearchEl,
+                this.creatorSearchEl,
                 this.makeEl( 'div' ).css( { 'clear': 'both' } ) ) );
 
         BioSync.Common.storeObjPosition( this.searchFooter, this.searchFooter );
 
-        this.labelSearchEl.width( ( this.searchFooter.myWidth / 2 ) - 9 );
-        this.taxonSearchEl.width( ( this.searchFooter.myWidth / 2 ) - 9 );
+        this.nameSearchEl.width( ( this.searchFooter.myWidth / 4 ) - 9 );
+        this.descriptionSearchEl.width( ( this.searchFooter.myWidth / 4 ) - 9 );
+        this.creatorSearchEl.width( ( this.searchFooter.myWidth / 4 ) - 9 );
 
-        $( this.labelSearchEl.children()[0] ).css( { 'width': ( this.searchFooter.myWidth / 2 ) - 20 } );
-        $( this.taxonSearchEl.children()[0] ).css( { 'width': ( this.searchFooter.myWidth / 2 ) - 20 } );
+        $( this.nameSearchEl.children()[0] ).css( { 'width': ( this.searchFooter.myWidth / 4 ) - 20 } );
+        $( this.descriptionSearchEl.children()[0] ).css( { 'width': ( this.searchFooter.myWidth / 4 ) - 20 } );
+        $( this.creatorSearchEl.children()[0] ).css( { 'width': ( this.searchFooter.myWidth / 4 ) - 20 } );
     },
 
     handleSearch: function() {
@@ -191,22 +258,16 @@ BioSync.OtuTable.prototype = {
         this.container.append( this.table );
     },
 
-    sortLabelColumn: function() {
-
-        this.labelSort =
-            ( ( this.labelSort == undefined ) || ( this.labelSort == 'descending' ) )
-                ? 'ascending'
-                : 'descending';
-
-        this.getTheInfo();
-    },
-
-    sortTaxonColumn: function() {
+    sortColumn: function( p ) {
     
-        this.taxonSort =
-            ( ( this.taxonSort == undefined ) || ( this.taxonSort == 'descending' ) )
+        console.log( this[ p.data.sort ] );
+
+        this[ p.data.sort ] =
+            ( ( this[ p.data.sort ] == undefined ) || ( this[ p.data.sort ] == 'descending' ) )
                 ? 'ascending'
                 : 'descending';
+
+        console.log( this[ p.data.sort ] );
 
         this.getTheInfo();
     },
@@ -215,7 +276,7 @@ BioSync.OtuTable.prototype = {
 
         this.subHeader = this.makeEl( 'div' ).css( { 'background-color': '#E6E6E6' } ).width( '100%' );
         
-        var leftSubHeader =
+        var nameSubHeader =
                 this.makeEl( 'div' )
                     .css( { 'float': 'left',
                             'text-align': 'center',
@@ -223,11 +284,12 @@ BioSync.OtuTable.prototype = {
                             'color': '#555',
                             'font-weight': 'bold',
                             'border': '1px solid gray' } )
-                    .text( 'Label' )
-                    .bind( 'click', { }, $.proxy( this.sortLabelColumn, this ) )
+                    .text( 'Name' )
+                    .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                    .bind( 'click', { sort: 'nameSort' }, $.proxy( this.sortColumn, this ) )
                     .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault );
 
-        var rightSubHeader =
+        var descriptionSubHeader =
             this.makeEl( 'div' )
                     .css( { 'float': 'left',
                             'padding': '5px',
@@ -235,18 +297,51 @@ BioSync.OtuTable.prototype = {
                             'color': '#555',
                             'font-weight': 'bold',
                             'border': '1px solid gray' } )
-                    .text( 'Taxon' )
-                    .bind( 'click', { }, $.proxy( this.sortTaxonColumn, this ) )
+                    .text( 'Description' );
+
+        var creatorSubHeader =
+            this.makeEl( 'div' )
+                    .css( { 'float': 'left',
+                            'padding': '5px',
+                            'text-align': 'center',
+                            'color': '#555',
+                            'font-weight': 'bold',
+                            'border': '1px solid gray' } )
+                    .text( 'Created By' )
+                    .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                    .bind( 'click', { sort: 'creatorSort' }, $.proxy( this.sortColumn, this ) )
+                    .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault );
+
+        var dateSubHeader =
+            this.makeEl( 'div' )
+                    .css( { 'float': 'left',
+                            'padding': '5px',
+                            'text-align': 'center',
+                            'color': '#555',
+                            'font-weight': 'bold',
+                            'border': '1px solid gray' } )
+                    .text( 'Creation Date' )
+                    .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                    .bind( 'click', { sort: 'dateSort' }, $.proxy( this.sortColumn, this ) )
                     .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault );
 
         var clear = this.makeEl( 'div' ).css( { 'clear': 'both' } );
 
-        this.container.append( this.subHeader.append( leftSubHeader, rightSubHeader, clear ) );
+        this.container.append(
+            this.subHeader.append(
+                nameSubHeader,
+                descriptionSubHeader,
+                creatorSubHeader,
+                dateSubHeader,
+                clear
+            )
+        );
 
-        this.subHeader.children().width( ( this.subHeader.outerWidth( true ) / 2 ) - 13 );
+        this.subHeader.children().width( ( this.subHeader.outerWidth( true ) / 4 ) - 13 );
 
-        this.labelSort = undefined;
-        this.taxonSort = 'ascending';
+        this.nameSort = undefined;
+        this.creatorSort = undefined;
+        this.dateSort = undefined;
     },
 
     changeRowsOnPage: function( e ) {
@@ -408,4 +503,3 @@ BioSync.OtuTable.prototype = {
     }
 
 }
-

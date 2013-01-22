@@ -6,45 +6,27 @@ import build as build
 
 def revertEdit( db, session, tree, editInfo ):
 
-    getattr( sys.modules[__name__], ''.join( [ 'revert', editInfo.action[0].capitalize(), editInfo.action[1:] ] ) )( db, session, tree, editInfo )
+    getattr( sys.modules[__name__], ''.join( [ 'revert', editInfo.action.capitalize() ] ) )( db, session, tree, editInfo )
 
    
-def revertPrune( db, session, clade, editInfo ):
+def revertPrune( db, session, tree, editInfo ):
 
-    if( editInfo.originalTreeType == 'source' ):
-        
-        prunedClade = build.snode2tree( db, editInfo.affected_node_id )
-        
-    else:
-        
-        prunedClade = build.gnode2tree( db, editInfo.affected_node_id, ( ( db.gnode.id == db.prune_detail.pruned_gnode ) &
-                                                                         ( db.gnode.pruned == True ) &
-                                                                         ( db.prune_detail.gtree_edit == editInfo.id ) ) )
+    prunedClade = \
+        getattr( build, ''.join( [ editInfo.originalTreeType, 'Clade' ] ) )\
+            ( db, editInfo.affected_node_id, Storage(), Storage( pruned = True, editId = editInfo.id ) )
 
-    parentNode = util.getNodeById( clade, editInfo.affected_clade_id )
-
-    if( parentNode is None ):
-        return
+    parentNode = util.getNodeById( tree, editInfo.affected_clade_id )
 
     parentNode.add_child( prunedClade );
 
 
 def revertReplace( db, session, tree, editInfo ):
 
-    if( editInfo.originalTreeType == 'source' ):
+    replacedClade = \
+        getattr( build, ''.join( [ editInfo.originalTreeType, 'Clade' ] ) )\
+            ( db, editInfo.affected_node_id, Storage(), Storage( pruned = True, editId = editInfo.id ) )
 
-        replacedClade = build.snode2tree( db, editInfo.affected_node_id )
-        
-    else:
-    
-        replacedClade = build.gnode2tree( db, editInfo.affected_node_id, ( ( db.gnode.id == db.prune_detail.pruned_gnode ) &
-                                                                            ( db.prune_detail.gtree_edit == editInfo.id ) ) )
-    
     replacingClade = util.getNodeById( tree, editInfo.target_gnode )
-    #replacingClade = build.gnode2tree( db, editInfo.target_gnode )
-
-    if( replacingClade is None ):
-        return
 
     parentNode = replacingClade.parent
 
@@ -54,11 +36,11 @@ def revertReplace( db, session, tree, editInfo ):
 
 def revertGraft( db, session, tree, editInfo ):
 
-    graftedClade = util.getNodeById( tree, editInfo.target_gnode )
-    #graftedClade = build.gnode2tree( db, editInfo.target_gnode )
+    print editInfo.target_gnode
 
-    if( graftedClade is None ):
-        return
+    graftedClade = util.getNodeById( tree, editInfo.target_gnode )
+
+    print graftedClade
 
     parentNode = graftedClade.parent
     parentNode.remove_child( graftedClade )
@@ -95,9 +77,9 @@ def postGraftDBUpdate( db, session, auth):
     if( session.TreeViewer.type == 'source' ):
         
         reference = \
-            dict( newCladeId = session.treeEdit.graftedCladeNodeId,
+            dict( newCladeId = int( session.treeEdit.graftedCladeNodeId ),
                   targetGNode = None,
-                  oldAffectedCladeId = graftedCladeSiblingRecord.parent,
+                  oldAffectedCladeId = int( graftedCladeSiblingRecord.parent ),
                   newAffectedCladeId = None )
         
         insertSnodesToGtree( db, session.TreeViewer.treeId, session.treeEdit.currentTree, None, reference )
@@ -110,7 +92,7 @@ def postGraftDBUpdate( db, session, auth):
 
         updateGtreeDB( db, session.treeEdit.currentTree )
         
-        reference = dict( newCladeId = session.treeEdit.graftedCladeNodeId, targetGNode = None )
+        reference = dict( newCladeId = int( session.treeEdit.graftedCladeNodeId ), targetGNode = None )
         
         insertGNodesToGtree( db, session.TreeViewer.treeId, util.getNodeById( session.treeEdit.currentTree, session.treeEdit.graftedCladeNodeId ), graftedCladeSiblingRecord.parent, session.treeEdit.graftedCladeType, reference )
         
@@ -407,7 +389,7 @@ def postPruneDBUpdate( db, session, request, auth, tree, prunedNodeRow ):
         index( tree )
 
         reference = dict( \
-            oldAffectedCladeId = prunedNodeRow.parent,
+            oldAffectedCladeId = int( prunedNodeRow.parent ),
             newAffectedCladeId = None,
             columnRootNodeIds = columnRootNodeIds,
             collapsedNodeIds = collapsedNodeIds )
@@ -643,6 +625,7 @@ def insertSnodesToGtree( db, gtreeId, node, parentId, reference=None ):
 
 def createGTreeRecord( db, auth, name, desc ):
 
+    #The contributor field is probably better as a user id.  I joined the first and last names in an attempt to normalize users logging in with multiple email addresses.
     return db.gtree.insert(
         contributor = ' '.join( [ auth.user.first_name, auth.user.last_name ] ),
         title = name,

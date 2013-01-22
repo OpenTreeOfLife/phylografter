@@ -206,8 +206,17 @@ BioSync.TreeViewer.viewer.prototype = {
 
         this.renderObj.getTree();
        
-        //still need to deal with this 
+        //i think the sidebar is now deprecated 
         //if( this.sidebar ) { this.sidebar.updateHeaderCoords(); }
+    },
+
+    refreshControlPanel: function( p ) {
+
+        this.controlPanel.remove();
+
+        delete this.controlPanel;
+
+        this.controlPanel = new BioSync.TreeViewer.ControlPanel( this ).initialize( this.menuInfo );
     },
 
     isAncestor: function( p ) {

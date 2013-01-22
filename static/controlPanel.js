@@ -23,7 +23,7 @@ BioSync.TreeViewer.ControlPanel.prototype = {
             return this;
         },
 
-        graftAudit: function( controlPanel ) {
+        graftOption: function( controlPanel ) {
 
             this.controlPanel = controlPanel;
             this.make = controlPanel.make;
@@ -41,6 +41,11 @@ BioSync.TreeViewer.ControlPanel.prototype = {
               zIndex: 5001,
               matchingLabelListZIndex: 5002,
               sliderSize: 100 },
+
+    remove: function() {
+
+        this.panelButton.remove();
+    },
 
     initialize: function( controlPanelInfo ) {
 
@@ -72,6 +77,8 @@ BioSync.TreeViewer.ControlPanel.prototype = {
         return this;
     },
 
+
+    //don't think this is being used
     addViewOption: function( p ) {
 
         var viewOption;
@@ -97,6 +104,7 @@ BioSync.TreeViewer.ControlPanel.prototype = {
             .bind( 'click', { }, $.proxy( this.viewer.togglePanel, this.viewer ) ) );
     },
 
+    //don't think this is being used 
     toggleCheck: function() {
 
         var that = $(this);
@@ -150,6 +158,11 @@ BioSync.TreeViewer.ControlPanel.prototype = {
         for( var i = 0, ii = p.options.length; i < ii; i++ ) {
 
             this.optionObjs[ p.options[i].name ] = new this.options[ p.options[i].name ]( this ).initialize();
+
+            if( this.optionObjs[ p.options[i].name ].multiLineOptionContainer ) {
+
+                this.optionObjs[ p.options[i].name ].multiLineOptionContainer.css( { 'left': this.rightMostContainer } );
+            }
         }
 
         this.optionContainer.hide();
@@ -198,14 +211,566 @@ BioSync.TreeViewer.ControlPanel.prototype = {
                 .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
                 .appendTo( container );
 
+        if( ! this.rightMostContainer ) { this.rightMostContainer = 0; }
+
+        var containerWidth = container.outerWidth( true );
+
+        if( ( containerWidth ) > this.rightMostContainer ) { this.rightMostContainer = containerWidth; }
+
         return [ container, label ];
+    },
+
+    checkOptionContainerHeight: function( p ) { 
+        
+        var optionContainerOffset = this.optionContainer.offset();
+        var subOptionContainerOffset = p.subOptionContainer.offset();
+
+        var difference =
+            ( subOptionContainerOffset.top + p.subOptionContainer.outerHeight( true ) ) -
+            ( optionContainerOffset.top + this.optionContainer.outerHeight( true ) );
+
+        if( difference > 0 ) {
+        
+            this.optionContainer.height(
+                this.optionContainer.height() +
+                difference );
+        }
     }
 }
 
 
-BioSync.TreeViewer.ControlPanel.prototype.options.graftAudit.prototype = {
+BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
 
-    initialize: function() { }
+    config: {
+
+        padding: 5    
+    },
+
+    initialize: function() {
+
+        if( this.controlPanel.viewer.treeType == 'grafted' ) {
+
+            var rv =
+                this.controlPanel.makeOptionContainer( {
+                    obj: this,
+                    label: 'graft options > ' } );
+       
+            this.container = rv[0];
+            this.label = rv[1];
+
+            this.graftAudit =
+                this.make('span').text( 'View Tree Edits' )
+                                 .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                 .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                                 .bind( 'click', { }, $.proxy( this.handleViewTreeEditClick, this ) );
+
+            if( ( this.controlPanel.viewer.isLoggedIn ) &&
+                ( this.controlPanel.viewer.treeCreator == [ this.controlPanel.viewer.userInfo.firstName,
+                                                            this.controlPanel.viewer.userInfo.lastName ].join(' ') ) ) {
+            
+                this.shareTree =
+                    this.make('span').html( 'Let Colleagues Edit Tree' )
+                                     .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                     .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                                     .bind( 'click', { }, $.proxy( this.handleShareTreeClick, this ) );
+            }
+
+            this.selectionContainer =
+                this.make('div').css( { 'padding': [ '0px ', this.config.padding, 'px' ].join(''),
+                                        'position': 'absolute',
+                                        'top': 0,
+                                        'left': this.label.outerWidth( true ) } ).append(
+                    this.make('div').css( { 'padding': this.config.padding } ).append( this.graftAudit ),
+                    this.make('div').css( { 'padding': this.config.padding } ).append( this.shareTree ) )
+                .hoverIntent( function() { }, $.proxy( this.handleMouseOutOfSelectionContainer, this ) )
+                .appendTo( this.container )
+                .hide();
+
+            this.multiLineOptionContainer = this.selectionContainer;
+        }
+
+        return this;
+    },
+
+    handleViewTreeEditClick: function( e ) {
+
+        this.selectionContainer.hide();
+
+        $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getGtreeGraftHistory' ] } ),
+                  type: "GET",
+                  success: $.proxy( this.showModalTreeEdits, this ) } );
+    },
+
+    showModalTreeEdits: function( response ) {
+
+        var data = eval( '(' + response + ')' );
+
+        this.treeEditContainer =
+            this.make('div').append(
+                this.make('div').css( { 'padding-bottom': '20px' } ).append(
+                    this.make('div')
+                      .text( 'Edit Type' )
+                      .width( '10%' )
+                      .css( { 'float': 'left',
+                              'text-align': 'center',
+                              'font-weight': 'bold',
+                              'font-size': '16px' } ),
+                    this.make('div')
+                      .text( 'Comment' )
+                      .width( '50%' )
+                      .css( { 'float': 'left',
+                              'text-align': 'center',
+                              'font-weight': 'bold',
+                              'font-size': '16px' } ),
+                    this.make('div')
+                      .text( 'User' )
+                      .width( '15%' )
+                      .css( { 'float': 'left',
+                              'text-align': 'center',
+                              'font-weight': 'bold',
+                              'font-size': '16px' } ),
+                    this.make('div')
+                      .text( 'Date' )
+                      .width( '15%' )
+                      .css( { 'float': 'left',
+                              'text-align': 'center',
+                              'font-weight': 'bold',
+                              'font-size': '16px' } ),
+                    this.make('div')
+                      .width( '10%' )
+                      .css( { 'clear': 'both' } ) ) );
+
+        for( var i = 0, ii = data.length; i < ii; i++ ) {
+
+            var dataRow = this.make( 'div' ).attr( { 'class': 'dataRow' } ).css( { 'padding': '5px' } ).append(
+                    this.make('div')
+                      .css( { 'float': 'left',
+                              'text-align': 'center' } )
+                      .width( '10%' )
+                      .text( BioSync.Common.capitalizeFirstLetter( data[i].gtree_edit.action ) ),
+                    this.make('div')
+                      .css( { 'float': 'left',
+                              //'white-space': 'nowrap',
+                              //'overflow': 'hidden',
+                              //'text-overflow': 'ellipsis',
+                              'text-align': 'center' } )
+                      .width( '50%' )
+                      .text( data[i].gtree_edit.comment ),
+                    this.make('div')
+                      .css( { 'float': 'left',
+                              'text-align': 'center' } )
+                      .width( '15%' )
+                      .text( [ data[i].auth_user.first_name, data[i].auth_user.last_name ].join(' ') ),
+                    this.make('div')
+                      .css( { 'float': 'left',
+                              'text-align': 'center' } )
+                      .width( '15%' )
+                      .text( data[i].gtree_edit.mtime )
+                );
+
+            if( ( i != 0 ) && ( this.controlPanel.viewer.userInfo && this.controlPanel.viewer.userInfo.canEdit ) ) {
+
+                dataRow.append(
+                    this.make('div')
+                      .css( { 'float': 'left',
+                              'color': 'green',
+                              'text-align': 'center' } )
+                      .text( 'Revert Edit' )
+                      .width( '10%' )
+                      .bind( 'click', { editId: data[i].gtree_edit.id }, $.proxy( this.showTreeBeforeEdit, this ) )
+                      .bind( 'click', { }, BioSync.ModalBox.closeBox )
+                      .bind( 'click', { }, BioSync.Common.setMouseToDefault )
+                      .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                      .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline ),
+                    
+                    this.make('div').css( { 'clear': 'both' } )
+                );
+
+            } else {
+               
+                dataRow.append( this.make('div').css( { 'clear': 'both' } ).width('10%') );
+            }
+
+            this.treeEditContainer.append( dataRow );
+        }
+
+        var content = this.make('div').append( this.treeEditContainer );
+
+        BioSync.ModalBox.showModalBox( {
+            content: content,
+            width: this.controlPanel.viewer.windowWidth * .75,
+            height: this.controlPanel.viewer.windowHeight * .75,
+            title: 'Tree Edits' } );
+
+        setTimeout(
+            function() { $( $('.dataRow').children() ).css( { 'position': 'relative', top: $( dataRow.children()[1] ).height() / 2 } ) },
+            1500 );
+    },
+
+    showTreeBeforeEdit: function( e ) {
+    
+        var renderObj = this.controlPanel.viewer.renderObj;
+
+        this.currentEditId = e.data.editId;
+
+        $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'showTreeBeforeEdit' ] } ),
+                  type: "GET",
+                  data: e.data,
+                  success: new Array( function() { renderObj.removeColumns( { start: 1, end: renderObj.columns.length - 1, keepInSession: true } ); },
+                           $.proxy( renderObj.columns[0].renderReceivedClade, renderObj.columns[0] ),
+                           $.proxy( renderObj.disableNodeSelector, renderObj ),
+                           $.proxy( this.showRevertEditDialogue, this ) ) } );
+    },
+
+    showRevertEditDialogue: function( ) {
+
+        this.hideOption();
+
+        this.revertEditContainer =
+            this.make( 'div' ).css( { 'position': 'absolute', 'z-index': '10000' } ).append(
+                this.make( 'span' )
+                  .text( 'Revert tree to this state ?' )
+                  .css( { 'font-weight': 'bold',
+                          'padding-right': '20px',
+                          'font-size': '16px' } ),
+                this.make( 'span' )
+                  .text( 'Yes' )
+                  .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                  .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                  .bind( 'click', { }, $.proxy( this.revertEdit, this ) )
+                  .css( { 'color': 'green',
+                           'margin': '5px 10px' } ),
+                this.make( 'span' )
+                  .text( 'Cancel' )
+                  .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                  .hover( BioSync.Common.underlineText, BioSync.Common.removeTextUnderline )
+                  .bind( 'click', { }, $.proxy( this.cancelRevertEdit, this ) )
+                  .css( { 'color': 'green',
+                          'margin': '5px 10px' } ) ).appendTo( this.controlPanel.viewer.renderObj.viewPanel );
+
+        this.revertEditContainer.css( {
+            'left': ( this.controlPanel.viewer.renderObj.viewPanel.myWidth - this.revertEditContainer.outerWidth( true ) ) / 2,
+            'top': 10 } );
+    },
+
+    cancelRevertEdit: function() {
+
+        this.revertEditContainer.remove();
+
+        this.controlPanel.viewer.renderObj.redrawTree();
+    },
+
+    revertEdit: function() {
+
+        $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'revertEdit' ] } ),
+                  type: "GET",
+                  data: { editId: this.currentEditId },
+                  success: $.proxy( this.revertEditSuccess, this ) } );
+    },
+
+    revertEditSuccess: function() {
+
+        this.revertEditContainer.remove();
+
+        this.controlPanel.viewer.renderObj.enableNodeSelector();
+
+        BioSync.Common.notify( {
+            text: 'Edit Reverted.',
+            timeout: 5000,
+            x: this.controlPanel.viewer.renderObj.viewPanel.myWidth / 2,
+            y: this.controlPanel.viewer.renderObj.viewPanel.myHeight / 2 } );
+    },
+
+    handleShareTreeClick: function( e ) {
+
+        $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getGtreeSharingInfo' ] } ),
+                  type: "GET",
+                  success: $.proxy( this.showModalTreeSharingDialogue, this ) } );
+    },
+
+    giveGreyBackground: function( e ) {
+        $( e.delegateTarget ).css( { 'background-color': '#F0F0F0' } );
+    },
+
+    removeGreyBackground: function( e ) {
+
+        if( ( this.selectedUser ) && ( e.delegateTarget == this.selectedUser.get(0) ) ) { return; }
+
+        $( e.delegateTarget ).css( { 'background-color': '' } );
+    },
+
+    selectUser: function( e ) {
+
+        var el = $( e.delegateTarget );
+
+        if( this.selectedUser ) { this.selectedUser.css( { 'background-color': '' } ); }
+        
+        if( ( this.selectedUser ) && ( this.selectedUser.get(0) == e.delegateTarget ) ) {
+
+            delete this.selectedUser;
+
+        } else {
+           
+            this.selectedUser = el.css( { 'background-color': '#F0F0F0' } );
+        }
+    },
+
+    showModalTreeSharingDialogue: function( response ) {
+
+        var data = eval( '(' + response + ')' );
+
+        var modal = BioSync.ModalBox;
+
+        this.nonEditUserBox =
+            this.make( 'div' ).height( this.controlPanel.viewer.windowHeight * .40 )
+                              .css( { 'overflow': 'auto',
+                                      'margin': '10px 5px',
+                                      'border': '1px solid black' } );
+
+        this.editUserBox =
+            this.make( 'div' ).height( this.controlPanel.viewer.windowHeight * .40 )
+                              .css( { 'overflow': 'auto',
+                                      'margin': '10px 5px',
+                                      'border': '1px solid black' } );
+
+        for( var i = 0, ii = data.notSharedWith.length; i < ii; i++ ) {
+
+            this.nonEditUserBox.append(
+                this.make( 'div' )
+                    .attr( { 'userId': data.notSharedWith[i].id } )
+                    .text( [ data.notSharedWith[i].first_name, data.notSharedWith[i].last_name ].join(' ') )
+                    .css( { 'padding': '5px', 'text-align': 'center' } )
+                    .bind( 'click', { }, $.proxy( this.selectUser, this ) )
+                    .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                    .hover( $.proxy( this.giveGreyBackground, this ), $.proxy( this.removeGreyBackground, this ) )
+            );
+        }
+
+        for( var i = 0, ii = data.sharedWith.length; i < ii; i++ ) {
+
+            this.editUserBox.append(
+                this.make( 'div' )
+                    .attr( { 'userId': data.sharedWith[i].id } )
+                    .text( [ data.sharedWith[i].first_name, data.sharedWith[i].last_name ].join(' ') )
+                    .css( { 'padding': '5px', 'text-align': 'center' } )
+                    .bind( 'click', { }, $.proxy( this.selectUser, this ) )
+                    .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                    .hover( $.proxy( this.giveGreyBackground, this ), $.proxy( this.removeGreyBackground, this ) )
+
+            );
+        }
+
+        this.searchInput =
+            this.make( 'input' ).attr( { 'type': 'text' } )
+                                .bind( 'keyup', { }, $.proxy( this.handleUserSearchKeyUp, this ) );
+
+        var searchContainer = this.searchContainer =
+            this.make( 'div' )
+                .css( { 'padding-top': '40px',
+                        'position': 'relative',
+                        'float': 'left',
+                        'margin': '0 auto' } ).append(
+                    this.make( 'span' ).text( 'Search : ' ),
+                    this.searchInput );
+
+        $('#modalBoxForm').append(
+            this.make( 'div' ).append(
+                this.make('div').css( { 'float': 'left',
+                                        'font-weight': 'bold',
+                                        'font-size': '16px',
+                                        'text-align': 'center' } )
+                                  .width( '50%' )
+                                  .text( 'Read Only' ),
+                this.make('div').css( { 'float': 'left',
+                                        'font-weight': 'bold',
+                                        'font-size': '16px',
+                                        'text-align': 'center' } )
+                                  .width( '50%' )
+                                  .text( 'Able to Edit' ),
+                this.make('div').css( { 'clear': 'both' } ) ),
+            this.make( 'div' ).append(
+                this.make('div').css( { 'float': 'left' } )
+                                  .width( '50%' ).append(
+                    this.nonEditUserBox ),
+                this.make('div').css( { 'float': 'left' } )
+                                  .width( '50%' ).append(
+                    this.editUserBox ),
+                this.make('div').css( { 'clear': 'both' } ) ),
+            this.make( 'div' ).append(
+                this.make('div').css( { 'float': 'left' } )
+                                  .width( '50%' ).append(
+                    this.make( 'div' ).css( { 'text-align': 'center',
+                                              'font-weight': 'bold',
+                                              'border': '1px solid green',
+                                              'border-radius': '10px',
+                                              'margin': '0 auto',
+                                              'padding': '3px 0px',
+                                              'font-size': '20px' } )
+                                      .width( '50%' )
+                                      .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                      .hover( function() { $(this).css( { 'background-color': '#F0F0F0' } ) }, function() { $(this).css( { 'background-color': 'white' } ) } )
+                                      .bind( 'click', { }, $.proxy( this.giveEditPermission, this ) )
+                                      .text(' > ') ),
+                this.make('div').css( { 'float': 'left' } )
+                                  .width( '50%' ).append(
+                    this.make( 'div' ).css( { 'text-align': 'center',
+                                              'font-weight': 'bold',
+                                              'border': '1px solid green',
+                                              'border-radius': '10px',
+                                              'margin': '0 auto',
+                                              'padding': '3px 0px',
+                                              'font-size': '20px' } )
+                                      .width( '50%' )
+                                      .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
+                                      .hover( function() { $(this).css( { 'background-color': '#F0F0F0' } ) }, function() { $(this).css( { 'background-color': 'white' } ) } )
+                                      .bind( 'click', { }, $.proxy( this.removeEditPermission, this ) )
+                                      .text(' < ') ),
+                this.make('div').css( { 'clear': 'both' } ) ),
+            this.make('div').append( this.searchContainer, this.make('div').css({'clear':'both'}) ) );
+
+            BioSync.ModalBox.showModalBox( {
+                width: this.controlPanel.viewer.windowWidth * .75,
+                height: this.controlPanel.viewer.windowHeight * .75,
+                title: 'Give Edit Permission to Others' } );
+
+            var controlPanel = this.controlPanel;
+
+            setTimeout(
+
+                function() {
+                    
+                    var searchContainerWidth = searchContainer.outerWidth( true );
+
+                    searchContainer.css( { 'left': ( ( controlPanel.viewer.windowWidth * .75 ) - searchContainerWidth ) / 2 } );
+
+                }, 2000 );
+    },
+
+    handleUserSearchKeyUp: function( e ) {
+
+        //enter
+        if( e.keyCode == 13 ) {
+
+            this.currentlySelected.click();
+
+        } else if( e.keyCode == 8 || e.keyCode == 46 || String.fromCharCode( e.keyCode ).match( /\w/ ) ) {
+
+            if( this.userInputTimeout ) { clearTimeout( this.userInputTimeout ); }
+
+            this.userInputTimeout = setTimeout( $.proxy( this.showOnlyMatchingUsers, this ), 500 );
+        }
+    },
+
+    showOnlyMatchingUsers: function( e ) {
+
+        var value = this.searchInput.val().toLowerCase();
+
+        var boxes = [ 'nonEditUserBox', 'editUserBox' ];
+
+        for( var j = 0, jj = 2; j < jj; j++ ) {
+
+            var userDivs = this[ boxes[j] ].children();
+
+            for( var i = 0, ii = userDivs.length; i < ii; i++ ) {
+           
+                var div = $( userDivs[i] );
+
+                if( div.text().toLowerCase().indexOf( value ) == -1 ) {
+
+                    div.hide();
+
+                } else {
+                    
+                    div.show();
+
+                }
+                
+            }
+        }
+    },
+
+    removeEditPermission: function( e ) {
+
+       if( ! this.selectedUser ) { return; } 
+
+       if( this.editUserBox.find( this.selectedUser ).length ) {
+
+            $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'removeEditPermission' ] } ),
+                      data: { userId: this.selectedUser.attr('userId') },
+                      type: "POST",
+                      success: $.proxy( this.removeEditPermissionSuccess, this ) } );
+       }
+    },
+
+    giveEditPermission: function( e ) {
+
+       if( ! this.selectedUser ) { return; } 
+
+       if( this.nonEditUserBox.find( this.selectedUser ).length ) {
+
+            $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'giveEditPermission' ] } ),
+                      data: { userId: this.selectedUser.attr('userId') },
+                      type: "POST",
+                      success: $.proxy( this.giveEditPermissionSuccess, this ) } );
+       }
+    },
+
+    removeEditPermissionSuccess: function() {
+
+        var optionObj = this;
+
+        this.selectedUser.hide( 'slow',
+            function() { optionObj.selectedUser.appendTo( optionObj.nonEditUserBox ).show( 'slow' ); }
+        );
+    },
+
+    giveEditPermissionSuccess: function() {
+
+        var optionObj = this;
+
+        this.selectedUser.hide( 'slow',
+            function() { optionObj.selectedUser.appendTo( optionObj.editUserBox ).show( 'slow' ); }
+        );
+    },
+
+    handleMouseOutOfSelectionContainer: function( e ) {
+
+        if( ( ! BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: this.container } ) ) ) {
+            
+            this.hideOption();
+        }
+    },
+
+    handleMouseOverContainer: function( e ) {
+
+        this.label.css( { 'background-color': 'lightGrey' } );
+
+        this.selectionContainer.show();
+
+        this.controlPanel.optionContainer.width(
+            this.label.outerWidth( true ) +
+            this.selectionContainer.outerWidth( true ) + 
+            this.controlPanel.config.optionContainerLeftBuffer );
+
+        this.controlPanel.checkOptionContainerHeight( { subOptionContainer: this.selectionContainer } );
+    },
+
+    handleMouseOutOfContainer: function( e ) {
+        
+        if( ( ! BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: this.selectionContainer } ) ) ) {
+            
+            this.hideOption();
+        }
+    },
+
+    hideOption: function( e ) {
+
+        this.label.css( { 'background-color': 'white' } );
+        
+        this.selectionContainer.hide();
+       
+        this.controlPanel.optionContainer.css( { 'width': '' } );
+    },
 }
 
 BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
@@ -270,6 +835,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
                                       'left': this.label.outerWidth( true ) } )
                               .hoverIntent( $.proxy( this.handleMouseOverOptionList, this ), $.proxy( this.handleMouseOutOfOptionList, this ) )
                               .appendTo( this.container );
+            
+        this.multiLineOptionContainer = this.sizingOptionsContainer;
 
         for( var optionName in this.config.options ) {
 
@@ -525,6 +1092,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.branchLength.prototype = {
                 .hoverIntent( function() { }, $.proxy( this.handleMouseOutOfSelectionContainer, this ) )
                 .appendTo( this.container )
                 .hide();
+
+            this.multiLineOptionContainer = this.selectionContainer;
         }
 
         return this;
@@ -775,6 +1344,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
     handleKeyUp: function( e ) {
 
         var that = this;
+
         //enter
         if( e.keyCode == 13 ) {
 

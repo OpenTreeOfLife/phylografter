@@ -19,6 +19,20 @@ def treeGrafter():
     return util.handleViewerInstantiation( request, response, session, db, auth )
 
 
+def getCreator():
+
+    return db( db.gtree.id == session.TreeViewer.treeId ).select( db.gtree.contributor )[0].contributor
+
+
+def getUserInfo():
+
+    canEdit = len( \
+        db( ( ( db.gtree_share.user == auth.user.id ) & ( db.gtree_share.gtree == session.TreeViewer.treeId ) ) |
+            ( ( db.gtree.id == session.TreeViewer.treeId ) & ( db.gtree.contributor == ' '.join( [ auth.user.first_name, auth.user.last_name ] ) ) ) ).select().as_list() )
+
+    return response.json( dict( firstName = auth.user.first_name, lastName = auth.user.last_name, canEdit = canEdit ) )
+
+
 def pruneClade():
 
     return response.json( util.getRenderModule( request, session, 'Graft' ).pruneClade( db, session, request, auth ) )
@@ -39,31 +53,83 @@ def updateUrl():
     return response.json( dict( treeId = session.TreeViewer.treeId, treeType = session.TreeViewer.treeType ) )
 
 
+def getGtreeSharingInfo():
 
-def getPreEditClade():
+    return response.json( \
+        dict( sharedWith = db(
+                ( db.gtree_share.gtree == session.TreeViewer.treeId ) &
+                ( db.gtree_share.user == db.auth_user.id ) &
+                ( db.gtree_share.user != auth.user.id ) ).select( db.auth_user.ALL ).as_list(),
 
-    editRow = db( db.gtree_edit.id == request.vars.editId ).select()[0]
-
-    clade = build.node2tree( db, editRow.affected_clade_id, 'grafted' )
-
-    grafts = db( ( db.gtree_edit.gtree == session.TreeViewer.treeId ) &
-                 ( db.gtree_edit.mtime >= editRow.mtime ) ).select( orderby = "mtime DESC" )
-
-    for graft in grafts:
-        graftUtil.revertEdit( db, session, clade, graft )
-
-    util.autoCollapse( clade, session, db, 'cladogram', [ ] )
-
-    return util.getRenderResponse( response, session, clade )
+              notSharedWith = db( ~db.auth_user.id.belongs(
+                    db( ( db.gtree_share.gtree == session.TreeViewer.treeId ) &
+                        ( db.gtree_share.user == db.auth_user.id ) |
+                        ( db.auth_user.id == auth.user.id ) )._select( db.auth_user.id ) ) )
+                            .select( db.auth_user.first_name, db.auth_user.last_name, db.auth_user.id ).as_list() ) )
 
 
 def getGtreeGraftHistory():
 
     return response.json( \
         db( ( db.gtree_edit.gtree == session.TreeViewer.treeId ) &
-            ( db.auth_user.id == db.gtree_edit.user ) ).select( orderby = db.gtree_edit.mtime ).as_list() )
+            ( db.gtree_edit.user == db.auth_user.id ) )
+            .select( orderby = db.gtree_edit.mtime ).as_list() )
+
+def giveEditPermission():
+
+    db.gtree_share.insert( user = request.vars.userId, gtree = session.TreeViewer.treeId )
 
 
+def removeEditPermission():
+
+    print db( ( db.gtree_share.user == request.vars.userId ) & ( db.gtree_share.gtree == session.TreeViewer.treeId ) ).select().as_list()
+
+    db( ( db.gtree_share.user == request.vars.userId ) & ( db.gtree_share.gtree == session.TreeViewer.treeId ) ).delete()
+
+
+def showTreeBeforeEdit():
+
+    editRow = db( db.gtree_edit.id == request.vars.editId ).select()[0]
+
+    columns = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ].columns
+
+    tree = getattr( build, ''.join( [ session.TreeViewer.treeType, 'Clade' ] ) )( db, columns[0].rootNodeId, Storage() )
+
+    grafts = db( ( db.gtree_edit.gtree == session.TreeViewer.treeId ) &
+                 ( db.gtree_edit.mtime >= editRow.mtime ) ).select( orderby = "mtime DESC" )
+
+    for graft in grafts:
+        graftUtil.revertEdit( db, session, tree, graft )
+
+    return response.json( util.getRenderModule( request, session ).getRenderResponse( \
+        tree,
+        session,
+        Storage( rootNodeId = columns[0].rootNodeId,
+                 keepVisibleNodeStorage = Storage(),
+                 collapsedNodeStorage = Storage() ) ) )
+
+
+def revertEdit():
+
+    editInfo = db( db.gtree_edit.id == request.vars.editId ).select()[0]
+
+    if( editInfo.action == 'prune' ):
+    
+        nodesToPrune = db( db.prune_detail.gtree_edit == editInfo.id ).select( db.prune_detail.pruned_gnode )
+
+        for node in nodesToPrune:
+            
+            db( db.gnode.id == node.pruned_gnode ).update( pruned = False )
+    
+        db( db.prune_detail.gtree_edit == editInfo.id ).delete()
+
+
+    db( db.gtree_edit.id == request.vars.editId ).delete()
+
+
+
+
+#### below this line is old
 def deleteGtree():
     #if we allow deleting gtrees, then we have to know what to do with clipboard items referring to those gtrees
     return response.json( dict() )

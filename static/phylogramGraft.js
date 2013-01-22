@@ -597,26 +597,25 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
                     this.make( 'div' ).width( modalBoxWidth * .25 ).css( css ).text( 'Name' ),
                     this.make( 'div' ).width( modalBoxWidth * .10 ).css( css ).text( 'Descendants' ),
                     this.make( 'div' ).width( modalBoxWidth * .15 ).css( css ).text( 'Date Created' ),
-                    this.make( 'div' ).width( modalBoxWidth * .45 ).css( css ).text( 'Study' ),
+                    this.make( 'div' ).width( modalBoxWidth * .44 ).css( css ).text( 'Study' ),
                     this.make( 'div' ).css( { 'clear': 'both' } ),
                     clipboardItems
                 ),
 
-                this.make( 'div' ).width( '100%' ).css( { 'margin': '25px 0px', 'border': '1px solid green' } ),
-
                 this.make('div').css( { 'text-align': 'center',
                                         'font-size': '20px',
                                         'color': 'steelBlue',
+                                        'margin-top': '25px',
                                         'margin-bottom': '10px',
                                         'padding': '10px' } ).text( 'Grafted Tree Clipboard Items' ),
 
                 this.make( 'div' ).css( { 'border': '1px solid black',
                                           'padding': '10px',
                                           'border-radius': '5px' } ).append( 
-                    this.make( 'div' ).width( modalBoxWidth * .20 ).css( css ).text( 'Name' ),
-                    this.make( 'div' ).width( modalBoxWidth * .20 ).css( css ).text( 'Descendants' ),
-                    this.make( 'div' ).width( modalBoxWidth * .20 ).css( css ).text( 'Date Created' ),
-                    this.make( 'div' ).width( modalBoxWidth * .20 ).css( css ).text( 'Grafted Tree Name' ),
+                    this.make( 'div' ).width( modalBoxWidth * .25 ).css( css ).text( 'Name' ),
+                    this.make( 'div' ).width( modalBoxWidth * .10 ).css( css ).text( 'Descendants' ),
+                    this.make( 'div' ).width( modalBoxWidth * .15 ).css( css ).text( 'Date Created' ),
+                    this.make( 'div' ).width( modalBoxWidth * .44 ).css( css ).text( 'Comment' ),
                     this.make( 'div' ).css( { 'clear': 'both' } ),
                     graftedClipboardItems
                 ),
@@ -625,7 +624,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
                 this.make( 'div' ).attr( { 'class': 'actionRow' } ).css( { 'padding-bottom': '10px' } ).append(
                     this.make('div').attr( { 'class': 'twoOpt modalBoxSubmit' } )
                                     .css( { 'float': 'left' } ).append(
-                        this.graftButton ),
+                        this.clipboardSubmitButton ),
                     this.make('div').attr( { 'class': 'twoOpt' } )
                                     .css( { 'float': 'left', 'color': 'steelBlue' } ).append(
                         this.make('span').attr( { 'class': 'modalBoxCancel' } )
@@ -685,14 +684,14 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
                               .hover( BioSync.Common.setMouseToPointer, BioSync.Common.setMouseToDefault )
                               .hover( $.proxy( this.giveGreyBackground, this ), $.proxy( this.removeGreyBackground, this ) )
                               .bind( 'click', { }, $.proxy( this.selectClipboardItem, this ) ).append(
-                this.make('div').width( modalBoxWidth * .21 )
+                this.make('div').width( modalBoxWidth * .25 )
                                 .css( css )
                                 .text( item[2] )
                                 .attr( { 'title': item[2] } )
                                 .css( { 'white-space': 'nowrap', 'overflow': 'hidden', 'text-overflow': 'ellipsis' } ),
-                this.make('div').width( modalBoxWidth * .21 ).css( css ).text( ( Math.floor( ( item[5] - item[4] - 1 ) / 2 ) ) ),
-                this.make('div').width( modalBoxWidth * .21 ).css( css ).text( item[3] ),
-                this.make('div').width( modalBoxWidth * .21 ).css( css )
+                this.make('div').width( modalBoxWidth * .10 ).css( css ).text( ( Math.floor( ( item[5] - item[4] - 1 ) / 2 ) ) ),
+                this.make('div').width( modalBoxWidth * .15 ).css( css ).text( item[3] ),
+                this.make('div').width( modalBoxWidth * .43 ).css( css )
                        .css( { 'white-space': 'nowrap', 'overflow': 'hidden', 'text-overflow': 'ellipsis' } ).append(
                     this.make( 'span' ).text( item[6] ).attr( { 'title': item[6] } )
                 ),
@@ -710,8 +709,9 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
 
     setTimeout( function() {
 
-        var modalBoxContent = $('#modalBoxContent');
-        var heightDifference = modalBoxContent.outerHeight( true ) - viewer.windowHeight;
+        var modalBoxForm = $('#modalBoxForm');
+
+        var heightDifference = modalBoxForm.outerHeight( true ) - viewer.windowHeight;
 
         if( heightDifference > 0 ) {
 
@@ -735,7 +735,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
                 }
            }
 
-           modalBoxContent.css( { top: ( ( $(document).height() - ( modalBoxContent.outerHeight( true ) ) ) / 2 ) } );
+           modalBoxForm.css( { top: ( ( $(document).height() - ( modalBoxForm.outerHeight( true ) ) ) / 2 ) } );
 
         } }, 2000 );
 }

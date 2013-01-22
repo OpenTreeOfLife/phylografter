@@ -366,8 +366,25 @@ def edit():
                    deletable=False, submit_button="Update record",
                    readonly=readonly)
     form.vars.study = rec.study
+
     if form.accepts(request.vars, session):
+
+        for ( attr, value ) in rec.as_dict().iteritems():
+
+            if( attr not in form.vars ):
+                continue
+
+            if( str( form.vars[attr] ) != str( rec[attr] ) ):
+
+                db.userEdit.insert( userName = ' '.join( [ auth.user.first_name, auth.user.last_name ] ),
+                                    tableName = 'stree',
+                                    rowId = rec.id,
+                                    fieldName = attr,
+                                    previousValue = str( rec[attr] ),
+                                    updatedValue = str( form.vars[attr] ) )
+
         response.flash = "record updated"
+
     return dict(form=form, rec=rec)
 
 def view():

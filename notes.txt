@@ -253,3 +253,22 @@ hidden hover border is on top of view descendant labels - this shouldn't be the 
 11/5/12 :
 
 testing prune node - prune entire column for source and gtree
+
+
+1/11/2013 :
+
+after a prune clade action, I viewed the tree edits, then as I was going to prune again, the prune comment modal dialogue was too tall.  make a default height for the modal box, or reset the height after each use
+
+
+1/15/2013 :
+
+when attempting to replace or graft, the clipboard has some minor display issues
+
+
+
+resizing window, change data tables
+width
+
+None is link to edit taxon
+
+visual indication of sort order
