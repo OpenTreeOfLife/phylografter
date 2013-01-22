@@ -10,9 +10,15 @@ Here is an example from views/stree/svgView :
           menuInfo = dict( options = [ dict( name = 'branchLength' ), dict( name = 'search' ), dict( name = 'treeSize' ) ] ),
           eventInfo = dict( labelClick = 'showEditTaxonDialogue',
                             nodeRightClick = dict( handler = 'showNodeContextMenu',
-                                                   options = [ dict( handler = 'handleCollapseCladeOptionClick', text = 'Collapse Clade' ),
-                                                               dict( handler = 'handleEditNodeOptionClick', text = 'Edit Node' ),
-                                                               dict( handler = 'handleAddToClipboardOptionClick', text = 'Add to Clipboard' ) ] ) ), 
+                                                   options = [ dict( handler = 'handleCollapseCladeOptionClick',
+                                                                     test = 'doesNodeHaveChildren',
+                                                                     text = 'Collapse Clade' ),
+                                                               dict( handler = 'handleEditNodeOptionClick',
+                                                                     test = 'isUserLoggedIn',
+                                                                     text = 'Edit Node' ),
+                                                               dict( handler = 'handleAddToClipboardOptionClick',
+                                                                     test = 'isUserLoggedIn',
+                                                                     text = 'Add to Clipboard' ) ] ) ), 
           viewInfo = dict( type = 'phylogram', mode = 'navigate' ) ) ) }}
 
 
@@ -22,9 +28,9 @@ Arguments :
 
     menuInfo - a list of options that will appear when the control panel is hovered with a mouse.  Each of these options ( above: 'branchLength', 'search', 'treeSize' ) must be defined in static/controlPanel.js.  Obviously, it would have been easier to make the argument as a list of strings [ 'branchLength', 'search', 'treeSize' ], but I left it this way in case unforseen options wanted to creep into this argument.
 
-    eventInfo - a dictionary for customizing events.  This argument is not structured properly.  Right now, the viewer assumes the 'labelClick' value and the 'nodeRightClick' handler value are events in static/phylogramColumn.js.  It was done this way to acheive proper functionality quicker.  I think a better solution would involve having these events the static/phylogram.js - the file containing code regarding the tree viewer's render object.
+    eventInfo - a dictionary for customizing events.  When a label is clicked with the left mouse button, the function, 'showEditTaxonDialogue', located in, static/phylogramColumn.js, is called. When the user right clicks on a node, 'showNodeContextMenu', also defined in static/phylogramColumn.js is called.  This function iterates through all of the options associated with the handler defined in the view, using the 'test' attribute of each option to determine whether or not the menu item should be shown to the user.  The test attributes are just strings for function names that are also defined in static/phylogramColumn.js.  The text attribute refers to the menu item's text, and the handler refers to the function called when the menu item is selected.
 
-    viewInfo - a dictionary describing the tree visualization style.  Originally, there would be many, but, as of now, a 'phylogram' type and a 'navigate' mode is all we have.
+    viewInfo - a dictionary describing the tree visualization style.  Originally, there was to be many, but, as of now, a 'phylogram' type and a 'navigate' mode is all we have.
 
 
 
@@ -37,7 +43,7 @@ return LOAD( 'plugin_treeViewer', 'treeViewer.load', ajax=True, vars=p )
 
 LOAD is a web2py function to be used by non programmers to make ajax calls from the view more simple.  Read more about it here : http://web2py.com/books/default/chapter/29/12#Components.  Concisely, it makes an ajax call to /plugin_treeViewer/treeViewer.load.  The arguments to this ajax call are the same arguments passed to the plugin_treeViewer function in the view.
 
-So the ajax request is made and the treeViewer function in controllers/plugin_treeViewer.py handles the request.  Because there are both Tree Viewers and Tree Grafters with common functionality, we use a module function to handle a Viewer instantiation on the server.  In modules/plugin_treeViewer, the function is called handleViewerInstantiation.  It stores information about the tree in the session and processes parameter information for the client.
+So the ajax request is made and the treeViewer function in controllers/plugin_treeViewer.py handles the request.  Because there are both Tree Viewers and Tree Grafters with common functionality, we use a module function to handle a viewer instantiation on the server.  In modules/plugin_treeViewer, the function is called handleViewerInstantiation.  It stores information about the tree in the session and processes parameter information for the client.
 
 Now that we've got what we want from the server, let's take a look at the view that will be passed to the client.  web2py's LOAD function will insert the corresponding view - views/plugin_treeViewer/treeViewer.load - into the DOM.  From the view :
 
