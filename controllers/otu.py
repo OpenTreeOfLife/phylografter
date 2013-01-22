@@ -101,67 +101,87 @@ response.subtitle = "OTUs"
 ##     return dict(study_url=study_url, N=N, table=powerTable.create())
 
 def study():
+    t = db.otu
     study = db.study(request.args(0)) or redirect(URL("index"))
+    theme = "smoothness"
+    for x in (
+        'DataTables-1.8.1/media/js/jquery.js',
+        'DataTables-1.8.1/media/js/jquery.dataTables.min.js',
+        'DataTables-1.8.1/media/css/demo_table.css',
+        'DataTables-1.8.1/media/ui/css/%s/jquery-ui-1.8.5.custom.css' % theme):
+        response.files.append(URL('static',x))
 
-    return dict( study = study )
+    colnames = ["Label", "Taxon"]
+    widths = ["50%", "50%"]
+    tid = "study-otus"
+    table = TABLE(_id=tid, _class="display")
+    table.append(THEAD(TR(*[ TH(f, _width=w)
+                             for f, w in zip(colnames, widths) ])))
+    table.append(TBODY(TR(TD("Loading data from server",
+                             _colspan=len(colnames),
+                             _class="dataTables_empty"))))
+    table.append(TFOOT(TR(
+        TH(INPUT(_name="search_label",
+                 _style="width:100%",_class="search_init",
+                 _title="search label" )),
+        TH(INPUT(_name="search_taxon",
+                 _style="width:100%",_class="search_init",
+                 _title="search taxon" ))
+        )))
 
-
-def getStudyOTUs():
-
-    study = db.study( request.vars.studyId )
-
-    otuTable = db.otu
-
-    left = db.ottol_name.on( db.ottol_name.id == otuTable.ottol_name )
-
-    fields = [ otuTable.label, db.ottol_name.name ]
-
+    return dict(tid=tid, table=table, study=study)
+    
+def dtrecords():
+    ## for k, v in sorted(request.vars.items()):
+    ##     print k, ":", v
+    study = db.study(request.args(0)) or redirect(URL("index"))
+    t = db.otu
+    left = db.ottol_name.on(db.ottol_name.id==t.ottol_name)
+    fields = [ t.label, db.ottol_name.name ]
     orderby = []
-
-    if request.vars.taxonSort:
-        orderby.append( db.ottol_name.name if request.vars.taxonSort == 'ascending' else ~db.ottol_name.name )
-    
-    if request.vars.labelSort:
-        orderby.append( otuTable.label if request.vars.labelSort == 'ascending' else ~otuTable.label )
-
-    start = ( ( int( request.vars.page ) - 1  ) * int( request.vars.rowsOnPage ) )
-    end = start + int( request.vars.rowsOnPage )
-
-    limitby = ( start, end )
-
-    q = q0 = ( otuTable.study == study.id )
-
-    if len( request.vars.labelSearch ):
-        q &= otuTable.label.like( '%' + request.vars.labelSearch + '%' )
-    
-    if len( request.vars.taxonSearch ):
-        q &= db.ottol_name.name.like( '%' + request.vars.taxonSearch + '%' )
-
+    if request.vars.iSortCol_0:
+        for i in range(int(request.vars.iSortingCols or 1)):
+            col = int(request.vars.get("iSortCol_%s" % i))
+            scol = fields[col]
+            sdir = request.vars.get("sSortDir_%s" % i) or "asc"
+            if sdir == "desc": scol = ~scol
+            orderby.append(scol)
+    start = int(request.vars.iDisplayStart or 0)
+    end = start + int(request.vars.iDisplayLength or 10)
+    limitby = (start,end)
+    q = q0 = (t.study==study.id)
+    for i, f in enumerate(fields):
+        sterm = request.vars.get("sSearch_%s" % i)
+        if f and sterm:
+            q &= f.like('%'+sterm+'%')
+                
     def tx(otu):
-        name_or_blank = otu.ottol_name.name if otu.ottol_name else ''
         if auth.has_membership(role="contributor"):
-            u = URL(c="otu",f="taxon_edit.load",args=[otu.id])
-            uid = uuid4().hex
-            return SPAN(A(str(name_or_blank), _href=u, cid=uid), _id=uid)
+            return taxon_link(otu)
         else:
-            return SPAN(name_or_blank)
+            return SPAN(otu.ottol_name.name if otu.ottol_name else '')
 
-    rows = db( q ).select( otuTable.id, otuTable.label, otuTable.ottol_name,
-                           left = left,
-                           orderby = orderby,
-                           limitby = limitby )
+    rows = db(q).select(t.id, t.label, t.ottol_name,
+                        left=left, orderby=orderby, limitby=limitby)
 
     data = [ (r.label, tx(r).xml()) for r in rows ]
-    
     totalrecs = db(q0).count()
-
-    disprecs = db( q ).select( otuTable.id.count(), left = left )[0]._extra['COUNT(otu.id)']
-
-    return response.json( \
-        dict( data = data,
-              totalRecords = totalrecs,
-              recordsInData = disprecs ) )
-
+    disprecs = db(q).count()
+    return dict(aaData=data,
+                iTotalRecords=totalrecs,
+                iTotalDisplayRecords=disprecs,
+                sEcho=int(request.vars.sEcho))
+    
+def taxon_link(otu):
+    ## print otu.keys()
+    taxon = db.ottol_name(otu.ottol_name) or Storage()
+    ## d = request.vars
+    ## if d.otu != otu: d.otu = otu
+    ## if d.taxon != taxon.id: d.taxon = taxon.id
+    ## d = dict(otu=otu, taxon=taxon.id)
+    u = URL(c="otu",f="taxon_edit.load",args=[otu.id])
+    uid = uuid4().hex
+    return SPAN(A(str(taxon.name), _href=u, cid=uid), _id=uid)
 
 def taxon_edit():
     otu = db.otu(int(request.args(0)))

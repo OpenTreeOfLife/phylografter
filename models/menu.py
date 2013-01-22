@@ -30,12 +30,12 @@ response.menu = [
         ]),
     ## (T('OTUs'), False, URL('otu','index'), []),
     (T('Source Trees'), False, URL('stree','index'), []),
-    ## (T('Grafted Trees'), False, URL('gtree','index'), [])
+    (T('Grafted Trees'), False, URL('gtree','index'), [])
     #(T('Share Your Trees'), False, URL('collab','index'), [])
     ]
 
-if( ( auth.is_logged_in() ) and ( db( db.gtree.contributor == ' '.join( [ auth.user.first_name, auth.user.last_name ] ) ).count() > 0 ) ):
-    response.menu.append( (T('Collaborate'), False, URL('collab','index'), []) )
+#if( ( auth.is_logged_in() ) and ( db( db.gtree.contributor == ' '.join( [ auth.user.first_name, auth.user.last_name ] ) ).count() > 0 ) ):
+    #response.menu.append( (T('Collaborate'), False, URL('collab','index'), []) )
 
 
 ##########################################
