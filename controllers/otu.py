@@ -137,20 +137,20 @@ def getStudyOTUs():
     if len( request.vars.taxonSearch ):
         q &= db.ottol_name.name.like( '%' + request.vars.taxonSearch + '%' )
 
-    def tx(otu):
+    def tx( row ):
         if auth.has_membership(role="contributor"):
             u = URL(c="otu",f="taxon_edit.load",args=[row.otu.id])
             uid = uuid4().hex
             return SPAN(A(str( row.ottol_name.name ), _href=u, cid=uid), _id=uid)
         else:
-            return SPAN(otu.ottol_name.name if otu.ottol_name else '')
+            return SPAN( row.ottol_name.name if row.ottol_name.name else '')
 
-    rows = db( q ).select( otuTable.id, otuTable.label, otuTable.ottol_name,
+    rows = db( q ).select( otuTable.id, otuTable.label, otuTable.ottol_name, db.ottol_name.name,
                            left = left,
                            orderby = orderby,
                            limitby = limitby )
 
-    data = [ (r.label, tx(r).xml()) for r in rows ]
+    data = [ (r.otu.label, tx(r).xml()) for r in rows ]
     
     totalrecs = db(q0).count()
 
@@ -175,6 +175,27 @@ def taxon_edit():
             ## response.flash="record updated"
             otu.update_record(ottol_name=taxon)
             otu.snode.update(ottol_name=taxon)
+
+            '''
+
+            #you may want to do something like this in order to get a name instead of an id for updated and previous value
+            updatedValue = db( db.ottol_name.id == otu.id ).select()[0].name
+
+            db.userEdit.insert( userName = ' '.join( [ auth.user.first_name, auth.user.last_name ] ),
+                                tableName = 'snode',
+                                rowId = $SNODE.id,
+                                fieldName = 'ottol_name',
+                                previousValue = $PREVIOUS_VALUE,
+                                updatedValue = $UPDATED_VALUE )
+
+            db.userEdit.insert( userName = ' '.join( [ auth.user.first_name, auth.user.last_name ] ),
+                                tableName = 'otu',
+                                rowId = otu.id,
+                                fieldName = 'ottol_name',
+                                previousValue = $PREVIOUS_VALUE,
+                                updatedValue = $UPDATED_VALUE )
+            '''
+
         return dict(form=None, cancel=None, a=taxon_link(otu))
 
     cancel = A("Cancel",

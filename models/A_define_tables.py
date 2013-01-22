@@ -494,6 +494,16 @@ def define_tables(db, migrate=False):
         migrate=migrate
         )
 
+    db.define_table(
+        'userEdit',
+        Field( 'userName', 'string' ),
+        Field( 'timestamp', 'datetime', default=datetime.datetime.now() ),
+        Field( 'tableName', 'string' ),
+        Field( 'rowId', 'int' ),
+        Field( 'fieldName', 'string' ),
+        Field( 'previousValue', 'string' ),
+        Field( 'updatedValue', 'string' ) )
+
 
     ## db.define_table(
     ##     "gtree_edit",

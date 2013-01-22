@@ -263,3 +263,12 @@ after a prune clade action, I viewed the tree edits, then as I was going to prun
 1/15/2013 :
 
 when attempting to replace or graft, the clipboard has some minor display issues
+
+
+
+resizing window, change data tables
+width
+
+None is link to edit taxon
+
+visual indication of sort order

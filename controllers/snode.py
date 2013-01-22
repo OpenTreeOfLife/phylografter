@@ -2,6 +2,7 @@ tree = local_import("tree", reload=True)
 build = local_import("build", reload=True)
 util = local_import( "plugin_treeViewer", reload = True )
 from pprint import pprint
+import re
 
 def index():
     return dict()
@@ -30,6 +31,38 @@ def update_snode():
 
     if form.process(message_onsuccess='Node updated',
                     onvalidation=valid).accepted:
+
+        for ( attr, value ) in rec.as_dict().iteritems():
+
+            if( attr not in form.vars ):
+                continue
+
+            if( str( form.vars[attr] ) != str( rec[attr] ) ):
+
+                if( attr == 'ottol_name' ):
+
+                    updatedValue = db( db.ottol_name.id == form.vars[attr] ).select()[0].name
+
+                    if re.match( "^[0-9]+$", str( rec[ attr ] ) ):
+
+                        previousValue = db( db.ottol_name.id == rec[ attr ] ).select()[0].name
+
+                    else:
+                        
+                        previousValue = str( rec[attr] )
+
+                else:
+                    updatedValue = form.vars[ attr ]
+                    previousValue = str( rec[attr] )
+
+
+                db.userEdit.insert( userName = ' '.join( [ auth.user.first_name, auth.user.last_name ] ),
+                                    tableName = 'snode',
+                                    rowId = rec.id,
+                                    fieldName = attr,
+                                    previousValue = previousValue,
+                                    updatedValue = updatedValue )
+                
 
         ## print ' form.vars.ingroup now', form.vars.ingroup
         ## print ' request.vars.ingroup now', request.vars.ingroup

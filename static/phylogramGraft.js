@@ -691,7 +691,7 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
                                 .css( { 'white-space': 'nowrap', 'overflow': 'hidden', 'text-overflow': 'ellipsis' } ),
                 this.make('div').width( modalBoxWidth * .10 ).css( css ).text( ( Math.floor( ( item[5] - item[4] - 1 ) / 2 ) ) ),
                 this.make('div').width( modalBoxWidth * .15 ).css( css ).text( item[3] ),
-                this.make('div').width( modalBoxWidth * .44 ).css( css )
+                this.make('div').width( modalBoxWidth * .43 ).css( css )
                        .css( { 'white-space': 'nowrap', 'overflow': 'hidden', 'text-overflow': 'ellipsis' } ).append(
                     this.make( 'span' ).text( item[6] ).attr( { 'title': item[6] } )
                 ),

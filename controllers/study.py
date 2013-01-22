@@ -12,9 +12,9 @@ from externalproc import get_external_proc_dir_for_upload, invoc_status, \
     ExternalProcStatus, get_logger, get_conf, do_ext_proc_launch
 
 track_changes()
-import ivy
-#treebase = ivy.treebase
-from ivy import treebase
+#import ivy
+treebase = ivy.treebase
+#from ivy import treebase
 response.subtitle = A("Studies", _href=URL('study','index'))
 
 class Virtual(object):
@@ -370,8 +370,25 @@ def view():
                    showid=False, submit_button="Update record")
     ## name = "%s %s" % (auth.user.first_name, auth.user.last_name)
     ## form.vars.contributor = name
+
     if form.accepts(request.vars, session):
+
+        for ( attr, value ) in rec.as_dict().iteritems():
+
+            if( attr not in form.vars ):
+                continue
+
+            if( str( form.vars[attr] ) != str( rec[attr] ) ):
+
+                db.userEdit.insert( userName = ' '.join( [ auth.user.first_name, auth.user.last_name ] ),
+                                    tableName = 'study',
+                                    rowId = rec.id,
+                                    fieldName = attr,
+                                    previousValue = str( rec[attr] ),
+                                    updatedValue = str( form.vars[attr] ) )
+
         response.flash = "record updated"
+
     label = _study_rep(rec)
     trees = db(db.stree.study==rec.id).select()
     for f in ("study", "source", "data", "uploaded", "contributor",
