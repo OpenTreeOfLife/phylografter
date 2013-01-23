@@ -71,4 +71,3 @@ Regarding plugin_treeViewer/instantiate.load :
 BioSync.TreeViewer.instances['{{=request.cid}}'] = new BioSync.TreeViewer.viewer().start( eval( "(" + '{{response.write(instanceParams, escape=False)}}' + ")" ) );
 
 This javascript code instantiates a Tree Viewer javascript object on the client.
-

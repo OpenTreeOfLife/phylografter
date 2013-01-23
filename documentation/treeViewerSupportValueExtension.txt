@@ -1,0 +1,75 @@
+Tree Viewer Support Value Extension :
+
+
+    To draw branches with support values greater than a certain value as thicker lines on the page load :
+
+        I would suggest adding a parameter to the plugin treeViewer definition in the view :
+
+          viewInfo = dict( type = 'phylogram', mode = 'navigate', supportValues = dict( test = 'greaterThan', value = 70, action = 'thickerLines' ) ) ) ) ) }}
+
+        This allows you to set a default value for a tree viewer instance.  Instead, if you want to set this up application wide, and not for each instance, you could omit the above and add default values to the tree viewer configuration on the server.  In modules/plugin_treeViewer line 63, there is a function called 'initializeViewConfig'.  Here, I would add attributes to session.TreeViewer.config ( which now I think might be better off with more dictionaries ( collapsedClade, nodeSelector sub dictionaries ) instead of a large number of ungrouped attributes ).  Maybe : supportValueTest = 'greaterThan', supportValueThreshold = '70', supportValueAction = 'thickerLines'.
+        Now we need to amend our build module to get the support values into the node definition.  In modules/build.py line 21, the function 'getCladeSqlString' needs to be changed so that the query selects the 'bootstrap_support' column from snode.  Then, on line 112 there's 'getNodeFromRowData', you need to amend this to attach a supportValue attribute to the node.  It turns out than writing raw sql is much faster than the web2py query.
+        Ok, some code that sends the client thicker line paths for the clades that cross the threshold.  In modules/unprocessedPhylogram.py, line 703, the function 'setScaledNodeCoordsAndPathString' creates the path string for a tree that uses branch lengths values.  On line 814, the function 'setSmoothNodeCoordsAndPathString' does the same thing for a 'smooth' tree.  In each of these functions, I suggest adding a 'supportValuesPathString' list, and adding strings to this list in a similar manner that strings are added to the pathString variable, with the exception that you do a check to see if the support value passes the test.  For example,
+
+    for id in renderInfo.nodeInfo:
+        pathString.append( getPathStringForNode( renderInfo.nodeInfo[id], renderInfo.nodeInfo ) )
+
+    becomes something like 
+    
+    for id in renderInfo.nodeInfo:
+        nodePathString = getPathStringForNode( renderInfo.nodeInfo[id], renderInfo.nodeInfo )
+        pathString.append( nodePathString )
+        if( config.supportValueTest ):
+            
+            if( config.supportValueTest == 'greaterThan' ):
+
+                if( config.supportValueThreshold < renderInfo.nodeRef[ id ].supportValue ): 
+                    
+                    supportValuePathString.append( nodePathString )
+
+   Its a little ugly using the string 'greaterThan' to compare to before issuing a > comparison.  You could get rid of this by using python's eval function, and setting the configuration value to a string version of an expression you want : eval( ' '.join( [ renderInfo.nodeRef[ id ].supportValue, config.supportValueTest ) ) == True
+
+
+   Be sure you return the supportValuePathString value in the BranchStyleResponse functions as this is what is passed to the client.
+
+   On to the client.  This is much easier.  The function 'renderClade' on line 67, is where we want to add the supportValuePathString.  Again, we want to do something similar to the regular path string.  This is how the regular path string is created :
+
+        this.path =
+            this.canvas.path( cladeInfo.pathString )
+                       .attr( { "stroke": this.renderObj.viewer.config.treeColor,
+                                "stroke-linecap": 'square',
+                                "stroke-width": this.renderObj.viewer.config.pathWidth } );
+
+    You would add something like :
+
+        if( cladeInfo.supportValuePathString ) {
+          
+            var supportValuePathThickness = this.renderObj.viewer.config.pathWidth;
+
+            if( this.renderObj.viewer.config.supportValueAction == 'thickerLines' ) {
+
+                supportValuePathThickness = this.renderObj.viewer.config.pathWidth * 1.5;
+            }
+
+            this.supportValuePath =
+                this.canvas.path( cladeInfo.supportValuePathString )
+                           .attr( { "stroke": this.renderObj.viewer.config.treeColor,
+                                    "stroke-linecap": 'square',
+                                    "stroke-width": supportValuePathThickness } );
+        }
+
+    Take a look at the raphael documentation for a list of the attributes you can use when creating or updating a path.
+
+
+
+    That's on page load.  Now to add to the control panel.  I would suggest changing the name of the 'tree sizing' menu item to something that can include the support value threshold.  In static/controlPanel.js, each menu item is defined as its own javascript object.  In the treeSize object, on line 786, there is a configuration data structure that describes each sub menu item in tree size.  You would add something like the following to this object :
+
+        supportValue: {
+          name: 'support value threshold,
+          viewerConfigName: 'supportValueThreshold',
+          min: 1,
+          max: 100
+        }
+
+    Upon updating of the slider or associated text box, the config should update, and the tree should be redrawn.
+
