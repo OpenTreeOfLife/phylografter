@@ -3,11 +3,12 @@ Below here are notes on installing phylografter on installing phylografter on Ma
 (1) Install prerequisites. You can get pip from http://www.pip-installer.org/en/latest/
 
 <pre>
-for module in matplotlib scipy numpy biopython pyparsing ipython lxml PIL requests
+for module in matplotlib numpy scipy biopython pyparsing ipython lxml PIL requests
 do
     pip install --upgrade "$module" 
 done
 </pre>
+This builds from source, make sure a fortran compiler is installed.  May have problem where numpy doesn't load correctly and scipy install fails - try building numpy from github source.[PEM]
 
 (2) Install MySQL.
 
