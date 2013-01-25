@@ -29,18 +29,6 @@ def handleViewerInstantiation( request, response, session, db, auth ):
         if( param in request.vars ):
             instanceParams[ param ] = common.evaluate( request.vars[ param ] )
 
-    for param in [ 'auxPlugins' ]:
-        if( param in request.vars ):
-            if( type( request.vars[ param ] ) is ListType ):
-                instanceParams[ param ] = [ common.evaluate( strDict ) for strDict in request.vars[ param ] ]
-            else:
-                instanceParams[ param ] = [ common.evaluate( request.vars[ param ] ) ]
-
-    
-    for param in [ 'modal' ]:
-        if( param in request.vars ):
-            instanceParams[ param ] = request.vars[ param ]
-
     instanceParams[ 'isTreePreprocessed' ] = session.TreeViewer.isTreePreprocessed = False
     instanceParams[ 'isLoggedIn' ] = auth.is_logged_in()
 

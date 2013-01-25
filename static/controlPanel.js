@@ -1,5 +1,27 @@
+/*
+    This page contains javascript code for the control panel object in Phylografter's tree viewer.  Currently, 2013/01/15, the object is created in static/plugin_treeViewer.js, on line 194 : 
+        BioSync.Common.loadScript( { name: [ 'controlPanel' ].join('') } );
+        this.controlPanel = new BioSync.TreeViewer.ControlPanel( this ).initialize( this.menuInfo );
+
+    The first line of code is an ajax call that loads this very file into the client's javascript parser and is evaluated.  The second line of code instantiates a ControlPanel object and stores it in the 'controlPanel' attribute of the tree viewer.
+*/
+
+
+//This is the control panel constructor.  The tree viewer javascript object gets passed in so it can be referenced later.  The make function allows the control panel to make DOM elements with less code.
+
+BioSync.TreeViewer.ControlPanel = function( viewer ) {
+
+    this.viewer = viewer;
+    this.make = BioSync.Common.makeEl;
+    return this;
+}
+
+    
+//The prototype contains attributes and functions available to an object.  Below, we define the attributes and functions our Control Panel object will have.
+
 BioSync.TreeViewer.ControlPanel.prototype = {
 
+    //each option in the control panel is itself another object.  Here, we define the constructors for the control panel menu items.
     options: {
 
         search: function( controlPanel ) {
@@ -31,6 +53,9 @@ BioSync.TreeViewer.ControlPanel.prototype = {
         }
     },
 
+
+    //configuration settings.  Most of these could be set using classes and .css files, but I do it here so its all in one place when I'm absolutely positioning elements and have to take into account their padding and margins.  Its foolish to have to update the values in both the .css and javascript files.  These could probably be better named, apoologies.
+
     config: { leftBuffer: 10,
               rightBuffer: 20,
               bottomBuffer: 10,
@@ -42,11 +67,15 @@ BioSync.TreeViewer.ControlPanel.prototype = {
               matchingLabelListZIndex: 5002,
               sliderSize: 100 },
 
+
+    //removes the control panel button from the DOM.  This is used when the control panel needs to be refreshed in order to account for new options that may be available after user interaction.
     remove: function() {
 
         this.panelButton.remove();
     },
 
+    
+    // this is called right after the constructor.  It initializes the control panel, creating the hover option in the corner of the tree viewer, then calling a function to create the menu options
     initialize: function( controlPanelInfo ) {
 
          this.panelButton =
@@ -77,58 +106,16 @@ BioSync.TreeViewer.ControlPanel.prototype = {
         return this;
     },
 
-
-    //don't think this is being used
-    addViewOption: function( p ) {
-
-        var viewOption;
-
-        if( ! this.panelContent.find(".controlPanelItemLabel:contains('view >')").length ) {
-
-            viewOption =
-                this.make('div').attr( { 'class': 'controlPanelItem' } ).append(
-                    this.make('span').attr( { 'class': 'controlPanelItemLabel' } ).text( 'view > ' ) )
-                        .hoverIntent( $.proxy( this.showChildHoverMenu, this ), $.proxy( this.hideChildHoverMenu, this ) );
-
-            this.panelContent.append( viewOption );
-
-        } else {
-
-            viewOption = $( this.panelContent.children(":contains('view')") );
-        }
-
-        viewOption.append(
-            this.make( 'div' ).attr( { 'class': 'controlPanelItem', 'check': 'true' } ).append(
-                this.make( 'span' ).attr( { 'class': 'controlPanelItemLabel', 'name': p.name } ).html( [ p.name, ' ', BioSync.Common.htmlCodes.check ].join(' ') ) )
-            .bind( 'click', { }, this.toggleCheck )
-            .bind( 'click', { }, $.proxy( this.viewer.togglePanel, this.viewer ) ) );
-    },
-
-    //don't think this is being used 
-    toggleCheck: function() {
-
-        var that = $(this);
-        var label = $( that.children()[0] );
-
-        if( that.attr('check') == 'true' ) {
-
-            that.attr( { 'check': 'false' } );
-            label.html( label.html().substring( 0, label.html().indexOf(' ') ) );
-
-        } else { 
-            
-            that.attr( { 'check': 'true' } );
-            label.html( [ label.html(), BioSync.Common.htmlCodes.check ].join(' ') );
-        } 
-    },
-
+    
+    // when the control panel is hovered with a mouse, this function is called, it displays the menu options
     showControlPanel: function() {
 
         this.panelButtonLabel.css( { 'font-weight': 'bold' } );
 
         this.optionContainer.show();
     },
-    
+   
+    // when the mouse leaves the control panel, this function is called, it hides the menu options
     hideControlPanel: function( ) {
 
         this.panelButtonLabel.css( { 'font-weight': 'normal' } );
@@ -136,6 +123,7 @@ BioSync.TreeViewer.ControlPanel.prototype = {
         this.optionContainer.hide();
     },
 
+    // this function is used by outside functions to update the control panel.  for example, when a collapsed clade is vertically expanded, this changes the number of max tips in a column.  this means the max tips ui in the control panel must also be changed.  This is where it happens -- it calls the menu option's function to complete the task.
     updateMaxTips: function() {
 
         if( this.optionObjs.treeSize ) {
@@ -144,6 +132,8 @@ BioSync.TreeViewer.ControlPanel.prototype = {
         }
     },
 
+
+    // this function iterates through each menu item and creates it.  Also, if an option exists over multiple lines, it makes sure that it is positioned to the right enough, so that it doesn't obscure the vision of other menu items.
     createMenuOptions: function( p ) {
                 
         this.optionObjs = { };
@@ -158,6 +148,9 @@ BioSync.TreeViewer.ControlPanel.prototype = {
         for( var i = 0, ii = p.options.length; i < ii; i++ ) {
 
             this.optionObjs[ p.options[i].name ] = new this.options[ p.options[i].name ]( this ).initialize();
+        }
+
+        for( var i = 0, ii = p.options.length; i < ii; i++ ) {
 
             if( this.optionObjs[ p.options[i].name ].multiLineOptionContainer ) {
 
@@ -168,32 +161,7 @@ BioSync.TreeViewer.ControlPanel.prototype = {
         this.optionContainer.hide();
     },
 
-    //not being used (zoom)
-    ratioChange: function( e, ui ) {
-
-        var scaleRatio = ui.value / this.baseRatio;
-        this.baseRatio = ui.value;
-
-        //this.viewer.renderObj.changeTreeSize( { ratio: this.viewer.renderObj.scaleRatio } );
-
-        var config = this.viewer.config;
-
-        var ajaxNames = [ 'fontSize', 'scaleRatio', 'branchLength', 'horizontalPadding', 'verticalPadding', 'tipLabelBuffer', 'verticalTipBuffer' ];
-        var ajaxValues = [  ];
-
-        for( var i = 0, ii = ajaxNames.length; i < ii; i++ ) {
-
-            var name = ajaxNames[i];
-            config[ name ] = config[ name ] * scaleRatio;
-            ajaxValues.push( config[ name ] );
-        }
-
-        BioSync.Common.style.fontSize = config.fontSize;
-        BioSync.Common.setTextWidthMetric();
-
-        this.viewer.updateConfig( { names: ajaxNames, values: ajaxValues, redraw: true } );
-    },
-
+    // when a menu item is created, it calls this function in order to make the container and label, the control panel keeps track of which menu item is the widest, or "rightMost", so that it is easier to position elements
     makeOptionContainer: function( p ) {
 
         var container =
@@ -220,6 +188,7 @@ BioSync.TreeViewer.ControlPanel.prototype = {
         return [ container, label ];
     },
 
+    // when a menu item is hovered upon by a mouse, its own menu is displayed on the screen.  This function checks that the height of the control panel is enough to cover the newly expanded menu item.
     checkOptionContainerHeight: function( p ) { 
         
         var optionContainerOffset = this.optionContainer.offset();
@@ -239,6 +208,7 @@ BioSync.TreeViewer.ControlPanel.prototype = {
 }
 
 
+//Here is the object definition of the graft option menu item.  It has two sub menu items : 'View Tree Edits' and 'Let Colleagues Edit Tree'.
 BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
 
     config: {
@@ -246,6 +216,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
         padding: 5    
     },
 
+    // This is called when creating the object.  The menu is only shown when the tree viewer is showing a grafted tree.  Anyone can view the tree edits.  Only the person who created the tree gives edit privileges to others.
     initialize: function() {
 
         if( this.controlPanel.viewer.treeType == 'grafted' ) {
@@ -292,6 +263,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
         return this;
     },
 
+    // when a user clicks on the 'View Tree Edits' button, this function is called.  It makes a call to /plugin_treeGrafter/getGtreeGraftHistory in order to retrieve the edits made regarding this tree from the server
     handleViewTreeEditClick: function( e ) {
 
         this.selectionContainer.hide();
@@ -301,6 +273,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                   success: $.proxy( this.showModalTreeEdits, this ) } );
     },
 
+   
+    // this function handles the response from 'handleViewTreeEditClick' above.  The response is evaluated, then a bunch of DOM elements are created and displayed in a modal dialogue box.  This isn't the best written code (should be more modular) as it was recently written to get it done fast.
     showModalTreeEdits: function( response ) {
 
         var data = eval( '(' + response + ')' );
@@ -402,11 +376,14 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
             height: this.controlPanel.viewer.windowHeight * .75,
             title: 'Tree Edits' } );
 
+        //this is done so that multiline rows are evenly spaced
         setTimeout(
             function() { $( $('.dataRow').children() ).css( { 'position': 'relative', top: $( dataRow.children()[1] ).height() / 2 } ) },
             1500 );
     },
 
+   
+    // this is called when someone clicks the 'Revert Edit' button.  It makes an ajax call to retrieve the state of the tree before that edit.  To plugin_treeGrafter/showTreeBeforeEdit.  When the tree is returned, the node selector is disabled, so the user can only look at the tree instead of making edits to it.
     showTreeBeforeEdit: function( e ) {
     
         var renderObj = this.controlPanel.viewer.renderObj;
@@ -422,6 +399,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                            $.proxy( this.showRevertEditDialogue, this ) ) } );
     },
 
+    // this function is one of many that occurs after the response from 'showTreeBeforeEdit' arrives.  The renderObj's 'renderReceivedClade' function handles the response in order to display the tree of before the selected edit.  This function adds UI to the top of the tree viewer, asking the user if they want to revert the tree to this state, or cancel the action.
     showRevertEditDialogue: function( ) {
 
         this.hideOption();
@@ -453,6 +431,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
             'top': 10 } );
     },
 
+    // called when our user clicks the 'Cancel' link regarding a reversion of a tree edit.  This function cancels the tree reversion process and gets the current 'head' of the grafted tree
     cancelRevertEdit: function() {
 
         this.revertEditContainer.remove();
@@ -460,6 +439,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
         this.controlPanel.viewer.renderObj.redrawTree();
     },
 
+   
+    // called when the user clicks the 'Revert' link regarding a reversion of a tree edit.  This function makes a call to the server to revert the current grafted tree to a previous state.  Call made to /plugin_treeGrafter/revertEdit.
     revertEdit: function() {
 
         $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'revertEdit' ] } ),
@@ -468,6 +449,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                   success: $.proxy( this.revertEditSuccess, this ) } );
     },
 
+    // This function is called after a successful reversion of an edit.  It enables the node selector and displays a notification for 5 seconds.
     revertEditSuccess: function() {
 
         this.revertEditContainer.remove();
@@ -481,6 +463,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
             y: this.controlPanel.viewer.renderObj.viewPanel.myHeight / 2 } );
     },
 
+    //  This function is called when the creator of the grafted tree wants to edit the privileges for other users regarding the tree
     handleShareTreeClick: function( e ) {
 
         $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeGrafter', argList: [ 'getGtreeSharingInfo' ] } ),
@@ -488,10 +471,12 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                   success: $.proxy( this.showModalTreeSharingDialogue, this ) } );
     },
 
+    // gives the DOM element that triggered this function a grey background
     giveGreyBackground: function( e ) {
         $( e.delegateTarget ).css( { 'background-color': '#F0F0F0' } );
     },
 
+    // removes the grey background on the DOM element that triggered this function unless of course, it is the element that is already selected
     removeGreyBackground: function( e ) {
 
         if( ( this.selectedUser ) && ( e.delegateTarget == this.selectedUser.get(0) ) ) { return; }
@@ -499,6 +484,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
         $( e.delegateTarget ).css( { 'background-color': '' } );
     },
 
+    
+    // this function is called when a user clicks on a name in the 'Share Tree with Colleagues' option, the currently selected user has a grey background
     selectUser: function( e ) {
 
         var el = $( e.delegateTarget );
@@ -515,6 +502,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
         }
     },
 
+
+    // this function handles the response from 'plugin_treeGrafter/getGtreeSharingInfo'.  It creates two boxes, each with a list of users.  One box holds the users that have edit privileges, the other box holds users that do not have edit privileges.  The user can select another user by clicking on their name, then click on an arrow to move them to a different box.  There is also a text input to filter the list of users.  This is all displayed in a modal box.
     showModalTreeSharingDialogue: function( response ) {
 
         var data = eval( '(' + response + ')' );
@@ -646,14 +635,10 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                 }, 2000 );
     },
 
+    
     handleUserSearchKeyUp: function( e ) {
 
-        //enter
-        if( e.keyCode == 13 ) {
-
-            this.currentlySelected.click();
-
-        } else if( e.keyCode == 8 || e.keyCode == 46 || String.fromCharCode( e.keyCode ).match( /\w/ ) ) {
+        if( e.keyCode == 8 || e.keyCode == 46 || String.fromCharCode( e.keyCode ).match( /\w/ ) ) {
 
             if( this.userInputTimeout ) { clearTimeout( this.userInputTimeout ); }
 

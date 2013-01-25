@@ -3,28 +3,6 @@ BioSync.TreeViewer = {
     instances: { },
 
     viewer: function() { return this; },
-
-    Sidebar: {
-
-        phylogram: {
-
-            browse: function( viewer ) { this.viewer = viewer; this.make = BioSync.Common.makeEl; return this; },
-
-            navigate: function( viewer ) {
-
-                this.viewer = viewer;
-                this.make = BioSync.Common.makeEl;
-                return this;
-            }
-        }
-    },
-
-    ControlPanel: function( viewer ) {
-
-        this.viewer = viewer;
-        this.make = BioSync.Common.makeEl;
-        return this;
-    }
 }
 
 BioSync.TreeViewer.viewer.prototype = {

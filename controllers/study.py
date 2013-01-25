@@ -13,8 +13,8 @@ from externalproc import get_external_proc_dir_for_upload, invoc_status, \
 
 track_changes()
 #import ivy
-treebase = ivy.treebase
-#from ivy import treebase
+#treebase = ivy.treebase
+from ivy import treebase
 response.subtitle = A("Studies", _href=URL('study','index'))
 
 class Virtual(object):
