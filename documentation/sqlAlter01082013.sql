@@ -17,5 +17,5 @@ CREATE TABLE userEdit (
     rowId INT,
     fieldName VARCHAR( 100 ),
     previousValue LONGTEXT,
-    updatedValue LONGTEXT )
+    updatedValue LONGTEXT
 );
