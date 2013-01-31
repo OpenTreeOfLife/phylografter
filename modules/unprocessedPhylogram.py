@@ -189,13 +189,16 @@ def navigateToNode( db, session, request ):
 
 
 
-def getRenderResponse( tree, session, columnInfo ):
+def getRenderResponse( tree, session, columnInfo, collapseNodes = True ):
    
     mode = session.TreeViewer.viewInfo['mode'].capitalize()
     
     renderInfo = getattr( sys.modules[__name__], ''.join( [ 'getRenderInfoFor', mode, 'Mode' ] ) )( tree )
 
-    getattr( sys.modules[__name__], ''.join( [ 'determineTreeToRenderFor', mode, 'Mode' ] ) )( tree, renderInfo, session, columnInfo )
+    if collapseNodes:
+        getattr( sys.modules[__name__], ''.join( [ 'determineTreeToRenderFor', mode, 'Mode' ] ) )( tree, renderInfo, session, columnInfo )
+    else:
+        renderInfo.tipsRemoved = 0
 
     return getCladeResponse( session, tree, renderInfo, columnInfo )
 

@@ -22,21 +22,21 @@ BioSync.TreeGrafter.RenderUtil.Column.prototype.canUserEditTree = function( p ) 
 
 BioSync.TreeGrafter.RenderUtil.Column.prototype.handlePruneCladeOptionClick = function() {
 
-    this.nodeIdToPrune = this.closestNodeToMouse.id;
+    this.nodeIdToPrune = this.recentlyClickedNode.id;
 
     this.renderObj.pruneClade( { column: this, nodeId: this.nodeIdToPrune } );
 }
 
 BioSync.TreeGrafter.RenderUtil.Column.prototype.handleReplaceCladeOptionClick = function() {
 
-    this.nodeIdToReplace = this.closestNodeToMouse.id;
+    this.nodeIdToReplace = this.recentlyClickedNode.id;
 
     this.renderObj.getClipboardForCladeReplace( { column: this, nodeId: this.nodeIdToReplace } );
 }
 
 BioSync.TreeGrafter.RenderUtil.Column.prototype.handleGraftCladeOptionClick = function() {
 
-    this.nodeIdToGraftOnto = this.closestNodeToMouse.id;
+    this.nodeIdToGraftOnto = this.recentlyClickedNode.id;
 
     this.renderObj.getClipboardForCladeGraft( { column: this, nodeId: this.nodeIdToGraftOnto } );
 }

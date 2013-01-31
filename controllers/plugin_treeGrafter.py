@@ -26,9 +26,13 @@ def getCreator():
 
 def getUserInfo():
 
+    
     canEdit = len( \
-        db( ( ( db.gtree_share.user == auth.user.id ) & ( db.gtree_share.gtree == session.TreeViewer.treeId ) ) |
-            ( ( db.gtree.id == session.TreeViewer.treeId ) & ( db.gtree.contributor == ' '.join( [ auth.user.first_name, auth.user.last_name ] ) ) ) ).select().as_list() )
+        db( ( db.gtree_share.user == auth.user.id ) & ( db.gtree_share.gtree == session.TreeViewer.treeId ) ).select().as_list() )
+   
+    if canEdit == 0:
+        canEdit =  len( \
+            db( ( db.gtree.id == session.TreeViewer.treeId ) & ( db.gtree.contributor == ' '.join( [ auth.user.first_name, auth.user.last_name ] ) ) ).select().as_list() )
 
     return response.json( dict( firstName = auth.user.first_name, lastName = auth.user.last_name, canEdit = canEdit ) )
 
@@ -82,8 +86,6 @@ def giveEditPermission():
 
 def removeEditPermission():
 
-    print db( ( db.gtree_share.user == request.vars.userId ) & ( db.gtree_share.gtree == session.TreeViewer.treeId ) ).select().as_list()
-
     db( ( db.gtree_share.user == request.vars.userId ) & ( db.gtree_share.gtree == session.TreeViewer.treeId ) ).delete()
 
 
@@ -101,30 +103,62 @@ def showTreeBeforeEdit():
     for graft in grafts:
         graftUtil.revertEdit( db, session, tree, graft )
 
+    ivy.tree.index( tree )
+
     return response.json( util.getRenderModule( request, session ).getRenderResponse( \
         tree,
         session,
         Storage( rootNodeId = columns[0].rootNodeId,
                  keepVisibleNodeStorage = Storage(),
-                 collapsedNodeStorage = Storage() ) ) )
+                 collapsedNodeStorage = Storage() ),
+        collapseNodes = False ) )
 
 
 def revertEdit():
 
+    treeState = session.TreeViewer.treeState[ session.TreeViewer.treeType ][ session.TreeViewer.treeId ]
+
     editInfo = db( db.gtree_edit.id == request.vars.editId ).select()[0]
-
-    if( editInfo.action == 'prune' ):
     
-        nodesToPrune = db( db.prune_detail.gtree_edit == editInfo.id ).select( db.prune_detail.pruned_gnode )
-
-        for node in nodesToPrune:
-            
-            db( db.gnode.id == node.pruned_gnode ).update( pruned = False )
+    editsAfter = db( ( db.gtree_edit.gtree == session.TreeViewer.treeId ) &
+                     ( db.gtree_edit.mtime >= editInfo.mtime ) ).select( orderby = "mtime DESC" )
     
-        db( db.prune_detail.gtree_edit == editInfo.id ).delete()
+    for edit in editsAfter:
+
+        if( edit.action == 'replace' or edit.action == 'graft' ):
+
+            cladeToDelete = db.gnode[ edit.target_gnode ]
+
+            nodesToDelete = db( ( db.gnode.pruned == False ) &
+                                ( db.gnode.next >= cladeToDelete.next ) &
+                                ( db.gnode.back <= cladeToDelete.back ) &
+                                ( db.gnode.tree == session.TreeViewer.treeId ) ).select( db.gnode.id )
+
+            for nodeToDelete in nodesToDelete:
+               
+                for column in treeState.columns:
+                    
+                    if nodeToDelete.id in column.collapsedNodeStorage:
+                        del column.collapsedNodeStorage[ nodeToDelete.id ]
+
+            db( ( db.gnode.pruned == False ) &
+                ( db.gnode.next >= cladeToDelete.next ) &
+                ( db.gnode.back <= cladeToDelete.back ) &
+                ( db.gnode.tree == session.TreeViewer.treeId ) ).delete()
 
 
-    db( db.gtree_edit.id == request.vars.editId ).delete()
+        if( edit.action == 'prune' or edit.action == 'replace' ):
+        
+            nodesToPrune = db( db.prune_detail.gtree_edit == edit.id ).select( db.prune_detail.pruned_gnode )
+
+            for node in nodesToPrune:
+                
+                db( db.gnode.id == node.pruned_gnode ).update( pruned = False )
+        
+            db( db.prune_detail.gtree_edit == edit.id ).delete()
+
+        
+        db( db.gtree_edit.id == edit.id ).delete()
 
 
 

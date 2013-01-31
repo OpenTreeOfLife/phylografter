@@ -1,0 +1,3 @@
+State of Record Edit Capture in Phylografter ( 1/31/2013 ) :
+
+    This is not completed.  The database table has been created in a sqlAlter ( 01/08/2013 ), and in a couple of places record edits are being captured.  Right now, it is being used in controllers/snode.py ( to record edits to source nodes ), in controllers/stree.py ( to record edits to source trees ), and in controllers/study.py ( to record edits to a study ).  Use these examples to decide how to incorporate it into other areas.

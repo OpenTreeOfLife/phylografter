@@ -524,7 +524,7 @@ def index(node, n=1):
     if not node.parent:
         node.depth = 0
     else:
-        node.depth = node.parent.depth
+        node.depth = node.parent.depth + 1
     n += 1
     for i, c in enumerate(node.children):
         if i > 0:

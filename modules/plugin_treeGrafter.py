@@ -36,11 +36,7 @@ def revertReplace( db, session, tree, editInfo ):
 
 def revertGraft( db, session, tree, editInfo ):
 
-    print editInfo.target_gnode
-
     graftedClade = util.getNodeById( tree, editInfo.target_gnode )
-
-    print graftedClade
 
     parentNode = graftedClade.parent
     parentNode.remove_child( graftedClade )
@@ -53,50 +49,6 @@ def graftClade( tree, graftingOntoNodeId, graftingClade ):
     
     graftingClade.meta[ 'targetGNode' ] = True
     parent.meta[ 'affectedCladeId' ] = True
-
-
-def postGraftDBUpdate( db, session, auth):
-
-    nodeTable = None
-
-    if( session.TreeViewer.type == 'source' ):
-
-       nodeTable = db.snode 
-        
-       session.TreeViewer.treeId = createGTreeRecord( db, auth, session.treeEdit.treeName, session.treeEdit.treeDescription )
-    
-    else:
-
-        nodeTable = db.gnode
-
-
-    graftedCladeSiblingRecord = db( nodeTable.id == session.treeEdit.graftedCladeSiblingId ).select().first()
-
-    index( session.treeEdit.currentTree )
-
-    if( session.TreeViewer.type == 'source' ):
-        
-        reference = \
-            dict( newCladeId = int( session.treeEdit.graftedCladeNodeId ),
-                  targetGNode = None,
-                  oldAffectedCladeId = int( graftedCladeSiblingRecord.parent ),
-                  newAffectedCladeId = None )
-        
-        insertSnodesToGtree( db, session.TreeViewer.treeId, session.treeEdit.currentTree, None, reference )
-        
-        createEditRecord( db, auth, session.TreeViewer.treeId, 'graft', reference['newAffectedCladeId'], graftedCladeSiblingRecord.id, session.treeEdit.graftedCladeNodeId, session.treeEdit.comment, session.TreeViewer.type, auth.user.id, reference['targetGNode'].id )
-        
-        updateSessionForNewGtree( session )
-
-    else:
-
-        updateGtreeDB( db, session.treeEdit.currentTree )
-        
-        reference = dict( newCladeId = int( session.treeEdit.graftedCladeNodeId ), targetGNode = None )
-        
-        insertGNodesToGtree( db, session.TreeViewer.treeId, util.getNodeById( session.treeEdit.currentTree, session.treeEdit.graftedCladeNodeId ), graftedCladeSiblingRecord.parent, session.treeEdit.graftedCladeType, reference )
-        
-        createEditRecord( db, auth, session.TreeViewer.treeId, 'graft', graftedCladeSiblingRecord.parent, graftedCladeSiblingRecord.id, session.treeEdit.graftedCladeNodeId, session.treeEdit.comment, session.TreeViewer.type, auth.user.id, reference['targetGNode'].id )
 
 
 def postGraftDBUpdate( db, session, request, auth, tree, graftingOntoNodeId, graftingClade ):
@@ -132,7 +84,7 @@ def postGraftDBUpdate( db, session, request, auth, tree, graftingOntoNodeId, gra
                           request.vars.comment,
                           treeType,
                           auth.user.id,
-                          reference['targetGNode'].id )
+                          reference['targetGNode'] )
 
         updateSessionForGraftedSourceTree( session, columnRootNodeIds, collapsedNodeIds, graftingClade )
 
@@ -159,7 +111,7 @@ def postGraftDBUpdate( db, session, request, auth, tree, graftingOntoNodeId, gra
                                    request.vars.comment,
                                    treeType,
                                    auth.user.id,
-                                   reference['targetGNode'].id )
+                                   reference['targetGNode'] )
     
         updateSessionForGraftedGraftedTree( session, updatedNextBackValues, graftingClade )
 
@@ -212,22 +164,12 @@ def postReplaceDBUpdate( db, session, request, auth, tree, replacedCladeRow, rep
                           request.vars.comment,
                           treeType,
                           auth.user.id,
-                          reference['targetGNode'].id )
+                          reference['targetGNode'] )
 
         updateSessionForReplacedSourceTree( session, columnRootNodeIds, collapsedNodeIds, replacedCladeRow, reference['targetGNode'] )
 
     else:
         
-        index( tree )
-        
-        updatedNextBackValues = getCollapsedNodeIds( session )
-
-        updateGtreeDB( db, tree, updatedNextBackValues )
-        
-        reference = dict( newCladeId = replacingClade.id, targetGNode = None )
-        
-        insertGNodesToGtree( db, session.TreeViewer.treeId, replacingClade, replacedCladeRow.parent, request.vars.replacingNodeTreeType, reference )
-
         editId = createEditRecord( db,
                                    auth,
                                    session.TreeViewer.treeId,
@@ -239,10 +181,22 @@ def postReplaceDBUpdate( db, session, request, auth, tree, replacedCladeRow, rep
                                    request.vars.comment,
                                    treeType,
                                    auth.user.id,
-                                   reference['targetGNode'].id )
+                                   None )
     
         pruneGNodeRecords( db, session.TreeViewer.treeId, replacedCladeRow, editId )
+
+        index( tree )
         
+        updatedNextBackValues = getCollapsedNodeIds( session )
+
+        updateGtreeDB( db, tree, updatedNextBackValues )
+        
+        reference = dict( newCladeId = replacingClade.id, targetGNode = None )
+        
+        insertGNodesToGtree( db, session.TreeViewer.treeId, replacingClade, replacedCladeRow.parent, request.vars.replacingNodeTreeType, reference )
+
+        db( db.gtree_edit.id == editId ).update( target_gnode = reference['targetGNode'] )
+
         updateSessionForReplacedGraftedTree( session, updatedNextBackValues, replacedCladeRow )
 
 
@@ -411,13 +365,8 @@ def postPruneDBUpdate( db, session, request, auth, tree, prunedNodeRow ):
         updateSessionForPrunedSourceTree( session, columnRootNodeIds, collapsedNodeIds, prunedNodeRow )
 
     else:
-        
-        index( tree )
+ 
 
-        updatedNextBackValues = getCollapsedNodeIds( session )
-
-        updateGtreeDB( db, tree, updatedNextBackValues )
-        
         editId = createEditRecord( db,
                                    auth,
                                    session.TreeViewer.treeId,
@@ -428,10 +377,16 @@ def postPruneDBUpdate( db, session, request, auth, tree, prunedNodeRow ):
                                    None,
                                    request.vars.comment,
                                    treeType,
-                                   auth.user.id )
-        
+                                   auth.user.id )       
+
         pruneGNodeRecords( db, session.TreeViewer.treeId, prunedNodeRow, editId )
 
+        index( tree )
+
+        updatedNextBackValues = getCollapsedNodeIds( session )
+
+        updateGtreeDB( db, tree, updatedNextBackValues )
+        
         updateSessionForPrunedGraftedTree( session, updatedNextBackValues, prunedNodeRow )
 
 
@@ -583,7 +538,7 @@ def insertGNodesToGtree( db, gtreeId, node, parentId, nodeType, reference ):
         reference['targetGNode'] = gnode
 
     for child in node.children:
-        insertGNodesToGtree( db, gtreeId, child, gnode.id, nodeType, reference )
+        insertGNodesToGtree( db, gtreeId, child, gnode, nodeType, reference )
 
 
 
@@ -609,18 +564,18 @@ def insertSnodesToGtree( db, gtreeId, node, parentId, reference=None ):
         
         if( ( 'oldAffectedCladeId' in reference ) and ( node.id == reference['oldAffectedCladeId'] ) and ( 'affectedCladeId' in node.meta ) ):
 
-            reference['newAffectedCladeId'] = gnode.id
+            reference['newAffectedCladeId'] = gnode
         
         if( ( 'columnRootNodeIds' in reference ) and ( node.id in reference[ 'columnRootNodeIds' ] ) ):
-            reference[ 'columnRootNodeIds' ][ node.id ] = gnode.id
+            reference[ 'columnRootNodeIds' ][ node.id ] = gnode
         
         if( ( 'collapsedNodeIds' in reference ) and ( node.id in reference[ 'collapsedNodeIds' ] ) ):
-            reference[ 'collapsedNodeIds' ][ node.id ] = Storage( nodeId = gnode.id, next = node.next, back = node.back )
+            reference[ 'collapsedNodeIds' ][ node.id ] = Storage( nodeId = gnode, next = node.next, back = node.back )
     
-    node.id = gnode.id
+    node.id = gnode
 
     for child in node.children:
-        insertSnodesToGtree( db, gtreeId, child, gnode.id, reference )
+        insertSnodesToGtree( db, gtreeId, child, gnode, reference )
 
 
 def createGTreeRecord( db, auth, name, desc ):
@@ -654,14 +609,16 @@ def createEditRecord( db, auth, treeId, action, affectedCladeId, affectedNodeId,
 
 def pruneGNodeRecords( db, treeId, node, editId ):
 
-    db( ( db.gnode.tree == treeId ) & 
-        ( db.gnode.next >= node.next ) &
-        ( db.gnode.back <= node.back ) ).update( pruned = True )
-
     nodesToPrune = db(
         ( db.gnode.tree == treeId ) & 
+        ( db.gnode.pruned == False ) & 
         ( db.gnode.next >= node.next ) &
         ( db.gnode.back <= node.back ) ).select( db.gnode.id )
 
-    for node in nodesToPrune:
-        db.prune_detail.insert( pruned_gnode = node.id, gtree_edit = editId )
+    for nodeToPrune in nodesToPrune:
+        db.prune_detail.insert( pruned_gnode = nodeToPrune.id, gtree_edit = editId )
+    
+    db( ( db.gnode.tree == treeId ) & 
+        ( db.gnode.pruned == False ) & 
+        ( db.gnode.next >= node.next ) &
+        ( db.gnode.back <= node.back ) ).update( pruned = True )
