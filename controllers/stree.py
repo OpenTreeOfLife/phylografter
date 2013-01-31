@@ -675,3 +675,7 @@ def import_cached_nexml():
         redirect(URL('study','tbimport_trees'))
 
     return dict(study=study, tree=t, form=form)
+
+
+def export_NexSON():
+    return dict()
