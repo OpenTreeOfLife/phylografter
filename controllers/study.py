@@ -891,3 +891,11 @@ def ref_from_doi():
     else:
         print resp.text
 
+def export_NexSON():
+    t = db.study
+    treesDict = dict()
+    subDict=dict()
+    subDict["trees"]=treesDict
+    nexmlDict = dict()
+    nexmlDict["nexml"]=subDict 
+    return nexmlDict

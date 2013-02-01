@@ -678,4 +678,9 @@ def import_cached_nexml():
 
 
 def export_NexSON():
-    return dict()
+    treesDict = dict()
+    subDict=dict()
+    subDict["trees"]=treesDict
+    nexmlDict = dict()
+    nexmlDict["nexml"]=subDict 
+    return nexmlDict
