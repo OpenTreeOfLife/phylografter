@@ -8,6 +8,7 @@ import build
 import link
 import ivy
 import treeUtil
+import nexson
 ## ivy = local_import("ivy")
 
 from gluon.storage import Storage
@@ -678,9 +679,5 @@ def import_cached_nexml():
 
 
 def export_NexSON():
-    treesDict = dict()
-    subDict=dict()
-    subDict["trees"]=treesDict
-    nexmlDict = dict()
-    nexmlDict["nexml"]=subDict 
-    return nexmlDict
+    
+    return nexson.nexmlElt()
