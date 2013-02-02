@@ -1,5 +1,9 @@
+//This contains javascript code for modal displays.  A modal window is a child window that requires the user to interact with it before the rest of the application.  In phylografter, the modal window is used in parallel with a semi-transparent, black layer just behind the modal window.  This is one of the first logical separations of javascript I did with phylografter, and, its not very elegantly coded or objectified.  Sorry.
+
+//A place to store information
 BioSync.ModalBox = {};
 
+//Currently, in phylografter, this page is loaded through BioSync.Common.loadLibs in static/plugin_common.js.  This function is called when the document is ready ( as defined by jquery ).  See the bottom of this page for the function call.  It simply creates the DOM elements needed for the framework of the modal dialogue.
 BioSync.ModalBox.initialize = function( p ) {
 
     var make = BioSync.Common.makeEl;
@@ -14,6 +18,8 @@ BioSync.ModalBox.initialize = function( p ) {
     BioSync.ModalBox.contentContainer = $('#modalBoxForm');
 };
 
+
+//This function checks for 'Esc' and 'Enter' keypresses.  When someone hits Escape, the modal dialogue disappears.  When the enter button is pressed, and there is a DOM element with a class of 'modalBoxSubmit', the element is programmatically clicked.
 BioSync.ModalBox.handleKeyPress = function( p ) {
 
     if( p.keyCode == 27 ) {
@@ -28,6 +34,8 @@ BioSync.ModalBox.handleKeyPress = function( p ) {
     }
 }
 
+
+//This function accepts a title and a url and makes an ajax request to that url.  The response is handled by ModalBox.acceptForm and displayed in a modal dialogue box.  'successTrigger' and 'successData' are parameters used to trigger an event upon successful submission of the received form.  'successTrigger' is the string triggered while successData is the data passed to the event.  I now view this as a hack and would suggest not using these two.
 BioSync.ModalBox.getUrlForm = function( p ) {
 
     $('#modalBoxTitle').text( p.title );
@@ -41,6 +49,8 @@ BioSync.ModalBox.getUrlForm = function( p ) {
     BioSync.ModalBox.successTriggerData = p.successData;
 }
 
+
+//After receiving a form via 'getUrlForm', this function is used to handle user changes ( check, unchecks ) to checkboxes in the form.  This was done because when using some canned web2py functions, SQLFORM being one, to receive forms via ajax ( instead of via a page request which works properly ), the checkbox wasn't working properly.
 BioSync.ModalBox.handleCheckboxChange = function() {
 
     var checkbox = $(this);
@@ -48,6 +58,7 @@ BioSync.ModalBox.handleCheckboxChange = function() {
     checkbox.val( ( checkbox.is( ':checked' ) ) ? 'on' : '' );
 }
 
+//This function handles the response from getUrlForm.  It places the response directly in the DOM, so the response better be html.  It fixes a checkbox issue and aligns the html in the modal box.
 BioSync.ModalBox.acceptForm = function( response ) {
 
     $('#modalBoxForm').html( response );
@@ -59,6 +70,7 @@ BioSync.ModalBox.acceptForm = function( response ) {
     $('#modalBoxContainer').show( 'slow', BioSync.ModalBox.alignBox );
 }
 
+//Used to set the proper checkbox value on a form returned from a web2py server using SQLFORM
 BioSync.ModalBox.sqlFormCheckboxHack = function() {
  
     $('#modalBoxForm input[type="checkbox"]').each(
@@ -69,6 +81,7 @@ BioSync.ModalBox.sqlFormCheckboxHack = function() {
     );
 }
 
+//
 BioSync.ModalBox.ajaxizeForm = function() {
 
     $('#modalBoxForm input[type="submit"]').bind( 'click', { }, BioSync.ModalBox.submit );

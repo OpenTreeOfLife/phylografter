@@ -1,0 +1,18 @@
+Tree Viewer Extension to view trees from other sources :
+
+    We need to add a parameter to the plugin instantiation in the view as well as remove parameters that rely on the backend database :
+
+        {{=plugin_treeViewer(
+            dict( source = dict( source = 'uploads/filename.text', type = 'newick' ),
+                  menuInfo = dict( options = [ dict( name = 'branchLength' ), dict( name = 'search' ), dict( name = 'treeSize' ) ] ),
+                  eventInfo = dict( nodeRightClick = dict( handler = 'showNodeContextMenu',
+                                                           options = [ dict( handler = 'handleCollapseCladeOptionClick',
+                                                                             test = 'doesNodeHaveChildren',
+                                                                             text = 'Collapse Clade' ) ],
+                  viewInfo = dict( type = 'phylogram', mode = 'navigate' ) ) ) }}   
+
+    You'll need to handle this new 'source' parameter in modules/plugin_treeViewer.py, line 12 the function 'handleViewerInstantiation'.  Because the application is tied closely to the session and to the database,  I think the easiest way to integrate this extension into the current application is to create database tables similar to that of stree and snode, and store the tree into these tables, permanently or not.  In this function, set the treeId to the filename and the treeType to a new type: 'file'.  You also want to set the 'session.TreeViewer.strNodeTable' variable to whatever you call your new node database table.  This ensures that the build module knows where to get nodes.  For source trees, this is set in controllers/stree.py, in def svgView.  For grafted trees, its set after a source tree backbone is edited and a grafted tree is created.  I'm not exactly sure where you'd set it in this instance, maybe in the 'handleViewerInstantiation' function after checking for a 'source' parameter.
+
+    The only other thing you need to do is create a new function in modules/build.py that does the same thing as sourceClade and graftedClade -- retrieves a tree from the databse and converts it to an ivy tree.
+    
+    

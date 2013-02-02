@@ -26,6 +26,8 @@ def getCladeSqlString( nodeTable, rootRec, collapsedNodeStorage, extra = Storage
 
         joinString = 'FROM snode LEFT JOIN ottol_name on snode.ottol_name = ottol_name.id '
 
+        pruneClause = ''
+
     elif( nodeTable == 'gnode' ):
 
         joinString = ''.join( [ 'FROM gnode LEFT JOIN snode on gnode.snode = snode.id ',
@@ -33,9 +35,9 @@ def getCladeSqlString( nodeTable, rootRec, collapsedNodeStorage, extra = Storage
 
         if( 'pruned' in extra and extra['pruned'] == True ):
 
-            pruneClade = ''.join( [ 'gnode.pruned = "T" AND prune_detail.gtree_edit = ', str( extra['editId'] ) ] )
+            pruneClause = ''.join( [ 'gnode.pruned = "T" AND prune_detail.gtree_edit = ', str( extra['editId'] ), ' AND ' ] )
 
-            joinString = ''.join( [ joinString, 'LEFT JOIN prune_detail on gnode.id = prune_detail.pruned_gnode ' ] )
+            joinString = ''.join( [ joinString, 'JOIN prune_detail on gnode.id = prune_detail.pruned_gnode ' ] )
 
         else:
             pruneClause = 'gnode.pruned = "F" AND '
@@ -49,7 +51,7 @@ def getCladeSqlString( nodeTable, rootRec, collapsedNodeStorage, extra = Storage
                    'ottol_name.name ',
         joinString,
         'WHERE ', nodeTable, '.tree = ', str( rootRec.tree ), ' AND ',
-        pruneClause,
+        pruneClause, 
         nodeTable, '.next >= ', str( rootRec.next ), ' AND ',
         nodeTable, '.back <= ', str( rootRec.back ) ]
 
@@ -64,6 +66,8 @@ def getCladeSqlString( nodeTable, rootRec, collapsedNodeStorage, extra = Storage
                            'AND ( ', nodeTable, '.back < ', str( collapsedNodeData['back'] ), ' ) )' ] ) )
 
     stringList.append( ''.join( [ ' ORDER BY ', nodeTable, '.next;' ] ) )
+
+    print ''.join( stringList )
 
     return ''.join( stringList ) 
 
@@ -96,6 +100,8 @@ def graftedClade( db, rootNodeId, collapsedNodeStorage, extra = Storage() ):
     rootRec = getRootRecord( db, 'gnode', rootNodeId )
 
     resultList = db.executesql( getCladeSqlString( 'gnode', rootRec, collapsedNodeStorage, extra ) )
+
+    print resultList
 
     return getIvyTreeFromNodeList( resultList )
 

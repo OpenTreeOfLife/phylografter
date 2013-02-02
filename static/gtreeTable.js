@@ -1,3 +1,6 @@
+//The BioSync.GtreeTable is a javascript currently ( 2013/01/28 ) used in /gtree/index.  It was created as a replacement to the DataTables as I was unable to find working documentation that solved a default sorting problem.  For those familiar with DataTables, it may be best to replace this with DataTables.
+
+//This is a constructor.
 BioSync.GtreeTable = function( p ) {
 
     this.makeEl = BioSync.Common.makeEl;
@@ -9,6 +12,7 @@ BioSync.GtreeTable = function( p ) {
     return this;
 }
 
+//This is the class definition.
 BioSync.GtreeTable.prototype = {
 
     config: {
@@ -16,6 +20,7 @@ BioSync.GtreeTable.prototype = {
         headerBackgroundColor: '#CCC'
     },
 
+    //Called after object creation
     initialize: function() {
 
         this.makeHeader();
@@ -28,6 +33,8 @@ BioSync.GtreeTable.prototype = {
         
         this.makeFooter();
 
+        this.dateSort = 'desc';
+
         this.getTheInfo();
         
         this.disablePrevButton();
@@ -37,6 +44,7 @@ BioSync.GtreeTable.prototype = {
         this.nextButtonDisabled = false;
     },
 
+    //Makes a request to the server to get grafted tree information
     getTheInfo: function() {
 
         $.ajax( { url: BioSync.Common.makeUrl( { controller: 'gtree', argList: [ 'getGtrees' ] } ),
@@ -54,6 +62,7 @@ BioSync.GtreeTable.prototype = {
                   success: $.proxy( this.handleTheInfo, this ) } );
     },
 
+    //Handles the 'getGtrees' response.  Populates table with gtree information
     handleTheInfo: function( response ) {
 
         var responseObj = eval( '(' + response + ')' );
@@ -167,6 +176,7 @@ BioSync.GtreeTable.prototype = {
         this.context.text( contextText );
     },
 
+    //Creates the DOM elements for the footer and appends them to the DOM
     makeFooter: function() {
 
         this.footer =
@@ -192,6 +202,7 @@ BioSync.GtreeTable.prototype = {
 
     },
 
+    //Creates the DOM elements for the search footer ( a text box for columns that can be searched ) and appends them to the DOM
     makeSearchFooter: function() {
 
         this.searchFooter =
@@ -243,6 +254,7 @@ BioSync.GtreeTable.prototype = {
         $( this.creatorSearchEl.children()[0] ).css( { 'width': ( this.searchFooter.myWidth / 4 ) - 20 } );
     },
 
+    //When someone types into the search, this function makes sure we wait 500 milliseconds of zero keypresses before making a request to the server.
     handleSearch: function() {
 
         if( this.userInputTimeout ) { clearTimeout( this.userInputTimeout ); }
@@ -251,6 +263,7 @@ BioSync.GtreeTable.prototype = {
         
     },
 
+    //Makes the table DOM element ( a div HTML element )
     makeTable: function() {
 
         this.table = this.makeEl( 'div' );
@@ -258,20 +271,18 @@ BioSync.GtreeTable.prototype = {
         this.container.append( this.table );
     },
 
+    //Called when a user clicks on a sortable row header.
     sortColumn: function( p ) {
-    
-        console.log( this[ p.data.sort ] );
 
         this[ p.data.sort ] =
             ( ( this[ p.data.sort ] == undefined ) || ( this[ p.data.sort ] == 'descending' ) )
                 ? 'ascending'
                 : 'descending';
 
-        console.log( this[ p.data.sort ] );
-
         this.getTheInfo();
     },
 
+    //Called during initialize, creates the column headers.
     makeSubHeader: function() {
 
         this.subHeader = this.makeEl( 'div' ).css( { 'background-color': '#E6E6E6' } ).width( '100%' );
@@ -344,6 +355,7 @@ BioSync.GtreeTable.prototype = {
         this.dateSort = undefined;
     },
 
+    //Called when the user changes the number of entries on a page.
     changeRowsOnPage: function( e ) {
 
         this.rowsOnPage = this.rowsOnPageSelector.val();
@@ -353,6 +365,8 @@ BioSync.GtreeTable.prototype = {
         this.getTheInfo();
     },
 
+   
+    //Called on initialize, creates the DOM elements for the header
     makeHeader: function() {
 
         this.header =
@@ -402,6 +416,7 @@ BioSync.GtreeTable.prototype = {
                 this.makeEl( 'div' ).css( { 'clear': 'both' } ) ) );
     },
 
+    //Creates the pagination elements used for the header, footer
     makePagination: function() {
 
         return this.makeEl( 'div' ).css( { 'padding': '0px 10px', 'float': 'right' } ).append(
@@ -414,6 +429,7 @@ BioSync.GtreeTable.prototype = {
                     this.makeEl( 'div' ).css( { 'clear': 'both' } ) );
     },
 
+    //Called on previous page click
     prevPageClick: function() {
 
         this.page -= 1;
@@ -430,7 +446,8 @@ BioSync.GtreeTable.prototype = {
 
         this.getTheInfo();
     },
-    
+   
+    //Called on next page click
     nextPageClick: function() {
 
         this.page += 1;
@@ -448,6 +465,7 @@ BioSync.GtreeTable.prototype = {
         this.getTheInfo();
     },
 
+    //Disables the previous page button
     disablePrevButton: function() {
 
         $( '.prevPageLink' )
@@ -465,6 +483,7 @@ BioSync.GtreeTable.prototype = {
         this.prevButtonDisabled = true;
     },
 
+    //Disables the next page button
     disableNextButton: function() {
 
         $( '.nextPageLink' )
@@ -482,6 +501,7 @@ BioSync.GtreeTable.prototype = {
         this.nextButtonDisabled = true;
     },
 
+    //you get it
     enablePrevButton: function() {
 
         $( '.prevPageLink' )
@@ -492,6 +512,7 @@ BioSync.GtreeTable.prototype = {
         this.prevButtonDisabled = false;
     },
 
+    //you get it
     enableNextButton: function() {
 
         $( '.nextPageLink' )

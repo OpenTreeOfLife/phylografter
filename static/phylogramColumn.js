@@ -158,6 +158,8 @@ BioSync.TreeViewer.RenderUtil.Column.prototype = {
 
     handleNodeSelectorClick: function( p ) {
         
+        this.recentlyClickedNode = this.closestNodeToMouse;
+
         var viewerEventObj = this.renderObj.viewer.events;
 
         if( ( p.which == 1 ) && ( viewerEventObj.nodeClick ) ) {

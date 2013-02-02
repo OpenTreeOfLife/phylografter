@@ -36,6 +36,9 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.getColumnObj = funct
     return new BioSync.TreeGrafter.RenderUtil.Column( this ).initialize( { index: this.columns.length } );
 }
 
+
+//below is old
+
 BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showCollapseDetail = function( e ) {
 
     if( this.viewer.movingClipboardItem ) { return; }
@@ -709,9 +712,9 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
 
     setTimeout( function() {
 
-        var modalBoxForm = $('#modalBoxForm');
+        var modalBoxContent = $('#modalBoxContent');
 
-        var heightDifference = modalBoxForm.outerHeight( true ) - viewer.windowHeight;
+        var heightDifference = modalBoxContent.outerHeight( true ) - viewer.windowHeight;
 
         if( heightDifference > 0 ) {
 
@@ -734,8 +737,8 @@ BioSync.TreeGrafter.RenderUtil.phylogram.navigate.prototype.showModalClipboardFo
                     clipboardItemsInfo[ clipboardId ].studyDiv.width( clipboardItemsInfo[ clipboardId ].studyDiv.width() - BioSync.Common.scrollbarWidth );
                 }
            }
-
-           modalBoxForm.css( { top: ( ( $(document).height() - ( modalBoxForm.outerHeight( true ) ) ) / 2 ) } );
+        
+           modalBoxContent.css( { top: ( ( $(document).height() - ( modalBoxContent.outerHeight( true ) ) ) / 2 ) } );
 
         } }, 2000 );
 }

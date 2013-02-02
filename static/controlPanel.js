@@ -429,6 +429,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
         this.revertEditContainer.css( {
             'left': ( this.controlPanel.viewer.renderObj.viewPanel.myWidth - this.revertEditContainer.outerWidth( true ) ) / 2,
             'top': 10 } );
+
+        this.controlPanel.viewer.renderObj.viewPanel.animate( { scrollTop: 0 }, 'slow' );
     },
 
     // called when our user clicks the 'Cancel' link regarding a reversion of a tree edit.  This function cancels the tree reversion process and gets the current 'head' of the grafted tree
@@ -635,7 +637,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
                 }, 2000 );
     },
 
-    
+   
+    // this function is called when someone begins typing while the user permissions search is focused.  KeyCodes 8 and 46 refer to the backspace and delete keys respectively. The function ignores typing keys that are not 'word' characters as defined by javascript, as well as the backspace and delete keys.  If an acceptable key is pressed, the function waits 500 milliseconds before calling the function 'showOnlyMatchingUsers', which actually filters the two user lists.  
     handleUserSearchKeyUp: function( e ) {
 
         if( e.keyCode == 8 || e.keyCode == 46 || String.fromCharCode( e.keyCode ).match( /\w/ ) ) {
@@ -646,6 +649,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
         }
     },
 
+    //As described in the function above ( handleUserSearch ), this function filters the two user permissions lists based on the text in the search box.
     showOnlyMatchingUsers: function( e ) {
 
         var value = this.searchInput.val().toLowerCase();
@@ -674,6 +678,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
         }
     },
 
+    //This function refers to the UI involving the setting of permissions for a user for a particular grafted tree.  When the user clicks the '<' button, "moving" an individual from the 'Able to Edit', to the 'Read Only' box, this function is called.  If there is a user selected in the Able to Edit box, an ajax request is made to remove the edit permissions for the particular user. 
     removeEditPermission: function( e ) {
 
        if( ! this.selectedUser ) { return; } 
@@ -687,6 +692,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
        }
     },
 
+    //Similar to the 'giveEditPermission' function, giveEditPermission makes an ajax request to give a user edit privileges to the tree.
     giveEditPermission: function( e ) {
 
        if( ! this.selectedUser ) { return; } 
@@ -700,6 +706,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
        }
     },
 
+    //Called when the 'removeEditPermission' ajax request was successful.  This function manipulates the DOM to show this visually.
     removeEditPermissionSuccess: function() {
 
         var optionObj = this;
@@ -709,6 +716,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
         );
     },
 
+    //Called when the 'giveEditPermission' ajax request was successful.  This function manipulates the DOM to show this visually.
     giveEditPermissionSuccess: function() {
 
         var optionObj = this;
@@ -718,6 +726,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
         );
     },
 
+    //This function is called when the mouse leaves the sub menu with the 'View Edit and Share With Colleagues' options.  If it is also outside of the top level menu item 'Graft Options', the sub menu is hidden.
     handleMouseOutOfSelectionContainer: function( e ) {
 
         if( ( ! BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: this.container } ) ) ) {
@@ -726,6 +735,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
         }
     },
 
+    //This function is called when the mouse hovers over the 'Graft Options' menu item.  It sets the background to light grey, shows the submenu, sets the width of the control panel to include the submenu, and checks to see if the heigh of the control panel needs to change.
     handleMouseOverContainer: function( e ) {
 
         this.label.css( { 'background-color': 'lightGrey' } );
@@ -740,6 +750,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
         this.controlPanel.checkOptionContainerHeight( { subOptionContainer: this.selectionContainer } );
     },
 
+    //This function is called when the mouse leaves the 'Graft Options' menu container, if the mouse is also not hovering the sub menu, then the option is hidden.
     handleMouseOutOfContainer: function( e ) {
         
         if( ( ! BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: this.selectionContainer } ) ) ) {
@@ -748,6 +759,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
         }
     },
 
+    //hides the 'Graft Options' sub menu
     hideOption: function( e ) {
 
         this.label.css( { 'background-color': 'white' } );
@@ -758,8 +770,11 @@ BioSync.TreeViewer.ControlPanel.prototype.options.graftOption.prototype = {
     },
 }
 
+
+//Here is the object definition of the 'tree size' menu item.
 BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
 
+    // these are configuration settings, notice the 'option' attribute, this is where you define the submenu options.  name refers to the sub menu item text, viewerConfigName corresponds to the attribute used in the session.config ( controlPanel.viewer.config on the client ), min and max are the minimum and maximum values for the corresponding slider control.
     config: {
 
         optionPadding: '5px',
@@ -802,6 +817,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
          }
     },
 
+    //This is called right after the menu item object is created, it creates all of the DOM elements associated with the tree size option
     initialize: function() {
 
         var rv =
@@ -884,6 +900,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
         return this;
     },
 
+    //This function is called when a user tries to enter a new value into a configuration text box.  The function ignores anything that is not a number or a backspace or a delete.
     filterAlphaKeyPress: function( e ) {
 
         var key = e.keyCode || e.which;
@@ -902,6 +919,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
         }
     },
 
+    //This function is called when a user is entering data into a configuration text box.  Rather than call 'updateValue' after every key up event, it waits a number of milleseconds -- 'valueChangeTimeout' -- for no key up event to take place before calling 'updateValue'.
     handleValueChange: function( e ) {
 
         if( e.data.userInputTimeout ) { clearTimeout( e.data.userInputTimeout ); }
@@ -909,6 +927,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
         e.data.userInputTimeout = setTimeout( $.proxy( this.updateValue, e.data ), this.config.valueChangeTimeout );
     },
 
+    //This updates the slider value when a user updates the configuration via the text box.
     updateValue: function() {
 
         if( this.valueBox.val() < this.slider.slider( 'option', 'min' ) ) {
@@ -921,7 +940,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
     
     handleMouseOverOptionList: function( e ) {
     },
-    
+   
+    //When the mouse leaves the sub menu, this function is called.  If the mouse is also not over the menu item, it removes the sub menu from view.
     handleMouseOutOfOptionList: function( e ) {
 
         if( ( ! BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: this.container } ) ) ) {
@@ -930,6 +950,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
         }
     },
 
+    //This is called when the user updates the max tips option from outside the control panel.  Right now, this is only possible after a vertical expand on a collapsed node.  It uninds the slider event, changes the slider, sets the value box, and resets the slider event.
     updateMaxTips: function() {
 
         var optionObj = this.config.options.maxTips;
@@ -944,6 +965,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
             'slidechange', { name: 'maxTips' }, ( optionObj.handleOnChange ) ? $.proxy( this[ optionObj.handleOnChange ], this ) : $.proxy( this.updateConfig, this ) );
     },
 
+    //If a tree size option config does not have a specific 'handleOnChange' attribute that corresponds to an event, this generic function is called.  It calls the viewer's update config event which updates the configuration on the client and on the server.  If the redraw parameter is set to true, then the tree is refreshed to show the updated options.
     updateConfig: function( e, ui ) {
 
         if( this.controlPanel.viewer.config[ e.data.name ].value != ui.value ) {
@@ -952,6 +974,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
         }
     },
 
+    //Called when the max tips slider or text value is changed.
     handleMaxTipsOnChange: function( e, ui ) {
 
         var optionObj = this.config.options.maxTips;
@@ -967,7 +990,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
 
         this.updateConfig( e, ui );
     },
-    
+   
+    //Called when the font size slider or text value is changed.
     updateFontSize: function( e, ui ) {
          
         BioSync.Common.style.fontSize = ui.value;
@@ -976,8 +1000,11 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
         this.updateConfig( e, ui );        
     },
 
+    //Called when a slider is slid.
     handleSlide: function( e, ui ) { this.val( ui.value ); },
 
+    
+    //This function is called when the mouse leaves the 'tree size' menu item.  If the mouse is not hovering the sub menu, then the option is hidden.
     handleMouseOutOfContainer: function( e ) {
 
         if( ( ! BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: this.sizingOptionsContainer } ) ) ) {
@@ -986,6 +1013,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
         }
     },
 
+    //Called when the mouse is over the menu item.
     handleMouseOverContainer: function( e ) {
 
         this.label.css( { 'background-color': 'lightGrey' } );
@@ -1012,6 +1040,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
         }
     },
 
+    //Hides the tree size sub menu
     hideOption: function() {
 
         this.label.css( { 'background-color': 'white' } );
@@ -1023,6 +1052,9 @@ BioSync.TreeViewer.ControlPanel.prototype.options.treeSize.prototype = {
 
 }
 
+
+
+//Here is the object definition of the 'branch length' menu item.
 BioSync.TreeViewer.ControlPanel.prototype.options.branchLength.prototype = {
 
     config: {
@@ -1030,6 +1062,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.branchLength.prototype = {
         padding: 5    
     },
 
+
+    //Called after the object is created, note that it only shows up when all of the branches in a tree have a branch length.
     initialize: function() {
 
         if( this.controlPanel.viewer.allNodesHaveLength ) {
@@ -1084,6 +1118,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.branchLength.prototype = {
         return this;
     },
 
+    //Called when the mouse leaves the sub menu, hides the option when the mouse is not hovering the menu item.
     handleMouseOutOfSelectionContainer: function( e ) {
 
         if( ( ! BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: this.container } ) ) ) {
@@ -1092,6 +1127,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.branchLength.prototype = {
         }
     },
 
+    //Called when the mouse enters the menu item, shows the sub menu
     handleMouseOverContainer: function( e ) {
 
         this.label.css( { 'background-color': 'lightGrey' } );
@@ -1104,6 +1140,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.branchLength.prototype = {
             this.controlPanel.config.optionContainerLeftBuffer );
     },
 
+    //Called when the mouse leaves the menu item, hides the options when the mouse is not hovering the sub menu.
     handleMouseOutOfContainer: function( e ) {
         
         if( ( ! BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: this.selectionContainer } ) ) ) {
@@ -1112,6 +1149,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.branchLength.prototype = {
         }
     },
 
+    //Hides the sub menu.
     hideOption: function( e ) {
 
         this.label.css( { 'background-color': 'white' } );
@@ -1121,6 +1159,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.branchLength.prototype = {
         this.controlPanel.optionContainer.css( { 'width': '' } );
     },
 
+    //Called when the user clicks the 'smooth' branch length option, calls the render object's ( static/phylogram.js ) updateBranchLength method.
     handleSmoothClick: function() {
 
         if( this.branchLengthStyle == 'smooth' ) { return; }
@@ -1133,6 +1172,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.branchLength.prototype = {
         this.controlPanel.viewer.renderObj.updateBranchLength( this.branchLengthStyle );
     },
 
+    //Called when the user clicks the 'scale' branch length option
     handleScaledClick: function() {
 
         if( this.branchLengthStyle == 'scale' ) { return; }
@@ -1147,6 +1187,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.branchLength.prototype = {
 }
 
 
+//Here is the object definition of the 'search' menu item.
 BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
 
     config: {
@@ -1162,6 +1203,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         hoverBridgeHeight: 40
     },
 
+    //Called after the object is created.  This function creates the DOM elements for the search menu item.
     initialize: function() {
 
         var rv =
@@ -1184,6 +1226,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
                 .mouseleave( $.proxy( this.handleMouseOutOfSearch, this ) )
                 .appendTo( this.container );
 
+        //This hover bridge is used as an invisible DOM element that let's us know that the mouse is still near our menu item even if its not directly hovering over the menu.  If the mouse is still near our search menu item, we do not want to hide it.
         this.hoverBridge =
             this.make('div')
                 .css( { 'position': 'absolute',
@@ -1228,6 +1271,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         return this;
     },
 
+    //Called when the mouse is over the menu item, shows the search input box and sizes the control panel.
     handleMouseOverContainer: function() {
 
        this.searchLabel.css( { 'background-color': 'lightGrey' } );
@@ -1240,6 +1284,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         this.controlPanel.config.optionContainerLeftBuffer );
     },
 
+    //Called when the mouse is no longer hovering over the menu item, hides the menu item
     handleMouseOutOfContainer: function() {
 
        this.searchLabel.css( { 'background-color': 'white' } );
@@ -1249,6 +1294,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
        this.controlPanel.optionContainer.css( { 'width': '' } );
     },
 
+    //Called when the mouse of not hovering the search sub menu, if it was also not hovering the 'search' part, the menu was hidden. 
     handleMouseOutOfSearch: function( e ) {
 
         if( ( ! BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: this.container } ) ) ) {
@@ -1259,6 +1305,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         }
     },
 
+    //Called when a user uses the arrow keys to traverse the search options. 
     handleArrowAndMouseSearch: function() {
 
         //if there is a mouse cursor visible
@@ -1274,11 +1321,14 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         }
     },
 
+    
+    //This function binds mouse hover on the search results.  This menu item has two modes for searching, using the mouse, or the arrows.
     setSearchHover: function() {
         
         $('.searchResult').unbind( 'mouseenter mouseleave' ).hover( $.proxy( this.searchResultHoverIn, this ), $.proxy( this.searchResultHoverOut, this ) );
     },
 
+    //Called when the mouse hovers over a search result.  Styles the search result, sets it to a variable.
     searchResultHoverIn: function( e ) {
 
         this.unStyleCurrentlySelected();
@@ -1286,25 +1336,31 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         this.styleCurrentlySelected();
     },
 
+    //Called when the mouse leaves a search result.
     searchResultHoverOut: function( e ) {
 
         this.unStyleCurrentlySelected();
     },
 
+   
+    //This is called when someone uses the arrow keys to traverse through the search results.  It automatically scrolls the result container, so that you can see the newly selected search result.
     handleSearchAutoScroll: function( p ) {
 
-        //scrolling makes the mouse move
-        $(document).unbind('mousemove');
+        //scrolling makes the mouse move, it may be a bad idea to unbind this document wide...
+        //$(document).unbind('mousemove');
+        $(document).unbind( 'mousemove', $.proxy( this.handleMouseMoveInSearch, this ) );
 
         //scroll and on success function
         this.matchingLabelList.animate( { scrollTop: '+=' + p.scroll }, 250, 'linear', $.proxy( this.setSearchMouseMove, this ) );
     },
 
+    //This is called to handle mouse movement while in arrow key search mode.
     setSearchMouseMove: function() {
 
         $( document ).bind( 'mousemove', { }, $.proxy( this.handleMouseMoveInSearch, this ) );
     },
 
+    //Called when the mouse moves during arrow search mode, makes the mouse visible, and changes modes.
     handleMouseMoveInSearch: function() {
 
         this.matchingLabelList.removeClass('noCursor');
@@ -1312,12 +1368,14 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         this.setSearchHover();
     },
 
+    //Styles the currently selected search result
     styleCurrentlySelected: function() {
 
         this.currentlySelected.css( {
             'background-color': '#EAEAEA' } );
     },
 
+    //Removes styling from the currently selected search result.
     unStyleCurrentlySelected: function( p ) {
 
         if( this.currentlySelected ) {
@@ -1326,16 +1384,17 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         }
     },
 
+    //This function is called when the javascript 'keyup' event occurs in the search box
     handleKeyUp: function( e ) {
 
         var that = this;
 
-        //enter
+        //enter button pressed
         if( e.keyCode == 13 ) {
 
             this.currentlySelected.click();
 
-        //down arrow
+        //down arrow pressed
         } else if( e.keyCode == 40 ) {
 
             this.handleArrowAndMouseSearch();
@@ -1362,7 +1421,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
                 this.styleCurrentlySelected();
             }
             
-        //up arrow
+        //up arrow pressed
         } else if( e.keyCode == 38 ) {
             
             this.handleArrowAndMouseSearch();
@@ -1388,7 +1447,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
                 }
             }
            
-        //letter 
+        //letter is pressed
         } else if( e.keyCode == 8 || e.keyCode == 46 || String.fromCharCode( e.keyCode ).match( /\w/ ) ) {
 
             if( this.userInputTimeout ) { clearTimeout( this.userInputTimeout ); }
@@ -1396,7 +1455,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
             this.userInputTimeout = setTimeout( $.proxy( this.getMatchingLabels, this ), 500 );
         }
     },
-   
+  
+    //Called when valid input occurs in the search box and 500 milliseconds have occurred without more typing.  Calls 'makeSearchRequest' if the box isn't empty, which makes the ajax call to get the results.
     getMatchingLabels: function() {
 
         if( this.searchInput.val() != '' ) {
@@ -1417,12 +1477,14 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         }
     },
 
+    //Makes an ajax request to retrieve matching labels/taxa
     makeSearchRequest: function() {
 
         $.ajax( { url: BioSync.Common.makeUrl( { controller: 'plugin_treeViewer', argList: [ 'getMatchingDescendantLabels' ] } ),
                   type: "GET", data: { value: this.searchInput.val(), next: 1, page: this.labelPage }, success: $.proxy( this.handleMatchingLabels, this ) } );
     },
 
+    //Called when a user clicks on a search result.  It calls the render object's navigateToNode function.
     labelSelected: function( e ) {
 
         var el = $( $( e.target ).closest( "[nodeId]" ) );
@@ -1431,6 +1493,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         this.controlPanel.viewer.controlPanel.hideControlPanel();
     },
 
+    //This function handles a search request.
     handleMatchingLabels: function( response ) {
 
         if( this.searchInput.is(':hidden') ) { return; }
@@ -1536,6 +1599,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         this.positionPageButtons();
     },
 
+    //positions the forward and back page buttons
     positionPageButtons: function() {
         
         if( this.nextPageButton ) {
@@ -1557,6 +1621,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         }
     },
 
+    //After the search results are displayed, this function sets DOM element sizes so that everything looks ok.
     sizeElementsAfterSearch: function() {
         
         if( this.matchingLabelList.outerHeight( true ) > parseInt( this.config.labelListMaxHeight ) ) {
@@ -1571,6 +1636,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         this.setOptionContainerWidth(); 
     },
 
+    //This function makes sure that the control panel's height contains the search results.
     setOptionContainerHeight: function() {
     
         var optionContainerOffset = this.controlPanel.optionContainer.offset();
@@ -1587,6 +1653,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         }
     },
 
+    //This function makes sure that the control panel's width contains the search results.
     setOptionContainerWidth: function() {
 
         this.controlPanel.optionContainer.width(
@@ -1594,7 +1661,8 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
             this.config.pixelsBetweenLabelAndSearch +
             this.searchContainer.outerWidth( true ) );
     },
-        
+       
+    //This function aligns the search box with the result list after results come back from the server
     alignSearchWithLabelList: function() {
 
         var offset = ( this.config.searchInputPadding * 2 ) +
@@ -1606,6 +1674,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         this.hoverBridge.width( width );
     },
 
+    //This function aligns the search box with the control panel container.
     alignSearchWithContainer: function() {
 
         var width = this.searchContainer.outerWidth( true ) - this.config.searchInputMarginRight;
@@ -1613,6 +1682,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         this.hoverBridge.width( width );
     },
 
+    //This function resets the menu item to a fresh state.
     resetElements: function() {
 
         this.currentlySelected = undefined;
@@ -1623,6 +1693,7 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         this.nextPageButton = this.prevPageButton = undefined;
     },
 
+    //This function is called when the next page arrow is clicked.
     nextPageClick: function() {
 
         this.labelPage++;
@@ -1630,10 +1701,11 @@ BioSync.TreeViewer.ControlPanel.prototype.options.search.prototype = {
         this.makeSearchRequest();
     },
 
+    //This function is called when the previous page arrow is clicked.
     prevPageClick: function() {
 
         this.labelPage--;
 
         this.makeSearchRequest();
-    },
+    }
 }
