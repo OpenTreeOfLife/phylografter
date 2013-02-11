@@ -685,4 +685,7 @@ def export_NexSON():
     '''
     treeid = request.args(0)
     ## error checking here
-    return nexson.nexmlTree(0,treeid,db)
+    if (db.stree(treeid) is None):
+        raise HTTP(404)
+    else:
+        return nexson.nexmlTree(treeid,db)

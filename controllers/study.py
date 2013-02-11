@@ -7,6 +7,7 @@ from StringIO import StringIO
 import requests
 import json
 import time
+import nexson
 
 from externalproc import get_external_proc_dir_for_upload, invoc_status, \
     ExternalProcStatus, get_logger, get_conf, do_ext_proc_launch
@@ -892,10 +893,9 @@ def ref_from_doi():
         print resp.text
 
 def export_NexSON():
-    t = db.study
-    treesDict = dict()
-    subDict=dict()
-    subDict["trees"]=treesDict
-    nexmlDict = dict()
-    nexmlDict["nexml"]=subDict 
-    return nexmlDict
+    'Exports the otus and trees in the study specified by the argument as JSON NeXML'
+    studyid = request.args(0)
+    if (db.stree(studyid) is None):
+        raise HTTP(404)
+    else:
+        return nexson.nexmlStudy(studyid,db)

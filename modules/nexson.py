@@ -4,22 +4,29 @@ from gluon import *
 from gluon.storage import Storage
 
 
-def nexmlElt(study,db):
+def nexmlStudy(study,db):
     '''Exports the set of trees associated with a study as JSON Nexml
        study - the study to export
-       db - database connection
-    '''
+       db - database connection'''
     otus = otusElt(study,db)
-    trees = treesElt(tree,db)
-    header = nexmlHeader(tree,db)
+    trees = treesElt(study,db)
+    header = nexmlHeader()
+    body = dict()
+    body.update(otus)
+    body.update(trees)
+    body.update(header)
+    body["id"] = study
     result = dict()
     result["nexml"] = body
     return result
 
-def nexmlTree(study,tree,db):
+def nexmlTree(tree,db):
+    '''Exports one tree from a study (still a complete JSON NeXML with
+    headers, otus, and trees blocks'''
+    study = singleTreeStudyId(tree,db)
     otus = singleTreeOtusElt(tree,db)
     trees = singletonTreesElt(tree,db)
-    header = singleTreeHeader(tree,db)
+    header = singleTreeHeader()
     body = dict()
     body.update(otus)
     body.update(trees)
@@ -30,17 +37,20 @@ def nexmlTree(study,tree,db):
     return result
 
 def nexmlHeader():
-    result = dict()
-    result["@xmlns"] = xmlNameSpace()
-    return result
-    
-def singleTreeHeader(tree,db):
+    'Header for nexml - includes namespaces and version tag (see nexml.org)'
     result = dict()
     result["@xmlns"] = xmlNameSpace()
     result["@version"] = "0.9"
+    result["@nexmljson"] = "http://www.somewhere.org"
     return result
-
+    
+def singleTreeHeader():
+    'Header for singleton tree export - probably not different from header for study export'
+    return nexmlHeader()
+    
 def xmlNameSpace():
+    '''namespace definitions for nexml; will be value of xmlns attribute in header (per badgerfish 
+    treatment of namespaces)'''
     result = dict()
     result["$"] = "http://www.nexml.org/2009"
     result["nex"] = "http://www.nexml.org/2009"
@@ -51,11 +61,24 @@ def xmlNameSpace():
 
 
 def otusElt(study,db):
+    'Generates an otus block'
+    #will studies have more than one set of otus?
     body = list([])
     ##get trees
-    ##for each tree get the outs
+    trees = getTreeIDsForStudy(study,db)
+    ##for each tree get the otus
     result = dict()
     result["otus"] = body
+    return result
+    
+def getTreeIDsForStudy(studyid,db):
+    'returns a list of the trees associated with the specified study'
+    treeStudy = db.stree.study
+    s=db(treeStudy==studyid)
+    rows = s.select()
+    result = list([])
+    for row in rows:
+        result.append(row.id)
     return result
     
 def singleTreeOtusElt(tree,db):
@@ -77,8 +100,13 @@ def taxonSetElt():
     result["taxonSet"] = body
     return result
     
-def treesElt():
-    body = dict()
+def treesElt(study,db):
+    idList = getTreeIDsForStudy(study,db)
+    if (len(idList) == 1):
+        return singletonTreesElt(idList[0],db)
+    body = list([])
+    for tree_id in idList:
+        body.append(treeElt(tree_id,db))
     result = dict()
     result["trees"] = body
     return result
@@ -101,13 +129,25 @@ def treeElt(tree,db):
     return result
     
 def treeNodes(tree,db):
-    nodeList = list([])
-    nodeList.append(nodeElt())
+    nodeList = getSNodeIdsForTree(tree,db)
+    body = list([])
+    for node_id in nodeList:
+        body.append(nodeElt(node_id,db))    
     return nodeList
     
-def nodeElt():
+def getSNodeIdsForTree(treeid,db):
+    'returns a list of the nodes associated with the specified study'
+    nodeSTree = db.snode.tree
+    s=db(nodeSTree==treeid)
+    rows = s.select()
+    result = list([])
+    for row in rows:
+        result.append(row.id)
+    return result
+    
+def nodeElt(nodeid,db):
     result = dict()
-    result["@id"] = "Insert_NodeID_here"
+    result["@id"] = nodeid
     return result
     
 def edgeElt():
