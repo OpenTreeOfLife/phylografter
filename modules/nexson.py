@@ -9,18 +9,19 @@ from gluon import *
 from gluon.storage import Storage
 
 
-def nexmlStudy(study,db):
+def nexmlStudy(studyId,db):
     '''Exports the set of trees associated with a study as JSON Nexml
        study - the study to export
        db - database connection'''
-    otus = otusEltForStudy(study,db)
-    trees = treesElt(study,db)
+    metaElts = metaElementsForNexml(studyId,db)
+    otus = otusEltForStudy(studyId,db)
+    trees = treesElt(studyId,db)
     header = nexmlHeader()
     body = dict()
     body.update(otus)
     body.update(trees)
     body.update(header)
-    body["id"] = study
+    body["id"] = studyId
     result = dict()
     result["nexml"] = body
     return result
@@ -29,6 +30,7 @@ def nexmlTree(tree,db):
     '''Exports one tree from a study (still a complete JSON NeXML with
     headers, otus, and trees blocks)'''
     studyId = getSingleTreeStudyId(tree,db)
+    metaElts = metaEltsForNexml(studyId,db)
     otus = otusEltForTree(tree,studyId,db)
     trees = singletonTreesElt(tree,studyId,db)
     header = nexmlHeader()
@@ -47,6 +49,7 @@ def nexmlHeader():
     result["@xmlns"] = xmlNameSpace()
     result["@version"] = "0.9"
     result["@nexmljson"] = "http://www.somewhere.org"
+    result["@generator"] = "Phylografter nexml-json exporter"
     return result
         
 def xmlNameSpace():
@@ -60,14 +63,20 @@ def xmlNameSpace():
     result["xsd"] = "http://www.w3.org/2001/XMLSchema#"
     return result
 
+def metaEltsForNexml(studyid,db):
+    'generates nexml meta elements that are children of the root nexml element'
+    result = dict()
+    return result
 
-def otusEltForStudy(study,db):
+
+def otusEltForStudy(studyId,db):
     'Generates an otus block'
-    otuList = getOtuIDsForStudy(study,db)
+    otuList = getOtuIDsForStudy(studyId,db)
+    metaElts = metaEltsForOtus(studyId,otuList,db)
     otuElements = [otuElt(otu_id,db) for otu_id in otuList]
     otusElement = dict()
     otusElement["otu"] = otuElements
-    otusElement["@id"] = "otus" + str(study)
+    otusElement["@id"] = "otus" + str(studyId)
     result = dict()
     result["otus"] = otusElement
     return result
@@ -79,6 +88,10 @@ def getOtuIDsForStudy(studyid,db):
     result = [row.id for row in s.select()]
     return result
     
+def metaEltsForOtus(studyid,otuList,db):
+    'generates nexml meta elements that are children of an otus element'
+    result = dict()
+    return result
     
 def getTreeIDsForStudy(studyid,db):
     'returns a list of the trees associated with the specified study'
@@ -96,13 +109,14 @@ def otusEltForTree(tree,studyId,db):
         nodeOtu = getOtuForNode(node_id,db)
         if (nodeOtu):
             otuList.append(nodeOtu)
+    metaElts = metaEltsForOtus(studyId,otuList,db)
     otuElements = [otuElt(otu_id,db) for otu_id in otuList] 
     otusElement = dict()
     otusElement["otu"] = otuElements
     otusElement["@id"] = "otus" + str(studyId) + "." + str(tree)
     result = dict()
     result["otus"] = otusElement
-    return result2
+    return result
        
 def getOtuForNode(node_id,db):
     return db.snode(node_id).otu    
