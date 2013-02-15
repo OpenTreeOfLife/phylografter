@@ -5,15 +5,16 @@
 
 #There are two entry points to this module: nexmlStudy (generate nexml for all the trees and otus for a study) and nexmlTree
 #(complete nexml but just including a single tree - but currently all the otus for its containing study)
-from gluon import *
+
 from gluon.storage import Storage
+from gluon import *
 
 
 def nexmlStudy(studyId,db):
     '''Exports the set of trees associated with a study as JSON Nexml
        study - the study to export
        db - database connection'''
-    metaElts = metaElementsForNexml(studyId,db)
+    metaElts = metaEltsForNexml(studyId,db)
     otus = otusEltForStudy(studyId,db)
     trees = treesElt(studyId,db)
     header = nexmlHeader()
@@ -21,7 +22,8 @@ def nexmlStudy(studyId,db):
     body.update(otus)
     body.update(trees)
     body.update(header)
-    body["id"] = studyId
+    body.update(metaElts)
+    body["@id"] = studyId
     result = dict()
     result["nexml"] = body
     return result
@@ -65,9 +67,52 @@ def xmlNameSpace():
 
 def metaEltsForNexml(studyid,db):
     'generates nexml meta elements that are children of the root nexml element'
+    metaArray = []
+    yearMeta = pubYearMetaForStudy(studyid,db)
+    if (yearMeta):
+        metaArray.append(yearMeta)
+    doiMeta = doiMetaForStudy(studyid,db)
+    if (doiMeta):
+        metaArray.append(doiMeta)
     result = dict()
+    result["meta"] = metaArray
     return result
 
+
+def pubYearMetaForStudy(studyid,db):
+    'generates a date meta element'
+    mdate = db.study(studyid).year_published
+    if (mdate):
+        names = metaNSForDCTerm()
+        result = dict()
+        result["@xmlns"] = names
+        result["@xsi:type"] = "ns:LiteralMeta" 
+        result["@property"] = "ter:date"
+        result["$"] = mdate
+        return result
+    else:
+        return
+        
+def doiMetaForStudy(studyid,db):
+    'generates doi metadata element for a study'
+    doi = db.study(studyid).doi
+    if (doi):
+        names = metaNSForDCTerm()
+        result = dict()
+        result["@xmlns"] = names
+        result["@xsi:type"] = "ns:RssourceMeta"
+        result["@property"] = "ter:identifier"
+        result["@href"] = doi
+        return result
+    else:
+        return
+
+def metaNSForDCTerm():
+    names = dict()
+    names["$"] = "http://www.nexml.org/2009"
+    names["ns"] = "http://www.nexml.org/2009"
+    names["ter"] = "http://purl.org/dc/terms/"
+    return names
 
 def otusEltForStudy(studyId,db):
     'Generates an otus block'
@@ -124,6 +169,9 @@ def getOtuForNode(node_id,db):
 def otuElt(otu_id,db):
     result = dict()
     result["@id"] = "otu" + str(otu_id)
+    ottol_name_id = db.otu(otu_id).ottol_name
+    if (ottol_name_id):
+        result["@label"]= db.ottol_name(ottol_name_id).name
     return result
     
 def taxonSetElt():
@@ -215,8 +263,5 @@ def nodeElt(nodeid,db):
     otu_id = db.snode(nodeid).otu
     if (otu_id):
         result["@otu"] = 'otu' + str(otu_id)
-        ottol_name_id = db.otu(otu_id).ottol_name
-        if (ottol_name_id):
-            result["@label"]= db.ottol_name(ottol_name_id).name
     result["@id"] = 'node'+str(nodeid)
     return result
