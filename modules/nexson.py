@@ -74,6 +74,9 @@ def metaEltsForNexml(studyid,db):
     doiMeta = doiMetaForStudy(studyid,db)
     if (doiMeta):
         metaArray.append(doiMeta)
+    citeMeta = citationMetaForStudy(studyid,db)
+    if (citeMeta):
+        metaArray.append(citeMeta)
     result = dict()
     result["meta"] = metaArray
     return result
@@ -100,9 +103,23 @@ def doiMetaForStudy(studyid,db):
         names = metaNSForDCTerm()
         result = dict()
         result["@xmlns"] = names
-        result["@xsi:type"] = "ns:RssourceMeta"
+        result["@xsi:type"] = "ns:ResourceMeta"
         result["@property"] = "ter:identifier"
         result["@href"] = doi
+        return result
+    else:
+        return
+
+def citationMetaForStudy(studyid,db):
+    'generates doi metadata element for a study'
+    cite = db.study(studyid).citation
+    if (cite):
+        names = metaNSForDCTerm()
+        result = dict()
+        result["@xmlns"] = names
+        result["@xsi:type"] = "ns:LiteralMeta"
+        result["@property"] = "ter:bibliographicCitation"
+        result["@href"] = cite
         return result
     else:
         return
