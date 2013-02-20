@@ -6,6 +6,12 @@
 #There are two entry points to this module: nexmlStudy (generate nexml for all the trees and otus for a study) and nexmlTree
 #(complete nexml but just including a single tree - but currently all the otus for its containing study)
 
+#local naming convention: getXXX are DAL queries, generally returning an id or list of ids', everything else is generating
+#dicts or lists that correspond to BadgerFish (http://badgerfish.ning.com - original site?) mappings of Elements
+
+#Output has been tested using the translator on http://dropbox.ashlock.us/open311/json-xml/ and validating the resulting
+#xml with the validator at nexml.org
+
 from gluon.storage import Storage
 from gluon import *
 
@@ -184,12 +190,40 @@ def getOtuForNode(node_id,db):
     return db.snode(node_id).otu    
     
 def otuElt(otu_id,db):
+    ottol_name_id = db.otu(otu_id).ottol_name
+    metaElts = metaEltsForOtuElt(otu_id,ottol_name_id,db)
     result = dict()
     result["@id"] = "otu" + str(otu_id)
-    ottol_name_id = db.otu(otu_id).ottol_name
     if (ottol_name_id):
         result["@label"]= db.ottol_name(ottol_name_id).name
     return result
+    
+def metaEltsForOtuElt(otu_id, ottol_name,db):
+    return dict()    
+    
+    
+def taxonIdMetaForStudy(ottol_name_id,db):
+    'generates doi metadata element for a study'
+    cite = db.study(studyid).citation
+    if (cite):
+        names = metaNSForDCTerm()
+        result = dict()
+        result["@xmlns"] = names
+        result["@xsi:type"] = "ns:LiteralMeta"
+        result["@property"] = "ter:bibliographicCitation"
+        result["@href"] = cite
+        return result
+    else:
+        return
+
+def metaNSForDWCTerm():
+    'returns namespace definitions for Darwin Core (v.s Dublin Core, which is DC)'
+    names = dict()
+    names["$"] = "http://www.nexml.org/2009"
+    names["ns"] = "http://www.nexml.org/2009"
+    names["ter"] = "http://rw.tdwg.org/dwc/terms/"
+    return names
+    
     
 def taxonSetElt():
     body = dict()
@@ -198,6 +232,7 @@ def taxonSetElt():
     return result
     
 def treesElt(study,db):
+    'generate trees element'
     idList = getTreeIDsForStudy(study,db)
     if (len(idList) == 1):
         tree = idList[0]
@@ -217,7 +252,11 @@ def treesElt(study,db):
         result["trees"] = treesElement
     return result
     
+def metaEltsForTreesElt(study,db):
+    return dict()    
+
 def singletonTreesElt(tree,studyId,db):
+    'generate the singleton tree element for a tree request'
     treeList = [treeElt(tree,db)]
     body=dict()
     body["@otus"] = "otus" + str(studyId) + "." + str(tree)
@@ -272,8 +311,7 @@ def getSNodeIdsForTree(treeid,db):
     'returns a list of the nodes associated with the specified study'
     nodeSTree = db.snode.tree
     s=db(nodeSTree==treeid)
-    result = [row.id for row in s.select()]
-    return result
+    return [row.id for row in s.select()]
     
 def nodeElt(nodeid,db):
     result = dict()
