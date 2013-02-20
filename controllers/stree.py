@@ -8,6 +8,7 @@ import build
 import link
 import ivy
 import treeUtil
+import nexson
 ## ivy = local_import("ivy")
 
 from gluon.storage import Storage
@@ -675,3 +676,16 @@ def import_cached_nexml():
         redirect(URL('study','tbimport_trees'))
 
     return dict(study=study, tree=t, form=form)
+
+
+def export_NexSON():
+    ''' Exports the tree specified by the argument as JSON NeXML
+        The export will be a complete NeXML document, with appropriate otus block
+        and singleton trees block
+    '''
+    treeid = request.args(0)
+    ## error checking here
+    if (db.stree(treeid) is None):
+        raise HTTP(404)
+    else:
+        return nexson.nexmlTree(treeid,db)
