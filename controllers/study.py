@@ -895,7 +895,7 @@ def ref_from_doi():
 def export_NexSON():
     'Exports the otus and trees in the study specified by the argument as JSON NeXML'
     studyid = request.args(0)
-    if (db.stree(studyid) is None):
+    if (db.study(studyid) is None):
         raise HTTP(404)
     else:
         return nexson.nexmlStudy(studyid,db)
