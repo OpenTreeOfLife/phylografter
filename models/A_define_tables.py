@@ -221,6 +221,7 @@ def define_tables(db, migrate=False):
         Field("uploaded", "datetime", default=datetime.datetime.now(),
               writable=False, notnull=True),
         Field("treebase_id", "integer"),
+        Field("last_modified","datetime",default=datetime.datetime.now()),
         format=_study_rep,
         migrate=migrate
         )
@@ -305,6 +306,7 @@ def define_tables(db, migrate=False):
         ## Field("tb_analysis_id", "string", length=128),
         Field("tb_tree_id", "string", length=128),
         Field("comment", "text"),
+        Field("last_modified","datetime", default=datetime.datetime.now()),
         format="%(type)s [%(id)s]",
         migrate=migrate
         )
@@ -521,4 +523,3 @@ def define_tables(db, migrate=False):
     ##     Field("comment", "text"),
     ##     migrate=migrate
     ##     )
-
