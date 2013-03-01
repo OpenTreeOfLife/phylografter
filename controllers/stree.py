@@ -383,7 +383,10 @@ def edit():
                                     fieldName = attr,
                                     previousValue = str( rec[attr] ),
                                     updatedValue = str( form.vars[attr] ) )
-
+                                    
+        
+        rec.update_record( last_modified = datetime.datetime.now() )
+                                    
         response.flash = "record updated"
 
     return dict(form=form, rec=rec)
@@ -679,9 +682,9 @@ def import_cached_nexml():
 
 
 def export_NexSON():
-    ''' Exports the tree specified by the argument as JSON NeXML
+    ''' This exports the tree specified by the argument as JSON NeXML.
         The export will be a complete NeXML document, with appropriate otus block
-        and singleton trees block
+        and singleton trees block.
     '''
     treeid = request.args(0)
     ## error checking here
@@ -689,3 +692,11 @@ def export_NexSON():
         raise HTTP(404)
     else:
         return nexson.nexmlTree(treeid,db)
+
+def modified_list():
+    'This reports a json formatted list of ids of modified trees'
+    since = request.args(0)
+    result = []
+    wrapper = dict()
+    wrapper['trees']=result
+    return wrapper

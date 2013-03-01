@@ -388,6 +388,8 @@ def view():
                                     previousValue = str( rec[attr] ),
                                     updatedValue = str( form.vars[attr] ) )
 
+        rec.update_record( last_modified = datetime.datetime.now() )
+
         response.flash = "record updated"
 
     label = _study_rep(rec)
@@ -899,3 +901,11 @@ def export_NexSON():
         raise HTTP(404)
     else:
         return nexson.nexmlStudy(studyid,db)
+    
+def modified_list():
+    'This reports a json formatted list of ids of studies with changed metadata or trees'
+    since = request.args(0)
+    result = []
+    wrapper = dict()
+    wrapper['studies']=result
+    return wrapper
