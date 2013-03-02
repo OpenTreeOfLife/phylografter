@@ -16,10 +16,11 @@ response.subtitle = A("Studies", _href=URL('study','index'))
 class Virtual(object):
     def study_url(self):
         u = URL(c="study",f="view",args=[self.study.id],extension="")
-        s = self.study.citation
+        s = self.study.citation.decode('utf8')
         N = 50
-        if len(s)>N: s = s[:N-3]+" ..."
-        return A(s, _href=u, _title=self.study.citation)
+        short = s
+        if len(s)>N: short = s[:N-3]+" ..."
+        return A(short, _href=u, _title=s)
 
     def trees(self):
         rows = db(db.stree.study==self.study.id).select()
