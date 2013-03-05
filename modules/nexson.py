@@ -109,8 +109,8 @@ def doiMetaForStudy(studyid,db):
     if (doi):
         if (doi.startswith('http://dx.doi.org/')):
             pass  #fine, leave as is
-        elif (doi.startswith('http://www.')): #not really a doi (jstor?), treat as if it's blank
-            return
+        elif (doi.startswith('http://www.')): #not a doi, but an identifier of some sort
+            pass
         elif (doi.startswith('doi:')):    #splice the http prefix on
            doi = 'http://dx.doi.org/' + doi[4:]
         elif not(doi.startswith('10.')):  #not a doi, or corrupted, treat as blank
