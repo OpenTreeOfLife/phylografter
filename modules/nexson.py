@@ -30,9 +30,7 @@ def nexmlStudy(studyId,db):
     body.update(header)
     body.update(metaElts)
     body["@id"] = studyId
-    result = dict()
-    result["nexml"] = body
-    return result
+    return dict(nexml = body)
 
 def nexmlTree(tree,db):
     '''Exports one tree from a study (still a complete JSON NeXML with
@@ -47,9 +45,7 @@ def nexmlTree(tree,db):
     body.update(trees)
     body.update(header)
     body["id"] = studyId
-    result = dict()
-    result["nexml"] = body
-    return result
+    return dict(nexml = body)
 
 def nexmlHeader():
     'Header for nexml - includes namespaces and version tag (see nexml.org)'
@@ -68,6 +64,7 @@ def xmlNameSpace():
     result["nex"] = "http://www.nexml.org/2009"
     result["xsi"] = "http://www.w3.org/2001/XMLSchema-instance"
     result["cdao"] = "http://www.evolutionaryontology.org/cdao/1.0/cdao.owl#"
+    result["ot"] = "http://opentreeoflife.org"  #need CURIE prefix, URI is placeholder
     result["xsd"] = "http://www.w3.org/2001/XMLSchema#"
     return result
 
@@ -80,12 +77,10 @@ def metaEltsForNexml(studyid,db):
     doiMeta = doiMetaForStudy(studyid,db)
     if (doiMeta):
         metaArray.append(doiMeta)
-    citeMeta = citationMetaForStudy(studyid,db)
-    if (citeMeta):
-        metaArray.append(citeMeta)
-    result = dict()
-    result["meta"] = metaArray
-    return result
+    studyPublicationMeta = studyPublicationMetaElt(studyid,db)
+    if (studyPublicationMeta):
+        metaArray.append(studyPublicationMeta)
+    return dict(meta = metaArray)
 
 
 def pubYearMetaForStudy(studyid,db):
@@ -116,15 +111,15 @@ def doiMetaForStudy(studyid,db):
     else:
         return
 
-def citationMetaForStudy(studyid,db):
-    'generates doi metadata element for a study'
+def studyPublicationMetaElt(studyid,db):
+    'generates text citation metadata element for a study'
     cite = db.study(studyid).citation
     if (cite):
         names = metaNSForDCTerm()
         result = dict()
         result["@xmlns"] = names
         result["@xsi:type"] = "ns:LiteralMeta"
-        result["@property"] = "ter:bibliographicCitation"
+        result["@property"] = "ot:studyPublication"
         result["@href"] = cite
         return result
     else:
@@ -145,9 +140,7 @@ def otusEltForStudy(studyId,db):
     otusElement = dict()
     otusElement["otu"] = otuElements
     otusElement["@id"] = "otus" + str(studyId)
-    result = dict()
-    result["otus"] = otusElement
-    return result
+    return dict(otus = otusElement)
     
 def getOtuIDsForStudy(studyid,db):
     'returns a list of otu ids for otu records that link to this study'
