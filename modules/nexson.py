@@ -15,12 +15,13 @@
 from gluon.storage import Storage
 from gluon import *
 
-
+# Note - the nexml root element can have meta elements as direct children; unlike everywhere else, there are no id or about
+# attributes as seem to be required for other element types (e.g., otu, node) when they have meta children
 def nexmlStudy(studyId,db):
     '''Exports the set of trees associated with a study as JSON Nexml
        study - the study to export
        db - database connection'''
-    metaElts = metaEltsForNexml(studyId,db)
+    metaElts = metaEltsForNexml(studyId,db) 
     otus = otusEltForStudy(studyId,db)
     trees = treesElt(studyId,db)
     header = nexmlHeader()
@@ -64,16 +65,19 @@ def xmlNameSpace():
     result["nex"] = "http://www.nexml.org/2009"
     result["xsi"] = "http://www.w3.org/2001/XMLSchema-instance"
     result["cdao"] = "http://www.evolutionaryontology.org/cdao/1.0/cdao.owl#"
-    result["ot"] = "http://opentreeoflife.org"  #need CURIE prefix, URI is placeholder
+    result["ot"] = "http://purl.org/opentree-terms#"
     result["xsd"] = "http://www.w3.org/2001/XMLSchema#"
     return result
 
 def metaEltsForNexml(studyid,db):
     'generates nexml meta elements that are children of the root nexml element'
     metaArray = []
-    yearMeta = pubYearMetaForStudy(studyid,db)
-    if (yearMeta):
-        metaArray.append(yearMeta)
+    curatorMeta = curatorMetaForStudy(studyid,db)
+    if (curatorMeta):
+        metaArray.append(curatorMeta)
+    treeBaseDepositMeta = treeBaseDepositMetaForStudy(studyid,db)
+    if (treeBaseDepositMeta):
+        metaArray.append(treeBaseDepositMeta)
     doiMeta = doiMetaForStudy(studyid,db)
     if (doiMeta):
         metaArray.append(doiMeta)
@@ -82,20 +86,32 @@ def metaEltsForNexml(studyid,db):
         metaArray.append(studyPublicationMeta)
     return dict(meta = metaArray)
 
-
-def pubYearMetaForStudy(studyid,db):
-    'generates a date meta element'
-    mdate = db.study(studyid).year_published
-    if (mdate):
-        names = metaNSForDCTerm()
+def curatorMetaForStudy(studyid,db):
+    'generates curator metadata element for a study'
+    curator = db.study(studyid).contributor
+    if (curator):
+        #names = metaNSForDCTerm()
         result = dict()
-        result["@xmlns"] = names
-        result["@xsi:type"] = "ns:LiteralMeta" 
-        result["@property"] = "ter:date"
-        result["$"] = mdate
+        result["@xsi:type"] = "nex:LiteralMeta"
+        result["@property"] = "ot:curatorName"
+        result["$"] = curator
         return result
     else:
         return
+
+def treeBaseDepositMetaForStudy(studyid,db):
+    'generates text citation metadata element for a study'
+    treebaseId = db.study(studyid).treebase_id
+    if (treebaseId):
+        #names = metaNSForDCTerm()
+        result = dict()
+        result["@xsi:type"] = "nex:LiteralMeta"
+        result["@property"] = "ot:dataDeposit"
+        result["$"] = treebaseId
+        return result
+    else:
+        return
+
 
 #returns a doi metadata element if a proper doi is available, else nothing
 def doiMetaForStudy(studyid,db):
@@ -112,11 +128,10 @@ def doiMetaForStudy(studyid,db):
             return
         else:
            doi = 'http://dx.doi.org/' + doi
-        names = metaNSForDCTerm()
+        #names = metaNSForDCTerm()
         result = dict()
-        result["@xmlns"] = names
-        result["@xsi:type"] = "ns:ResourceMeta"
-        result["@property"] = "ter:identifier"
+        result["@xsi:type"] = "nex:ResourceMeta"
+        result["@property"] = "ot:studyPublication"
         result["@href"] = doi
         return result
     else:
@@ -126,22 +141,16 @@ def studyPublicationMetaElt(studyid,db):
     'generates text citation metadata element for a study'
     cite = db.study(studyid).citation
     if (cite):
-        names = metaNSForDCTerm()
+        #names = metaNSForDCTerm()
         result = dict()
-        result["@xmlns"] = names
-        result["@xsi:type"] = "ns:LiteralMeta"
-        result["@property"] = "ot:studyPublication"
+        #result["@xmlns"] = names
+        result["@xsi:type"] = "nex:LiteralMeta"
+        result["@property"] = "ot:studyPublicationReference"
         result["$"] = cite
         return result
     else:
         return
 
-def metaNSForDCTerm():
-    names = dict()
-    names["$"] = "http://www.nexml.org/2009"
-    names["ns"] = "http://www.nexml.org/2009"
-    names["ter"] = "http://purl.org/dc/terms/"
-    return names
 
 def otusEltForStudy(studyId,db):
     'Generates an otus block'
