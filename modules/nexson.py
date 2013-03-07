@@ -96,11 +96,22 @@ def pubYearMetaForStudy(studyid,db):
         return result
     else:
         return
-        
+
+#returns a doi metadata element if a proper doi is available, else nothing
 def doiMetaForStudy(studyid,db):
     'generates doi metadata element for a study'
     doi = db.study(studyid).doi
     if (doi):
+        if (doi.startswith('http://dx.doi.org/')):
+            pass  #fine, leave as is
+        elif (doi.startswith('http://www.')): #not a doi, but an identifier of some sort
+            pass
+        elif (doi.startswith('doi:')):    #splice the http prefix on
+           doi = 'http://dx.doi.org/' + doi[4:]
+        elif not(doi.startswith('10.')):  #not a doi, or corrupted, treat as blank
+            return
+        else:
+           doi = 'http://dx.doi.org/' + doi
         names = metaNSForDCTerm()
         result = dict()
         result["@xmlns"] = names
@@ -120,7 +131,7 @@ def studyPublicationMetaElt(studyid,db):
         result["@xmlns"] = names
         result["@xsi:type"] = "ns:LiteralMeta"
         result["@property"] = "ot:studyPublication"
-        result["@href"] = cite
+        result["$"] = cite
         return result
     else:
         return
