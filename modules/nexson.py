@@ -246,13 +246,6 @@ def metaNSForDWCTerm():
     names["ter"] = "http://rw.tdwg.org/dwc/terms/"
     return names
     
-    
-def taxonSetElt():
-    body = dict()
-    result = dict()
-    result["taxonSet"] = body
-    return result
-    
 def treesElt(study,db):
     'generate trees element'
     idList = getTreeIDsForStudy(study,db)
