@@ -64,7 +64,6 @@ def xmlNameSpace():
     result["$"] = "http://www.nexml.org/2009"
     result["nex"] = "http://www.nexml.org/2009"
     result["xsi"] = "http://www.w3.org/2001/XMLSchema-instance"
-    result["cdao"] = "http://www.evolutionaryontology.org/cdao/1.0/cdao.owl#"
     result["ot"] = "http://purl.org/opentree-terms#"
     result["xsd"] = "http://www.w3.org/2001/XMLSchema#"
     return result
@@ -128,7 +127,6 @@ def doiMetaForStudy(studyid,db):
             return
         else:
            doi = 'http://dx.doi.org/' + doi
-        #names = metaNSForDCTerm()
         result = dict()
         result["@xsi:type"] = "nex:ResourceMeta"
         result["@property"] = "ot:studyPublication"
@@ -141,9 +139,7 @@ def studyPublicationMetaElt(studyid,db):
     'generates text citation metadata element for a study'
     cite = db.study(studyid).citation
     if (cite):
-        #names = metaNSForDCTerm()
         result = dict()
-        #result["@xmlns"] = names
         result["@xsi:type"] = "nex:LiteralMeta"
         result["@property"] = "ot:studyPublicationReference"
         result["$"] = cite
@@ -201,7 +197,8 @@ def otusEltForTree(tree,studyId,db):
        
 def getOtuForNode(node_id,db):
     return db.snode(node_id).otu    
-    
+
+#Generates an otu Element             
 def otuElt(otu_id,db):
     ottol_name_id = db.otu(otu_id).ottol_name
     metaElts = metaEltsForOtuElt(otu_id,ottol_name_id,db)
@@ -209,10 +206,22 @@ def otuElt(otu_id,db):
     result["@id"] = "otu" + str(otu_id)
     if (ottol_name_id):
         result["@label"]= db.ottol_name(ottol_name_id).name
+    else:
+        result["@label"]= db.otu(otu_id).label
+    if metaElts:
+        result["@about"] = "#otu" + str(otu_id)
+        result.update(metaElts)
     return result
     
-def metaEltsForOtuElt(otu_id, ottol_name,db):
-    return dict()    
+def metaEltsForOtuElt(otu_id, ottol_name_id,db):
+    if db.ottol_name(ottol_name_id):
+        idElt = dict()
+        idElt["@xsi:type"] = "nex:LiteralMeta"
+        idElt["@property"] = "ot:ottolid"
+        idElt["$"] = db.ottol_name(ottol_name_id).opentree_uid
+        return dict(meta = idElt)    
+    else:
+        return
     
     
 def taxonIdMetaForStudy(ottol_name_id,db):
@@ -331,5 +340,9 @@ def nodeElt(nodeid,db):
     otu_id = db.snode(nodeid).otu
     if (otu_id):
         result["@otu"] = 'otu' + str(otu_id)
+    if getNodeParent(nodeid,db):
+        pass
+    else:
+        result["@root"] = 'true'
     result["@id"] = 'node'+str(nodeid)
     return result
