@@ -112,9 +112,10 @@ def treeBaseDepositMetaForStudy(studyid,db):
         return
 
 
-#returns a doi metadata element if a proper doi is available, else nothing
+#returns an ot:studyPublication metadata element if a (possibly incomplete) doi or a 
+#suitable URI is available, else nothing
 def doiMetaForStudy(studyid,db):
-    'generates doi metadata element for a study'
+    'generates ot:studyPublication metadata element for a study'
     doi = db.study(studyid).doi
     if (doi):
         if (doi.startswith('http://dx.doi.org/')):
@@ -213,7 +214,10 @@ def otuElt(otu_id,db):
         result.update(metaElts)
     return result
     
+#Name suggests more than one meta element; expect more than current ot:ottolid
+#will be added in the future.    
 def metaEltsForOtuElt(otu_id, ottol_name_id,db):
+    'generates meta elements for an otu element'
     if db.ottol_name(ottol_name_id):
         idElt = dict()
         idElt["@xsi:type"] = "nex:LiteralMeta"
@@ -222,29 +226,6 @@ def metaEltsForOtuElt(otu_id, ottol_name_id,db):
         return dict(meta = idElt)    
     else:
         return
-    
-    
-def taxonIdMetaForStudy(ottol_name_id,db):
-    'generates doi metadata element for a study'
-    cite = db.study(studyid).citation
-    if (cite):
-        names = metaNSForDCTerm()
-        result = dict()
-        result["@xmlns"] = names
-        result["@xsi:type"] = "ns:LiteralMeta"
-        result["@property"] = "ter:bibliographicCitation"
-        result["@href"] = cite
-        return result
-    else:
-        return
-
-def metaNSForDWCTerm():
-    'returns namespace definitions for Darwin Core (v.s Dublin Core, which is DC)'
-    names = dict()
-    names["$"] = "http://www.nexml.org/2009"
-    names["ns"] = "http://www.nexml.org/2009"
-    names["ter"] = "http://rw.tdwg.org/dwc/terms/"
-    return names
     
 def treesElt(study,db):
     'generate trees element'
@@ -283,13 +264,43 @@ def singletonTreesElt(tree,studyId,db):
 def getSingleTreeStudyId(tree,db):
     return db.stree(tree).study
     
-def treeElt(tree,db):
-    t = db.stree(tree)
+def treeElt(tree_id,db):
+    'generates a tree element'
+    t = db.stree(tree_id)
+    metaElts = metaEltsForTreeElt(tree_id,db)
     result = dict()
-    result["@id"]='tree' + str(t.id)
-    result["node"]=treeNodes(tree,db)
-    result["edge"]=treeEdges(tree,db)
+    result["@id"]='tree' + str(tree_id)
+    result["node"]=treeNodes(tree_id,db)
+    result["edge"]=treeEdges(tree_id,db)
+    if metaElts:
+    	result["@about"] = "#tree" + str(tree_id)
+    	result.update(metaElts)
     return result
+    
+#Name suggests more than one meta element; expect more than current ot:branchLengthMode
+#will be added in the future.    
+def metaEltsForTreeElt(tree_id,db):
+    'returns meta elements for a tree element'
+    blRep = db.stree(tree_id).branch_lengths_represent
+    if blRep:
+        lengthsElt = dict()
+        lengthsElt["@xsi:type"] = "nex:LiteralMeta"
+        lengthsElt["@property"] = "ot:branchLengthMode"
+        if (blRep == "substitutions per site"):
+        	lengthsElt["$"] = "ot:substitutionCount"
+        elif (blRep == "character changes"):
+            lengthsElt["$"] = "ot:changesCount"
+        elif (blRep == "time (Myr)"):
+            lengthsElt["$"] = "ot:years"
+        elif (blRep == "bootstrap values"):
+            lengthsElt["$"] = "ot:bootstrapValues"                            
+        elif (blRep == "posterior support"):
+            lengthsElt["$"] = "ot:posteriorSupport"
+        else:
+        	return   #this is a silent fail, maybe better to return 'unknown'?
+        return dict(meta=lengthsElt)
+    else:
+        return    
     
 def treeNodes(tree,db):
     nodeList = getSNodeIdsForTree(tree,db)
