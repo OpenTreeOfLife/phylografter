@@ -30,7 +30,8 @@ def nexmlStudy(studyId,db):
     body.update(trees)
     body.update(header)
     body.update(metaElts)
-    body["@id"] = studyId
+    body["@id"] = "study"
+    body["@about"] = "#study"
     return dict(nexml = body)
 
 def nexmlTree(tree,db):
@@ -45,7 +46,8 @@ def nexmlTree(tree,db):
     body.update(otus)
     body.update(trees)
     body.update(header)
-    body["id"] = studyId
+    body["id"] = "study"
+    body["@about"] = "#study"
     return dict(nexml = body)
 
 def nexmlHeader():
@@ -68,21 +70,24 @@ def xmlNameSpace():
     result["xsd"] = "http://www.w3.org/2001/XMLSchema#"
     return result
 
-def metaEltsForNexml(studyid,db):
+def metaEltsForNexml(study_id,db):
     'generates nexml meta elements that are children of the root nexml element'
     metaArray = []
-    curatorMeta = curatorMetaForStudy(studyid,db)
-    if (curatorMeta):
-        metaArray.append(curatorMeta)
-    treeBaseDepositMeta = treeBaseDepositMetaForStudy(studyid,db)
-    if (treeBaseDepositMeta):
-        metaArray.append(treeBaseDepositMeta)
-    doiMeta = doiMetaForStudy(studyid,db)
-    if (doiMeta):
-        metaArray.append(doiMeta)
-    studyPublicationMeta = studyPublicationMetaElt(studyid,db)
-    if (studyPublicationMeta):
+    studyPublicationMeta = studyPublicationMetaElt(study_id,db)
+    if studyPublicationMeta:
         metaArray.append(studyPublicationMeta)
+    doiMeta = doiMetaForStudy(study_id,db)
+    if doiMeta:
+        metaArray.append(doiMeta)
+    curatorMeta = curatorMetaForStudy(study_id,db)
+    if curatorMeta:
+        metaArray.append(curatorMeta)
+    treeBaseDepositMeta = treeBaseDepositMetaForStudy(study_id,db)
+    if treeBaseDepositMeta:
+        metaArray.append(treeBaseDepositMeta)
+    phylografterIdMeta = phylografterIdMetaForStudy(study_id,db)
+    if phylografterIdMeta:
+        metaArray.append(phylografterIdMeta)
     return dict(meta = metaArray)
 
 def curatorMetaForStudy(studyid,db):
@@ -148,6 +153,13 @@ def studyPublicationMetaElt(studyid,db):
     else:
         return
 
+def phylografterIdMetaForStudy(study_id,db):
+    'generates phylografter study id metadata element for a study'
+    result = dict()
+    result["@xsi:type"] = "nex:LiteralMeta"
+    result["@property"] = "ot:studyid"
+    result["$"] = study_id
+    return result
 
 def otusEltForStudy(studyId,db):
     'Generates an otus block'
