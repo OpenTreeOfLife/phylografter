@@ -15,12 +15,13 @@
 from gluon.storage import Storage
 from gluon import *
 
-
+# Note - the nexml root element can have meta elements as direct children; unlike everywhere else, there are no id or about
+# attributes as seem to be required for other element types (e.g., otu, node) when they have meta children
 def nexmlStudy(studyId,db):
     '''Exports the set of trees associated with a study as JSON Nexml
        study - the study to export
        db - database connection'''
-    metaElts = metaEltsForNexml(studyId,db)
+    metaElts = metaEltsForNexml(studyId,db) 
     otus = otusEltForStudy(studyId,db)
     trees = treesElt(studyId,db)
     header = nexmlHeader()
@@ -29,10 +30,9 @@ def nexmlStudy(studyId,db):
     body.update(trees)
     body.update(header)
     body.update(metaElts)
-    body["@id"] = studyId
-    result = dict()
-    result["nexml"] = body
-    return result
+    body["@id"] = "study"
+    body["@about"] = "#study"
+    return dict(nexml = body)
 
 def nexmlTree(tree,db):
     '''Exports one tree from a study (still a complete JSON NeXML with
@@ -46,10 +46,9 @@ def nexmlTree(tree,db):
     body.update(otus)
     body.update(trees)
     body.update(header)
-    body["id"] = studyId
-    result = dict()
-    result["nexml"] = body
-    return result
+    body["id"] = "study"
+    body["@about"] = "#study"
+    return dict(nexml = body)
 
 def nexmlHeader():
     'Header for nexml - includes namespaces and version tag (see nexml.org)'
@@ -67,75 +66,100 @@ def xmlNameSpace():
     result["$"] = "http://www.nexml.org/2009"
     result["nex"] = "http://www.nexml.org/2009"
     result["xsi"] = "http://www.w3.org/2001/XMLSchema-instance"
-    result["cdao"] = "http://www.evolutionaryontology.org/cdao/1.0/cdao.owl#"
+    result["ot"] = "http://purl.org/opentree-terms#"
     result["xsd"] = "http://www.w3.org/2001/XMLSchema#"
     return result
 
-def metaEltsForNexml(studyid,db):
+def metaEltsForNexml(study_id,db):
     'generates nexml meta elements that are children of the root nexml element'
     metaArray = []
-    yearMeta = pubYearMetaForStudy(studyid,db)
-    if (yearMeta):
-        metaArray.append(yearMeta)
-    doiMeta = doiMetaForStudy(studyid,db)
-    if (doiMeta):
+    studyPublicationMeta = studyPublicationMetaElt(study_id,db)
+    if studyPublicationMeta:
+        metaArray.append(studyPublicationMeta)
+    doiMeta = doiMetaForStudy(study_id,db)
+    if doiMeta:
         metaArray.append(doiMeta)
-    citeMeta = citationMetaForStudy(studyid,db)
-    if (citeMeta):
-        metaArray.append(citeMeta)
-    result = dict()
-    result["meta"] = metaArray
-    return result
+    curatorMeta = curatorMetaForStudy(study_id,db)
+    if curatorMeta:
+        metaArray.append(curatorMeta)
+    treeBaseDepositMeta = treeBaseDepositMetaForStudy(study_id,db)
+    if treeBaseDepositMeta:
+        metaArray.append(treeBaseDepositMeta)
+    phylografterIdMeta = phylografterIdMetaForStudy(study_id,db)
+    if phylografterIdMeta:
+        metaArray.append(phylografterIdMeta)
+    return dict(meta = metaArray)
 
-
-def pubYearMetaForStudy(studyid,db):
-    'generates a date meta element'
-    mdate = db.study(studyid).year_published
-    if (mdate):
-        names = metaNSForDCTerm()
+def curatorMetaForStudy(studyid,db):
+    'generates curator metadata element for a study'
+    curator = db.study(studyid).contributor
+    if (curator):
+        #names = metaNSForDCTerm()
         result = dict()
-        result["@xmlns"] = names
-        result["@xsi:type"] = "ns:LiteralMeta" 
-        result["@property"] = "ter:date"
-        result["$"] = mdate
+        result["@xsi:type"] = "nex:LiteralMeta"
+        result["@property"] = "ot:curatorName"
+        result["$"] = curator
         return result
     else:
         return
-        
+
+def treeBaseDepositMetaForStudy(studyid,db):
+    'generates text citation metadata element for a study'
+    treebaseId = db.study(studyid).treebase_id
+    if (treebaseId):
+        #names = metaNSForDCTerm()
+        result = dict()
+        result["@xsi:type"] = "nex:LiteralMeta"
+        result["@property"] = "ot:dataDeposit"
+        result["$"] = treebaseId
+        return result
+    else:
+        return
+
+
+#returns an ot:studyPublication metadata element if a (possibly incomplete) doi or a 
+#suitable URI is available, else nothing
 def doiMetaForStudy(studyid,db):
-    'generates doi metadata element for a study'
+    'generates ot:studyPublication metadata element for a study'
     doi = db.study(studyid).doi
     if (doi):
-        names = metaNSForDCTerm()
+        if (doi.startswith('http://dx.doi.org/')):
+            pass  #fine, leave as is
+        elif (doi.startswith('http://www.')): #not a doi, but an identifier of some sort
+            pass
+        elif (doi.startswith('doi:')):    #splice the http prefix on
+           doi = 'http://dx.doi.org/' + doi[4:]
+        elif not(doi.startswith('10.')):  #not a doi, or corrupted, treat as blank
+            return
+        else:
+           doi = 'http://dx.doi.org/' + doi
         result = dict()
-        result["@xmlns"] = names
-        result["@xsi:type"] = "ns:ResourceMeta"
-        result["@property"] = "ter:identifier"
+        result["@xsi:type"] = "nex:ResourceMeta"
+        result["@property"] = "ot:studyPublication"
         result["@href"] = doi
         return result
     else:
         return
 
-def citationMetaForStudy(studyid,db):
-    'generates doi metadata element for a study'
+def studyPublicationMetaElt(studyid,db):
+    'generates text citation metadata element for a study'
     cite = db.study(studyid).citation
     if (cite):
-        names = metaNSForDCTerm()
         result = dict()
-        result["@xmlns"] = names
-        result["@xsi:type"] = "ns:LiteralMeta"
-        result["@property"] = "ter:bibliographicCitation"
-        result["@href"] = cite
+        result["@xsi:type"] = "nex:LiteralMeta"
+        result["@property"] = "ot:studyPublicationReference"
+        result["$"] = cite
         return result
     else:
         return
 
-def metaNSForDCTerm():
-    names = dict()
-    names["$"] = "http://www.nexml.org/2009"
-    names["ns"] = "http://www.nexml.org/2009"
-    names["ter"] = "http://purl.org/dc/terms/"
-    return names
+def phylografterIdMetaForStudy(study_id,db):
+    'generates phylografter study id metadata element for a study'
+    result = dict()
+    result["@xsi:type"] = "nex:LiteralMeta"
+    result["@property"] = "ot:studyid"
+    result["$"] = study_id
+    return result
 
 def otusEltForStudy(studyId,db):
     'Generates an otus block'
@@ -145,9 +169,7 @@ def otusEltForStudy(studyId,db):
     otusElement = dict()
     otusElement["otu"] = otuElements
     otusElement["@id"] = "otus" + str(studyId)
-    result = dict()
-    result["otus"] = otusElement
-    return result
+    return dict(otus = otusElement)
     
 def getOtuIDsForStudy(studyid,db):
     'returns a list of otu ids for otu records that link to this study'
@@ -188,7 +210,8 @@ def otusEltForTree(tree,studyId,db):
        
 def getOtuForNode(node_id,db):
     return db.snode(node_id).otu    
-    
+
+#Generates an otu Element             
 def otuElt(otu_id,db):
     ottol_name_id = db.otu(otu_id).ottol_name
     metaElts = metaEltsForOtuElt(otu_id,ottol_name_id,db)
@@ -196,40 +219,25 @@ def otuElt(otu_id,db):
     result["@id"] = "otu" + str(otu_id)
     if (ottol_name_id):
         result["@label"]= db.ottol_name(ottol_name_id).name
+    else:
+        result["@label"]= db.otu(otu_id).label
+    if metaElts:
+        result["@about"] = "#otu" + str(otu_id)
+        result.update(metaElts)
     return result
     
-def metaEltsForOtuElt(otu_id, ottol_name,db):
-    return dict()    
-    
-    
-def taxonIdMetaForStudy(ottol_name_id,db):
-    'generates doi metadata element for a study'
-    cite = db.study(studyid).citation
-    if (cite):
-        names = metaNSForDCTerm()
-        result = dict()
-        result["@xmlns"] = names
-        result["@xsi:type"] = "ns:LiteralMeta"
-        result["@property"] = "ter:bibliographicCitation"
-        result["@href"] = cite
-        return result
+#Name suggests more than one meta element; expect more than current ot:ottolid
+#will be added in the future.    
+def metaEltsForOtuElt(otu_id, ottol_name_id,db):
+    'generates meta elements for an otu element'
+    if db.ottol_name(ottol_name_id):
+        idElt = dict()
+        idElt["@xsi:type"] = "nex:LiteralMeta"
+        idElt["@property"] = "ot:ottolid"
+        idElt["$"] = db.ottol_name(ottol_name_id).preottol_taxid   # was opentree_uid
+        return dict(meta = idElt)    
     else:
         return
-
-def metaNSForDWCTerm():
-    'returns namespace definitions for Darwin Core (v.s Dublin Core, which is DC)'
-    names = dict()
-    names["$"] = "http://www.nexml.org/2009"
-    names["ns"] = "http://www.nexml.org/2009"
-    names["ter"] = "http://rw.tdwg.org/dwc/terms/"
-    return names
-    
-    
-def taxonSetElt():
-    body = dict()
-    result = dict()
-    result["taxonSet"] = body
-    return result
     
 def treesElt(study,db):
     'generate trees element'
@@ -268,13 +276,43 @@ def singletonTreesElt(tree,studyId,db):
 def getSingleTreeStudyId(tree,db):
     return db.stree(tree).study
     
-def treeElt(tree,db):
-    t = db.stree(tree)
+def treeElt(tree_id,db):
+    'generates a tree element'
+    t = db.stree(tree_id)
+    metaElts = metaEltsForTreeElt(tree_id,db)
     result = dict()
-    result["@id"]='tree' + str(t.id)
-    result["node"]=treeNodes(tree,db)
-    result["edge"]=treeEdges(tree,db)
+    result["@id"]='tree' + str(tree_id)
+    result["node"]=treeNodes(tree_id,db)
+    result["edge"]=treeEdges(tree_id,db)
+    if metaElts:
+    	result["@about"] = "#tree" + str(tree_id)
+    	result.update(metaElts)
     return result
+    
+#Name suggests more than one meta element; expect more than current ot:branchLengthMode
+#will be added in the future.    
+def metaEltsForTreeElt(tree_id,db):
+    'returns meta elements for a tree element'
+    blRep = db.stree(tree_id).branch_lengths_represent
+    if blRep:
+        lengthsElt = dict()
+        lengthsElt["@xsi:type"] = "nex:LiteralMeta"
+        lengthsElt["@property"] = "ot:branchLengthMode"
+        if (blRep == "substitutions per site"):
+        	lengthsElt["$"] = "ot:substitutionCount"
+        elif (blRep == "character changes"):
+            lengthsElt["$"] = "ot:changesCount"
+        elif (blRep == "time (Myr)"):
+            lengthsElt["$"] = "ot:years"
+        elif (blRep == "bootstrap values"):
+            lengthsElt["$"] = "ot:bootstrapValues"                            
+        elif (blRep == "posterior support"):
+            lengthsElt["$"] = "ot:posteriorSupport"
+        else:
+        	return   #this is a silent fail, maybe better to return 'unknown'?
+        return dict(meta=lengthsElt)
+    else:
+        return    
     
 def treeNodes(tree,db):
     nodeList = getSNodeIdsForTree(tree,db)
@@ -318,5 +356,9 @@ def nodeElt(nodeid,db):
     otu_id = db.snode(nodeid).otu
     if (otu_id):
         result["@otu"] = 'otu' + str(otu_id)
+    if getNodeParent(nodeid,db):
+        pass
+    else:
+        result["@root"] = 'true'
     result["@id"] = 'node'+str(nodeid)
     return result
