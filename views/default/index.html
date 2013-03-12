@@ -1,7 +1,5 @@
 {{extend 'layout.html'}}
 
-Please edit my content and style...
-
 <h2>
 Source trees for phylogenetic synthesis
 </h2>
@@ -24,7 +22,7 @@ by <b>taxon</b>.</li>
 {{nstudies = db(db.study.id>0).count()}}
 {{nstrees = db(db.stree.id>0).count()}}
 {{notus = db(db.otu.id>0).count()}}
-{{ntaxa = len(db(db.otu.ottol_name!=None).select(db.otu.ottol_name, distinct=True))}}
+{{ntaxa = db.executesql('select count(distinct otu.ottol_name) from otu where otu.ottol_name is not null')[0][0]}}
 
 <p>The database currently contains {{=nstudies}}
 <a href="{{=URL(c='study',f='index')}}">studies</a> and
