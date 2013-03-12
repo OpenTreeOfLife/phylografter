@@ -205,7 +205,7 @@ def dtrecords():
     totalrecs = db(q).count()
     for x in filters: q &= x
     disprecs = db(q).count()
-    print data
+    ## print data
     return dict(aaData=data,
                 iTotalRecords=totalrecs,
                 iTotalDisplayRecords=disprecs,
