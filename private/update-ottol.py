@@ -16,19 +16,25 @@ with open(p) as f:
             assert pre not in pre2uid, pre
             pre2uid[pre] = uid
 
+t = db.ottol_name
+
 q = ((db.otu.ottol_name==db.ottol_name.id)&
      (db.otu.ottol_name!=None))
-t = db.ottol_name
-used = db(q).select(t.id, t.preottol_taxid, distinct=True)
+otu_used = set([ x.id for x in db(q).select(t.id, distinct=True) ])
 
-## q = ('select distinct ottol_name.id, ottol_name.preottol_taxid '
-##      'from ottol_name, otu '
-##      'where otu.ottol_name = ottol_name.id '
-##      'and otu.ottol_name is not null')
-## used_preids = db.executesql(q)
+q = ((db.snode.ottol_name==db.ottol_name.id)&
+     (db.snode.ottol_name!=None))
+snode_used = set([ x.id for x in db(q).select(t.id, distinct=True) ])
+
+q = ((db.study.focal_clade_ottol==db.ottol_name.id)&
+     (db.study.focal_ottol_name!=None))
+study_used = set([ x.id for x in db(q).select(t.id, distinct=True) ])
+
+used = otu_used | snode_used | study_used
 
 # update used records that map to new ottol uids
-for row in used:
+for i in used:
+    row = t[i]
     pre = row.preottol_taxid
     if pre in pre2uid:
         uid = pre2uid[pre]
@@ -40,13 +46,12 @@ for row in used:
         print pre, row.id
 
 # delete unused records
-v = tuple([ x.id for x in used ])
+v = tuple(sorted(used))
 q = 'delete from ottol_name where id not in %s ;' % (v,)
 ## with open('/tmp/tmp.sql','w') as f:
 ##     f.write(q)
 db.executesql(q)
 
-used_uids = set(pre2uid.values())
 # insert new unused records
 for uid, row in uid2row.items():
     if uid not in used_uids:
