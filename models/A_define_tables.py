@@ -102,9 +102,11 @@ def define_tables(db, migrate=False):
 
     db.define_table(
         "ottol_name",
-        Field("opentree_uid", "string", length=32,
-              required=True, notnull=True, unique=True),
-        Field("opentree_parent_uid", "string", length=32),
+        Field("uid", "integer"),
+        Field("parent_uid", "integer"),
+        ## Field("opentree_uid", "string", length=32,
+        ##       required=True, notnull=True, unique=True),
+        ## Field("opentree_parent_uid", "string", length=32),
         Field("preottol_taxid", "integer", unique=True),
         Field("preottol_parent_taxid", "integer", unique=True),
         Field("preottol_source", "string"),
