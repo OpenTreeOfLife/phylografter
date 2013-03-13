@@ -9,6 +9,7 @@ import link
 import ivy
 import treeUtil
 import nexson
+import urllib
 ## ivy = local_import("ivy")
 
 from gluon.storage import Storage
@@ -688,15 +689,22 @@ def export_NexSON():
     '''
     treeid = request.args(0)
     ## error checking here
-    if (db.stree(treeid) is None):
+    if db.stree(treeid) is None:
         raise HTTP(404)
     else:
         return nexson.nexmlTree(treeid,db)
 
 def modified_list():
     'This reports a json formatted list of ids of modified trees'
-    since = request.args(0)
+    now = datetime.datetime.now()
+    sinceString = request.vars['date']
+#    if sinceString is None:
+#        since = now - datetime.timedelta(1)
+#    else:
+       #since = datetime.datetime.strptime(sinceString,'%Y-%m-%d %H:%M:%S')
+    since = sinceString #urllib.unquote(sinceString)
     result = []
-    wrapper = dict()
+    wrapper = dict(now = now)
+    wrapper['since']=since
     wrapper['trees']=result
     return wrapper
