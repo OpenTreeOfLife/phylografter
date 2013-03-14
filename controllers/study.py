@@ -917,12 +917,17 @@ def modified_list():
         toTime = datetime.datetime.utcnow()
     else:
         toTime = datetime.datetime.strptime(toString,dtimeFormat)
-    studies = []
+    # this is not strictly correct as the dst corrections will vary
+    utcDelta = datetime.datetime.utcnow() - datetime.datetime.now()
+    upLoadQuery = (db.study.uploaded > (fromTime+utcDelta)) & (db.study.uploaded <= (toTime + utcDelta)) 
+    studies = set()
+    for s in db(upLoadQuery).select():
+        studies.add(s.id)
     timeQuery = (db.study.last_modified > fromTime) & (db.study.last_modified <= toTime)
-    queryStudies = db(timeQuery).select()
-    for s in queryStudies:
-        studies.append(s.id)
-    wrapper = dict(studies = studies)
+    for s in db(timeQuery).select():
+        studies.add(s.id)
+    studyList = list(studies)
+    wrapper = dict(studies = studyList)
     wrapper['from']=fromTime.strftime(dtimeFormat)
     wrapper['to']=toTime.strftime(dtimeFormat)
     return wrapper
