@@ -708,12 +708,17 @@ def modified_list():
         toTime = datetime.datetime.utcnow()
     else:
         toTime = datetime.datetime.strptime(toString,dtimeFormat)
-    trees = []
+    # this is not strictly correct as the dst corrections will vary
+    utcDelta = datetime.datetime.utcnow() - datetime.datetime.now()
+    upLoadQuery = (db.stree.uploaded > (fromTime+utcDelta)) & (db.stree.uploaded <= (toTime + utcDelta)) 
+    trees = set()
+    for t in db(upLoadQuery).select():
+        trees.add(t.id)
     timeQuery = (db.stree.last_modified > fromTime) & (db.stree.last_modified <= toTime)
-    queryTrees = db(timeQuery).select()
-    for t in queryTrees:
-        trees.append(t.id)
-    wrapper = dict(trees = trees)
+    for t in db(timeQuery).select():
+        trees.add(t.id)
+    treeList = list(trees)
+    wrapper = dict(trees = treeList)
     wrapper['from']=fromTime.strftime(dtimeFormat)
     wrapper['to']=toTime.strftime(dtimeFormat)
     return wrapper
