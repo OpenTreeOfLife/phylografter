@@ -919,13 +919,20 @@ def modified_list():
         toTime = datetime.datetime.strptime(toString,dtimeFormat)
     # this is not strictly correct as the dst corrections will vary
     utcDelta = datetime.datetime.utcnow() - datetime.datetime.now()
+    #look for studies with (utc corrected) uploaded in the interval
     upLoadQuery = (db.study.uploaded > (fromTime+utcDelta)) & (db.study.uploaded <= (toTime + utcDelta)) 
     studies = set()
     for s in db(upLoadQuery).select():
         studies.add(s.id)
+    #as well as studies modified within the interval
     timeQuery = (db.study.last_modified > fromTime) & (db.study.last_modified <= toTime)
     for s in db(timeQuery).select():
         studies.add(s.id)
+    #assuming that a tree can't be uploaded independently of a study, it might still be modified
+    #so this checks for strees modified in the interval and adds their study ids to the list
+    treeQuery = (db.stree.last_modified > fromTime) & (db.stree.last_modified <= toTime)
+    for t in db(treeQuery).select():
+        studies.add(t.study)        
     studyList = list(studies)
     wrapper = dict(studies = studyList)
     wrapper['from']=fromTime.strftime(dtimeFormat)

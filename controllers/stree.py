@@ -710,10 +710,12 @@ def modified_list():
         toTime = datetime.datetime.strptime(toString,dtimeFormat)
     # this is not strictly correct as the dst corrections will vary
     utcDelta = datetime.datetime.utcnow() - datetime.datetime.now()
+    #look for trees with (utc corrected) uploaded in the interval
     upLoadQuery = (db.stree.uploaded > (fromTime+utcDelta)) & (db.stree.uploaded <= (toTime + utcDelta)) 
     trees = set()
     for t in db(upLoadQuery).select():
         trees.add(t.id)
+    #as well as trees modified within the interval
     timeQuery = (db.stree.last_modified > fromTime) & (db.stree.last_modified <= toTime)
     for t in db(timeQuery).select():
         trees.add(t.id)
