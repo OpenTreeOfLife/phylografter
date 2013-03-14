@@ -255,7 +255,7 @@ def _insert_stree(study, data):
     lab2otu = dict([ (x.label, x) for x in _study_otus(study) ])
     stree = db.stree.insert(**data)
     db.stree[stree].update_record(study=study)
-    db.stree[stree].update_record(last_modified = datetime.datetime.utcnow())
+    db.stree[stree].update_record(last_modified = datetime.datetime.now())
     i2n = {}
     for n in nodes:
         label = (n.label or "").replace("_", " ")
@@ -387,7 +387,7 @@ def edit():
                                     updatedValue = str( form.vars[attr] ) )
                                     
         
-        rec.update_record( last_modified = datetime.datetime.utcnow() )
+        rec.update_record( last_modified = datetime.datetime.now() )
                                     
         response.flash = "record updated"
 
@@ -697,21 +697,19 @@ def export_NexSON():
 
 def modified_list():
     'This reports a json formatted list of ids of modified trees'
-    dtimeFormat = '%Y-%m-%dT%H:%M:%SZ'
+    dtimeFormat = '%Y-%m-%dT%H:%M:%S'
     fromString = request.vars['from']
     if fromString is None:
-        fromTime = datetime.datetime.utcnow() - datetime.timedelta(1)
+        fromTime = datetime.datetime.now() - datetime.timedelta(1)
     else:
        fromTime = datetime.datetime.strptime(fromString,dtimeFormat)
     toString = request.vars['to']
     if toString is None:
-        toTime = datetime.datetime.utcnow()
+        toTime = datetime.datetime.now()
     else:
         toTime = datetime.datetime.strptime(toString,dtimeFormat)
-    # this is not strictly correct as the dst corrections will vary
-    utcDelta = datetime.datetime.utcnow() - datetime.datetime.now()
-    #look for trees with (utc corrected) uploaded in the interval
-    upLoadQuery = (db.stree.uploaded > (fromTime+utcDelta)) & (db.stree.uploaded <= (toTime + utcDelta)) 
+    #look for trees with uploaded in the interval
+    upLoadQuery = (db.stree.uploaded > fromTime) & (db.stree.uploaded <= toTime) 
     trees = set()
     for t in db(upLoadQuery).select():
         trees.add(t.id)

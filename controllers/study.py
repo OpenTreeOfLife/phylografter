@@ -906,21 +906,19 @@ def export_NexSON():
 #some overlap with corresponding function in stree.py    
 def modified_list():
     'This reports a json formatted list of ids of modified studies'
-    dtimeFormat = '%Y-%m-%dT%H:%M:%SZ'
+    dtimeFormat = '%Y-%m-%dT%H:%M:%S'
     fromString = request.vars['from']
     if fromString is None:
-        fromTime = datetime.datetime.utcnow() - datetime.timedelta(1)
+        fromTime = datetime.datetime.now() - datetime.timedelta(1)
     else:
        fromTime = datetime.datetime.strptime(fromString,dtimeFormat)
     toString = request.vars['to']
     if toString is None:
-        toTime = datetime.datetime.utcnow()
+        toTime = datetime.datetime.now()
     else:
         toTime = datetime.datetime.strptime(toString,dtimeFormat)
-    # this is not strictly correct as the dst corrections will vary
-    utcDelta = datetime.datetime.utcnow() - datetime.datetime.now()
-    #look for studies with (utc corrected) uploaded in the interval
-    upLoadQuery = (db.study.uploaded > (fromTime+utcDelta)) & (db.study.uploaded <= (toTime + utcDelta)) 
+    #look for studies with uploaded in the interval
+    upLoadQuery = (db.study.uploaded > fromTime) & (db.study.uploaded <= toTime) 
     studies = set()
     for s in db(upLoadQuery).select():
         studies.add(s.id)
