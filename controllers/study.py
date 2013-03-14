@@ -902,11 +902,27 @@ def export_NexSON():
         raise HTTP(404)
     else:
         return nexson.nexmlStudy(studyid,db)
-    
+
+#some overlap with corresponding function in stree.py    
 def modified_list():
-    'This reports a json formatted list of ids of studies with changed metadata or trees'
-    since = request.args(0)
-    result = []
-    wrapper = dict()
-    wrapper['studies']=result
+    'This reports a json formatted list of ids of modified studies'
+    dtimeFormat = '%Y-%m-%dT%H:%M:%SZ'
+    fromString = request.vars['from']
+    if fromString is None:
+        fromTime = datetime.datetime.utcnow() - datetime.timedelta(1)
+    else:
+       fromTime = datetime.datetime.strptime(fromString,dtimeFormat)
+    toString = request.vars['to']
+    if toString is None:
+        toTime = datetime.datetime.utcnow()
+    else:
+        toTime = datetime.datetime.strptime(toString,dtimeFormat)
+    studies = []
+    timeQuery = (db.study.last_modified > fromTime) & (db.study.last_modified <= toTime)
+    queryStudies = db(timeQuery).select()
+    for s in queryStudies:
+        studies.append(s.id)
+    wrapper = dict(studies = studies)
+    wrapper['from']=fromTime.strftime(dtimeFormat)
+    wrapper['to']=toTime.strftime(dtimeFormat)
     return wrapper

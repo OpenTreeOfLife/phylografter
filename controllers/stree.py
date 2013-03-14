@@ -255,6 +255,7 @@ def _insert_stree(study, data):
     lab2otu = dict([ (x.label, x) for x in _study_otus(study) ])
     stree = db.stree.insert(**data)
     db.stree[stree].update_record(study=study)
+    db.stree[stree].update_record(last_modified = datetime.datetime.utcnow())
     i2n = {}
     for n in nodes:
         label = (n.label or "").replace("_", " ")
@@ -386,7 +387,7 @@ def edit():
                                     updatedValue = str( form.vars[attr] ) )
                                     
         
-        rec.update_record( last_modified = datetime.datetime.now() )
+        rec.update_record( last_modified = datetime.datetime.utcnow() )
                                     
         response.flash = "record updated"
 
@@ -696,15 +697,23 @@ def export_NexSON():
 
 def modified_list():
     'This reports a json formatted list of ids of modified trees'
-    now = datetime.datetime.now()
-    sinceString = request.vars['date']
-#    if sinceString is None:
-#        since = now - datetime.timedelta(1)
-#    else:
-       #since = datetime.datetime.strptime(sinceString,'%Y-%m-%d %H:%M:%S')
-    since = sinceString #urllib.unquote(sinceString)
-    result = []
-    wrapper = dict(now = now)
-    wrapper['since']=since
-    wrapper['trees']=result
+    dtimeFormat = '%Y-%m-%dT%H:%M:%SZ'
+    fromString = request.vars['from']
+    if fromString is None:
+        fromTime = datetime.datetime.utcnow() - datetime.timedelta(1)
+    else:
+       fromTime = datetime.datetime.strptime(fromString,dtimeFormat)
+    toString = request.vars['to']
+    if toString is None:
+        toTime = datetime.datetime.utcnow()
+    else:
+        toTime = datetime.datetime.strptime(toString,dtimeFormat)
+    trees = []
+    timeQuery = (db.stree.last_modified > fromTime) & (db.stree.last_modified <= toTime)
+    queryTrees = db(timeQuery).select()
+    for t in queryTrees:
+        trees.append(t.id)
+    wrapper = dict(trees = trees)
+    wrapper['from']=fromTime.strftime(dtimeFormat)
+    wrapper['to']=toTime.strftime(dtimeFormat)
     return wrapper
