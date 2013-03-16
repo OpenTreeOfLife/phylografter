@@ -59,8 +59,7 @@ q = 'delete from ottol_name where id not in %s ;' % (v,)
 ##     f.write(q)
 db.executesql(q)
 
-# deal with cases of multiple preottol_ids-->one ottol uid
-
+# deal with cases of multiple preottol_ids-->one ottol uid:
 
 # insert new (unused) ottol_name records from taxomachine dump
 for uid, row in uid2row.items():

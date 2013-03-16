@@ -504,7 +504,9 @@ def define_tables(db, migrate=False):
         Field( 'rowId', 'int' ),
         Field( 'fieldName', 'string' ),
         Field( 'previousValue', 'string' ),
-        Field( 'updatedValue', 'string' ) )
+        Field( 'updatedValue', 'string' ),
+        migrate=migrate
+        )
 
 
     ## db.define_table(
