@@ -234,7 +234,7 @@ def metaEltsForOtuElt(otu_id, ottol_name_id,db):
         idElt = dict()
         idElt["@xsi:type"] = "nex:LiteralMeta"
         idElt["@property"] = "ot:ottolid"
-        idElt["$"] = db.ottol_name(ottol_name_id).preottol_taxid   # was opentree_uid
+        idElt["$"] = db.ottol_name(ottol_name_id).accepted_uid
         return dict(meta = idElt)    
     else:
         return
