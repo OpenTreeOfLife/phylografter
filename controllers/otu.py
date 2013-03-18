@@ -223,7 +223,8 @@ def taxon_edit():
             ## response.flash="record updated"
             otu.update_record(ottol_name=taxon)
             otu.snode.update(ottol_name=taxon)
-        return dict(form=None, cancel=None, a=taxon_link(otu))
+        uid, link = taxon_link(otu)
+        return dict(form=None, cancel=None, a=link)
 
     cancel = A("Cancel",
                _href=URL(c="otu",f="taxon_edit_cancel.load",args=[otu.id]),
