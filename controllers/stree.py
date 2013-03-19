@@ -717,6 +717,12 @@ def modified_list():
     timeQuery = (db.stree.last_modified > fromTime) & (db.stree.last_modified <= toTime)
     for t in db(timeQuery).select():
         trees.add(t.id)
+    #a modification to the parent study might involve changes to the otu mappings
+    studyQuery = (db.study.last_modified > fromTime) & (db.study.last_modified <= toTime)
+    for s in db(studyQuery).select():
+        internalTreeQuery = (db.stree.study == s)
+        for t in db(internalTreeQuery).select():
+            trees.add(t.id)
     treeList = list(trees)
     wrapper = dict(trees = treeList)
     wrapper['from']=fromTime.strftime(dtimeFormat)

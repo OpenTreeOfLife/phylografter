@@ -181,7 +181,7 @@ def dtrecords():
 
     def datarow(otu):
         if auth.has_membership(role="contributor"):
-            uid, link = taxon_link(otu)
+            uid, link = taxon_link(otu,study)
             return (label(otu, uid), link.xml())
         else:
             return (otu.label,
@@ -199,19 +199,20 @@ def dtrecords():
                 iTotalDisplayRecords=disprecs,
                 sEcho=int(request.vars.sEcho))
     
-def taxon_link(otu):
+def taxon_link(otu,study):
     ## print otu.keys()
     taxon = db.ottol_name(otu.ottol_name) or Storage()
     ## d = request.vars
     ## if d.otu != otu: d.otu = otu
     ## if d.taxon != taxon.id: d.taxon = taxon.id
     ## d = dict(otu=otu, taxon=taxon.id)
-    u = URL(c="otu",f="taxon_edit.load",args=[otu.id])
+    u = URL(c="otu",f="taxon_edit.load",args=[otu.id,study.id])
     uid = uuid4().hex
     return uid, SPAN(A(str(taxon.name), _href=u, cid=uid), _id=uid)
 
 def taxon_edit():
     otu = db.otu(int(request.args(0)))
+    study = db.study(int(request.args(1)))
     field = Field("taxon", "integer", default=otu.ottol_name)
     field.widget = SQLFORM.widgets.autocomplete(
         request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
@@ -223,21 +224,23 @@ def taxon_edit():
             ## response.flash="record updated"
             otu.update_record(ottol_name=taxon)
             otu.snode.update(ottol_name=taxon)
-        uid, link = taxon_link(otu)
+            study.update_record(last_modified = datetime.datetime.now())
+        uid, link = taxon_link(otu,study)
         return dict(form=None, cancel=None, a=link)
 
     cancel = A("Cancel",
-               _href=URL(c="otu",f="taxon_edit_cancel.load",args=[otu.id]),
+               _href=URL(c="otu",f="taxon_edit_cancel.load",args=[otu.id,study.id]),
                cid=request.cid)
     return dict(form=form, cancel=cancel, a=None)
 
 def taxon_edit_cancel():
     r = db.otu(request.args(0))
+    s = db.study(request.args(1))
     ## t = db.otu
     ## left = db.ottol_name.on(db.ottol_name.id==t.ottol_name)
     ## r = db(t.id==request.args(0)).select(
     ##     t.id, t.label, db.ottol_name.name, left=left).first()
-    uid, link = taxon_link(r)
+    uid, link = taxon_link(r,s)
     return link
 
 @auth.requires_membership('contributor')
