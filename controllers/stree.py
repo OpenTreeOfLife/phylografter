@@ -9,6 +9,7 @@ import link
 import ivy
 import treeUtil
 import nexson
+import urllib
 ## ivy = local_import("ivy")
 
 from gluon.storage import Storage
@@ -254,6 +255,7 @@ def _insert_stree(study, data):
     lab2otu = dict([ (x.label, x) for x in _study_otus(study) ])
     stree = db.stree.insert(**data)
     db.stree[stree].update_record(study=study)
+    db.stree[stree].update_record(last_modified = datetime.datetime.now())
     i2n = {}
     for n in nodes:
         label = (n.label or "").replace("_", " ")
@@ -383,7 +385,10 @@ def edit():
                                     fieldName = attr,
                                     previousValue = str( rec[attr] ),
                                     updatedValue = str( form.vars[attr] ) )
-
+                                    
+        
+        rec.update_record( last_modified = datetime.datetime.now() )
+                                    
         response.flash = "record updated"
 
     return dict(form=form, rec=rec)
@@ -679,13 +684,47 @@ def import_cached_nexml():
 
 
 def export_NexSON():
-    ''' Exports the tree specified by the argument as JSON NeXML
+    ''' This exports the tree specified by the argument as JSON NeXML.
         The export will be a complete NeXML document, with appropriate otus block
-        and singleton trees block
+        and singleton trees block.
     '''
     treeid = request.args(0)
     ## error checking here
-    if (db.stree(treeid) is None):
+    if db.stree(treeid) is None:
         raise HTTP(404)
     else:
         return nexson.nexmlTree(treeid,db)
+
+def modified_list():
+    'This reports a json formatted list of ids of modified trees'
+    dtimeFormat = '%Y-%m-%dT%H:%M:%S'
+    fromString = request.vars['from']
+    if fromString is None:
+        fromTime = datetime.datetime.now() - datetime.timedelta(1)
+    else:
+       fromTime = datetime.datetime.strptime(fromString,dtimeFormat)
+    toString = request.vars['to']
+    if toString is None:
+        toTime = datetime.datetime.now()
+    else:
+        toTime = datetime.datetime.strptime(toString,dtimeFormat)
+    #look for trees with uploaded in the interval
+    upLoadQuery = (db.stree.uploaded > fromTime) & (db.stree.uploaded <= toTime) 
+    trees = set()
+    for t in db(upLoadQuery).select():
+        trees.add(t.id)
+    #as well as trees modified within the interval
+    timeQuery = (db.stree.last_modified > fromTime) & (db.stree.last_modified <= toTime)
+    for t in db(timeQuery).select():
+        trees.add(t.id)
+    #a modification to the parent study might involve changes to the otu mappings
+    studyQuery = (db.study.last_modified > fromTime) & (db.study.last_modified <= toTime)
+    for s in db(studyQuery).select():
+        internalTreeQuery = (db.stree.study == s)
+        for t in db(internalTreeQuery).select():
+            trees.add(t.id)
+    treeList = list(trees)
+    wrapper = dict(trees = treeList)
+    wrapper['from']=fromTime.strftime(dtimeFormat)
+    wrapper['to']=toTime.strftime(dtimeFormat)
+    return wrapper

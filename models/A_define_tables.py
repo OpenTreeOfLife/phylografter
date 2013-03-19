@@ -528,4 +528,3 @@ def define_tables(db, migrate=False):
     ##     Field("comment", "text"),
     ##     migrate=migrate
     ##     )
-

@@ -389,6 +389,8 @@ def view():
                                     previousValue = str( rec[attr] ),
                                     updatedValue = str( form.vars[attr] ) )
 
+        rec.update_record( last_modified = datetime.datetime.now() )
+
         response.flash = "record updated"
 
     label = _study_rep(rec)
@@ -613,6 +615,7 @@ def tbimport2():
     if form.accepts(request.vars, session):
         if rec: response.flash = "record updated"
         else: response.flash = "record inserted"
+        t.update_record( last_modified = datetime.datetime.now() )
         ## redirect(URL('study','view',args=form.vars.id))
 
     return dict(form=form, rec=rec, diffs=diffs)
@@ -900,3 +903,37 @@ def export_NexSON():
         raise HTTP(404)
     else:
         return nexson.nexmlStudy(studyid,db)
+
+#some overlap with corresponding function in stree.py    
+def modified_list():
+    'This reports a json formatted list of ids of modified studies'
+    dtimeFormat = '%Y-%m-%dT%H:%M:%S'
+    fromString = request.vars['from']
+    if fromString is None:
+        fromTime = datetime.datetime.now() - datetime.timedelta(1)
+    else:
+       fromTime = datetime.datetime.strptime(fromString,dtimeFormat)
+    toString = request.vars['to']
+    if toString is None:
+        toTime = datetime.datetime.now()
+    else:
+        toTime = datetime.datetime.strptime(toString,dtimeFormat)
+    #look for studies with uploaded in the interval
+    upLoadQuery = (db.study.uploaded > fromTime) & (db.study.uploaded <= toTime) 
+    studies = set()
+    for s in db(upLoadQuery).select():
+        studies.add(s.id)
+    #as well as studies modified within the interval
+    timeQuery = (db.study.last_modified > fromTime) & (db.study.last_modified <= toTime)
+    for s in db(timeQuery).select():
+        studies.add(s.id)
+    #assuming that a tree can't be uploaded independently of a study, it might still be modified
+    #so this checks for strees modified in the interval and adds their study ids to the list
+    treeQuery = (db.stree.last_modified > fromTime) & (db.stree.last_modified <= toTime)
+    for t in db(treeQuery).select():
+        studies.add(t.study)        
+    studyList = list(studies)
+    wrapper = dict(studies = studyList)
+    wrapper['from']=fromTime.strftime(dtimeFormat)
+    wrapper['to']=toTime.strftime(dtimeFormat)
+    return wrapper
