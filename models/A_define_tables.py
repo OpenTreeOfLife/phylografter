@@ -35,56 +35,56 @@ def _study_rep(x):
     return s
 
 def define_tables(db, migrate=False):
-    # this table is obsolete and will be removed in the future
-    db.define_table(
-        "ncbi_taxon",
-        Field("taxid", "integer", unique=True, notnull=True),
-        Field("parent", "integer"),
-        Field("next", "integer"),
-        Field("back", "integer"),
-        Field("depth", "integer"),
-        Field("name", "string", notnull=True),
-        Field("rank", "string"),
-        format="%(name)s [ncbi:%(taxid)s]",
-        migrate=migrate
-        )
+    ## # this table is obsolete and will be removed in the future
+    ## db.define_table(
+    ##     "ncbi_taxon",
+    ##     Field("taxid", "integer", unique=True, notnull=True),
+    ##     Field("parent", "integer"),
+    ##     Field("next", "integer"),
+    ##     Field("back", "integer"),
+    ##     Field("depth", "integer"),
+    ##     Field("name", "string", notnull=True),
+    ##     Field("rank", "string"),
+    ##     format="%(name)s [ncbi:%(taxid)s]",
+    ##     migrate=migrate
+    ##     )
 
-    # the names that map to unique nodes in the NCBI hierarchy
-    db.define_table(
-        "ncbi_name",
-        Field("taxid", "integer", notnull=True),
-        Field("name", "string"),
-        Field("unique_name", "string", unique=True),
-        Field("name_class"),
-        migrate=migrate
-        )
+    ## # the names that map to unique nodes in the NCBI hierarchy
+    ## db.define_table(
+    ##     "ncbi_name",
+    ##     Field("taxid", "integer", notnull=True),
+    ##     Field("name", "string"),
+    ##     Field("unique_name", "string", unique=True),
+    ##     Field("name_class"),
+    ##     migrate=migrate
+    ##     )
 
-    # these are unique nodes in the NCBI hierarchy
-    db.define_table(
-        "ncbi_node",
-        Field("taxid", "integer", notnull=True),
-        Field("name", "string"),  # the "scientific name" as listed by NCBI
-        Field("parent", "integer"),
-        Field("next", "integer"),
-        Field("back", "integer"),
-        Field("depth", "integer"),
-        Field("rank", "string"),
-        Field("hidden", "boolean", notnull=True, default=False),
-        Field("comments", "text"),
-        migrate=migrate
-        )
+    ## # these are unique nodes in the NCBI hierarchy
+    ## db.define_table(
+    ##     "ncbi_node",
+    ##     Field("taxid", "integer", notnull=True),
+    ##     Field("name", "string"),  # the "scientific name" as listed by NCBI
+    ##     Field("parent", "integer"),
+    ##     Field("next", "integer"),
+    ##     Field("back", "integer"),
+    ##     Field("depth", "integer"),
+    ##     Field("rank", "string"),
+    ##     Field("hidden", "boolean", notnull=True, default=False),
+    ##     Field("comments", "text"),
+    ##     migrate=migrate
+    ##     )
 
-    db.define_table(
-        "apg_taxon",
-        Field("parent", "integer"),
-        Field("next", "integer"),
-        Field("back", "integer"),
-        Field("depth", "integer"),
-        Field("name", "string", required=True, unique=True, notnull=True),
-        Field("rank", "string"),
-        format="%(name)s",
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     "apg_taxon",
+    ##     Field("parent", "integer"),
+    ##     Field("next", "integer"),
+    ##     Field("back", "integer"),
+    ##     Field("depth", "integer"),
+    ##     Field("name", "string", required=True, unique=True, notnull=True),
+    ##     Field("rank", "string"),
+    ##     format="%(name)s",
+    ##     migrate=migrate
+    ##     )
 
     ## db.define_table(
     ##     "ottol_node",
@@ -102,81 +102,84 @@ def define_tables(db, migrate=False):
 
     db.define_table(
         "ottol_name",
-        Field("opentree_uid", "string", length=32,
-              required=True, notnull=True, unique=True),
-        Field("opentree_parent_uid", "string", length=32),
+        Field("uid", "integer"),
+        Field("parent_uid", "integer"),
+        Field("accepted_uid", "integer"),
+        ## Field("opentree_uid", "string", length=32,
+        ##       required=True, notnull=True, unique=True),
+        ## Field("opentree_parent_uid", "string", length=32),
         Field("preottol_taxid", "integer", unique=True),
         Field("preottol_parent_taxid", "integer", unique=True),
         Field("preottol_source", "string"),
         Field("preottol_source_taxid", "string"),
         Field("ncbi_taxid", "integer"),
+        Field("gbif_taxid", "integer"),
         Field("namebank_taxid", "integer"),
         Field("treebase_taxid", "integer"),
         ## Field("node", db.ottol_node, ondelete="NO ACTION"),
         Field("name", "string", required=True, notnull=True),
         Field("unique_name", "string", unique=True,
               required=True, notnull=True),
-        Field("preottol_authority", "string"),
-        Field("preottol_code", "string"),
+        ## Field("preottol_authority", "string"),
+        ## Field("preottol_code", "string"),
         Field("rank", "string"),
-        Field("preottol_date", "string"),
+        ## Field("preottol_date", "string"),
         Field("comments", "string"),
-        Field("preottol_homonym_flag", "boolean"),
-        Field("preottol_pdb_flag", "boolean"),
-        Field("mtime", "datetime", default=datetime.datetime.now(),
-              readable=False, writable=False),
+        ## Field("preottol_homonym_flag", "boolean"),
+        ## Field("preottol_pdb_flag", "boolean"),
+        Field("mtime", "datetime", readable=False, writable=False),
         format="%(name)s",
         migrate=migrate
         )
 
-    # The taxon table is not a hierarchy.  Nodes refer to it
-    # (one-to-one).  Each taxon record may or may not refer to an
-    # entry into a hierarchy (ncbi or apg).  This allows for synonyms
-    # in the taxon table.
-    db.define_table(
-        "taxon",
-        ## Field("parent", "integer"), # should drop this column
-        ## Field("next", "integer"),
-        ## Field("back", "integer"),
-        ## Field("depth", "integer"),
-        Field("name", "string", required=True, notnull=True),
-        Field("rank", "string"),
-        ## Field("family", "string"),
-        ## Field("genus", "string"),
-        ## Field("species", "string"),
-        ## Field("ncbi_taxon", db.ncbi_taxon, ondelete="NO ACTION"), # NOT USED
-        Field("ncbi_taxid", "integer"),
-        Field("namebank_id", "integer"),
-        Field("tb_taxid", "integer"),
-        Field("apg_taxon", db.apg_taxon, ondelete="NO ACTION"),
-        format="%(name)s",
-        migrate=migrate
-        )
+    ## # The taxon table is not a hierarchy.  Nodes refer to it
+    ## # (one-to-one).  Each taxon record may or may not refer to an
+    ## # entry into a hierarchy (ncbi or apg).  This allows for synonyms
+    ## # in the taxon table.
+    ## db.define_table(
+    ##     "taxon",
+    ##     ## Field("parent", "integer"), # should drop this column
+    ##     ## Field("next", "integer"),
+    ##     ## Field("back", "integer"),
+    ##     ## Field("depth", "integer"),
+    ##     Field("name", "string", required=True, notnull=True),
+    ##     Field("rank", "string"),
+    ##     ## Field("family", "string"),
+    ##     ## Field("genus", "string"),
+    ##     ## Field("species", "string"),
+    ##     ## Field("ncbi_taxon", db.ncbi_taxon, ondelete="NO ACTION"), # NOT USED
+    ##     Field("ncbi_taxid", "integer"),
+    ##     Field("namebank_id", "integer"),
+    ##     Field("tb_taxid", "integer"),
+    ##     Field("apg_taxon", db.apg_taxon, ondelete="NO ACTION"),
+    ##     format="%(name)s",
+    ##     migrate=migrate
+    ##     )
 
-    db.define_table(
-        "plantlist",
-        Field("major_group"),
-        Field("family"),
-        Field("genus_hybrid_marker"),
-        Field("genus"),
-        Field("species_hybrid_marker"),
-        Field("species"),
-        Field("infra_rank"),
-        Field("infra_epithet"),
-        Field("author"),
-        Field("TPL_status"),
-        Field("original_status"),
-        Field("confidence"),
-        Field("source"),
-        Field("source_id"),
-        Field("IPNI_id"),
-        Field("publication"),
-        Field("pub_collation"),
-        Field("pub_page"),
-        Field("pub_date"),
-        format="%(genus)s %(species)s",
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     "plantlist",
+    ##     Field("major_group"),
+    ##     Field("family"),
+    ##     Field("genus_hybrid_marker"),
+    ##     Field("genus"),
+    ##     Field("species_hybrid_marker"),
+    ##     Field("species"),
+    ##     Field("infra_rank"),
+    ##     Field("infra_epithet"),
+    ##     Field("author"),
+    ##     Field("TPL_status"),
+    ##     Field("original_status"),
+    ##     Field("confidence"),
+    ##     Field("source"),
+    ##     Field("source_id"),
+    ##     Field("IPNI_id"),
+    ##     Field("publication"),
+    ##     Field("pub_collation"),
+    ##     Field("pub_page"),
+    ##     Field("pub_date"),
+    ##     format="%(genus)s %(species)s",
+    ##     migrate=migrate
+    ##     )
 
     ## db.define_table(
     ##     "sdata", # study data
@@ -221,6 +224,7 @@ def define_tables(db, migrate=False):
         Field("uploaded", "datetime", default=datetime.datetime.now(),
               writable=False, notnull=True),
         Field("treebase_id", "integer"),
+        Field("last_modified", "datetime", readable=False, writable=False),
         format=_study_rep,
         migrate=migrate
         )
@@ -259,7 +263,7 @@ def define_tables(db, migrate=False):
         "otu",
         Field("study", db.study, ondelete="NO ACTION"),
         Field("label", required=True, notnull=True),
-        Field("taxon", db.taxon, ondelete="NO ACTION"),
+        ## Field("taxon", db.taxon, ondelete="NO ACTION"),
         Field("ottol_name", db.ottol_name, ondelete="NO ACTION"),
         Field("tb_nexml_id"),
         ## Field("genus", db.taxon, ondelete="NO ACTION"),
@@ -305,6 +309,7 @@ def define_tables(db, migrate=False):
         ## Field("tb_analysis_id", "string", length=128),
         Field("tb_tree_id", "string", length=128),
         Field("comment", "text"),
+        Field("last_modified", "datetime", readable=False, writable=False),
         format="%(type)s [%(id)s]",
         migrate=migrate
         )
@@ -502,7 +507,9 @@ def define_tables(db, migrate=False):
         Field( 'rowId', 'int' ),
         Field( 'fieldName', 'string' ),
         Field( 'previousValue', 'string' ),
-        Field( 'updatedValue', 'string' ) )
+        Field( 'updatedValue', 'string' ),
+        migrate=migrate
+        )
 
 
     ## db.define_table(
@@ -521,4 +528,3 @@ def define_tables(db, migrate=False):
     ##     Field("comment", "text"),
     ##     migrate=migrate
     ##     )
-
