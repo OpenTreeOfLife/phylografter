@@ -27,6 +27,7 @@ Give the user privileges to modify the database
 mysql> CREATE USER 'tester'@'localhost' IDENTIFIED BY 'abc123' ;
 mysql> CREATE database phylografter ;
 mysql> GRANT ALL ON phylografter.* to 'tester'@'localhost' ;
+mysql> FLUSH PRIVILEGES;
 </pre>
 
 (4) Configure Phylografter
