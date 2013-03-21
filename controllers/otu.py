@@ -261,5 +261,5 @@ def update_name():
     db(db.snode.otu==otu).update(ottol_name=name)
     ## session.flash = 'OTU %s mapped to %s' % (otu, db.ottol_name[name].name)
     ## redirect(URL('study', args=[study]))
-    uid, link = taxon_link(db.otu(otu))
+    uid, link = taxon_link(db.otu(otu), db.study(study))
     return dict(link=link)
