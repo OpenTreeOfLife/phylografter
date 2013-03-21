@@ -19,7 +19,7 @@ ROW_SEGMENTS = ("http://treebase.org/treebase-web/search/study/"
 META_DATATYPE = {
     "xsd:long": int,
     "xsd:integer": int,
-    "xsd:string": str
+    "xsd:string": unicode
     }
 
 AMBIG_RE = re.compile(r'([{][a-zA-Z]+[}])')

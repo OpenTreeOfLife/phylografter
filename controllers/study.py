@@ -615,7 +615,7 @@ def tbimport2():
     if form.accepts(request.vars, session):
         if rec: response.flash = "record updated"
         else: response.flash = "record inserted"
-        t.update_record( last_modified = datetime.datetime.now() )
+        ## t.update_record( last_modified = datetime.datetime.now() )
         ## redirect(URL('study','view',args=form.vars.id))
 
     return dict(form=form, rec=rec, diffs=diffs)

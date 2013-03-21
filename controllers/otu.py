@@ -245,8 +245,8 @@ def taxon_edit_cancel():
 
 @auth.requires_membership('contributor')
 def update_name():
-    study = request.args(0)
-    otu = request.args(1)
+    study = db.study(request.args(0))
+    otu = db.otu(request.args(1))
     name = request.args(2)
     ## if not study:
     ##     session.flash = 'error in mapping otu to taxon'
@@ -256,10 +256,11 @@ def update_name():
     ##         session.flash = 'error in mapping otu to taxon'
     ##         redirect(URL('study', args=[study]))
 
-    otu = int(otu); name = int(name)
-    db(db.otu.id==otu).update(ottol_name=name)
-    db(db.snode.otu==otu).update(ottol_name=name)
+    ## otu = int(otu); name = int(name)
+    otu.update_record(ottol_name=name)
+    otu.snode.update(ottol_name=name)
+    study.update_record(last_modified = datetime.datetime.now())
     ## session.flash = 'OTU %s mapped to %s' % (otu, db.ottol_name[name].name)
     ## redirect(URL('study', args=[study]))
-    uid, link = taxon_link(db.otu(otu), db.study(study))
+    uid, link = taxon_link(otu, study)
     return dict(link=link)
