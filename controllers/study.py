@@ -937,3 +937,7 @@ def modified_list():
     wrapper['from']=fromTime.strftime(dtimeFormat)
     wrapper['to']=toTime.strftime(dtimeFormat)
     return wrapper
+
+def export_csv():
+    studies = db().select(db.study.ALL)
+    return dict(studies=studies)
