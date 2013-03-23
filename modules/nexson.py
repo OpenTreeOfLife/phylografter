@@ -109,9 +109,9 @@ def treeBaseDepositMetaForStudy(studyid,db):
     if (treebaseId):
         #names = metaNSForDCTerm()
         result = dict()
-        result["@xsi:type"] = "nex:LiteralMeta"
+        result["@xsi:type"] = "nex:ResourceMeta"
         result["@property"] = "ot:dataDeposit"
-        result["$"] = treebaseId
+        result["href"] = "http://purl.org/phylo/treebase/phylows/study/TB2:S" + str(treebaseId)
         return result
     else:
         return
