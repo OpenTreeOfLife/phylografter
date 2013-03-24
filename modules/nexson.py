@@ -111,7 +111,7 @@ def treeBaseDepositMetaForStudy(studyid,db):
         result = dict()
         result["@xsi:type"] = "nex:ResourceMeta"
         result["@property"] = "ot:dataDeposit"
-        result["href"] = "http://purl.org/phylo/treebase/phylows/study/TB2:S" + str(treebaseId)
+        result["@href"] = "http://purl.org/phylo/treebase/phylows/study/TB2:S" + str(treebaseId)
         return result
     else:
         return
