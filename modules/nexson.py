@@ -230,11 +230,12 @@ def otuElt(otu_id,db):
 #will be added in the future.    
 def metaEltsForOtuElt(otu_id, ottol_name_id,db):
     'generates meta elements for an otu element'
-    if db.ottol_name(ottol_name_id):
+    oname = db.ottol_name(ottol_name_id)
+    if oname and oname.accepted_uid:
         idElt = dict()
         idElt["@xsi:type"] = "nex:LiteralMeta"
         idElt["@property"] = "ot:ottolid"
-        idElt["$"] = db.ottol_name(ottol_name_id).accepted_uid
+        idElt["$"] = oname.accepted_uid
         return dict(meta = idElt)    
     else:
         return
