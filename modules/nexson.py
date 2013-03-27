@@ -21,9 +21,10 @@ def nexmlStudy(studyId,db):
     '''Exports the set of trees associated with a study as JSON Nexml
        study - the study to export
        db - database connection'''
-    metaElts = metaEltsForNexml(studyId,db) 
-    otus = otusEltForStudy(studyId,db)
-    trees = treesElt(studyId,db)
+    studyRow = db.study(studyId)
+    metaElts = metaEltsForNexml(studyRow) 
+    otus = otusEltForStudy(studyRow,db)
+    trees = treesElt(studyRow,db)
     header = nexmlHeader()
     body = dict()
     body.update(otus)
@@ -37,10 +38,11 @@ def nexmlStudy(studyId,db):
 def nexmlTree(tree,db):
     '''Exports one tree from a study (still a complete JSON NeXML with
     headers, otus, and trees blocks)'''
-    studyId = getSingleTreeStudyId(tree,db)
-    metaElts = metaEltsForNexml(studyId,db)
-    otus = otusEltForTree(tree,studyId,db)
-    trees = singletonTreesElt(tree,studyId,db)
+    studyRow = db.study(getSingleTreeStudyId(tree,db))
+    metaElts = metaEltsForNexml(studyRow)
+    treeRow = db.stree(tree)
+    otus = otusEltForTree(treeRow,studyRow,db)
+    trees = singletonTreesElt(treeRow,studyRow,db)
     header = nexmlHeader()
     body = dict()
     body.update(otus)
@@ -71,10 +73,9 @@ def xmlNameSpace():
     result["xsd"] = "http://www.w3.org/2001/XMLSchema#"
     return result
 
-def metaEltsForNexml(study_id,db):
+def metaEltsForNexml(studyRow):
     'generates nexml meta elements that are children of the root nexml element'
     metaArray = []
-    studyRow = db.study(study_id)
     studyPublicationMeta = studyPublicationMetaElt(studyRow)
     if studyPublicationMeta:
         metaArray.append(studyPublicationMeta)
@@ -163,54 +164,56 @@ def phylografterIdMetaForStudy(studyRow):
     result["$"] = studyRow.id
     return result
 
-def otusEltForStudy(studyId,db):
+def otusEltForStudy(studyRow,db):
     'Generates an otus block'
-    otuRows = getOtuRowsForStudy(studyId,db)
-    metaElts = metaEltsForOtus(studyId,otuRows,db)
+    otuRows = getOtuRowsForStudy(studyRow,db)
+    metaElts = metaEltsForOtus(studyRow,otuRows,db)
     otuElements = [otuElt(otuRow,db) for otuRow in otuRows]
     otusElement = dict()
     otusElement["otu"] = otuElements
-    otusElement["@id"] = "otus" + str(studyId)
+    otusElement["@id"] = "otus" + str(studyRow.id)
     return dict(otus = otusElement)
     
-def getOtuRowsForStudy(studyid,db):
+def getOtuRowsForStudy(studyRow,db):
     'returns a list of otu ids for otu records that link to this study'
+    studyid = studyRow.id
     otuStudy = db.otu.study
     s=db(otuStudy==studyid)
     rows = s.select()
     return rows
     
-def metaEltsForOtus(studyid,otuRows,db):
+def metaEltsForOtus(studyRow,otuRows,db):
     'generates nexml meta elements that are children of an otus element'
     result = dict()
     return result
     
-def getTreeRowsForStudy(studyid,db):
+def getTreeRowsForStudy(studyRow,db):
     'returns a list of the trees associated with the specified study'
+    studyid = studyRow.id
     treeStudy = db.stree.study
     s=db(treeStudy==studyid)
     rows = s.select()
     return rows
     
-def otusEltForTree(tree,studyId,db):
+def otusEltForTree(treeRow,studyRow,db):
     ##get the otus for this tree
-    nodeList = getSNodeIdsForTree(tree,db)
+    nodeRows = getSNodeRowsForTree(treeRow,db)
     otuRows = list([])
-    for node_id in nodeList:
-        otuRow = getOtuRowForNode(node_id,db)
+    for nodeRow in nodeRows:
+        otuRow = getOtuRowForNode(nodeRow,db)
         if (otuRow):
             otuRows.append(otuRow)
-    metaElts = metaEltsForOtus(studyId,otuRows,db)
+    metaElts = metaEltsForOtus(studyRow,otuRows,db)
     otuElements = [otuElt(otuRow,db) for otuRow in otuRows] 
     otusElement = dict()
     otusElement["otu"] = otuElements
-    otusElement["@id"] = "otus" + str(studyId) + "." + str(tree)
+    otusElement["@id"] = "otus" + str(studyRow.id) + "." + str(treeRow.id)
     result = dict()
     result["otus"] = otusElement
     return result
        
-def getOtuRowForNode(node_id,db):
-    return db.otu(db.snode(node_id).otu) #this may need more attention   
+def getOtuRowForNode(nodeRow,db):
+    return db.otu(nodeRow.otu) #this may need more attention   
 
 #Generates an otu Element             
 def otuElt(otuRow,db):
@@ -263,12 +266,11 @@ def treesElt(study,db):
 def metaEltsForTreesElt(study,db):
     return dict()    
 
-def singletonTreesElt(tree,studyId,db):
+def singletonTreesElt(treeRow,studyRow,db):
     'generate the singleton tree element for a tree request'
-    treeRow=db.stree(tree)
     treeList = [treeElt(treeRow,db)]
     body=dict()
-    body["@otus"] = "otus" + str(studyId) + "." + str(treeRow.id)
+    body["@otus"] = "otus" + str(studyRow.id) + "." + str(treeRow.id)
     body["tree"] = treeList
     result = dict()
     result["trees"] = body
@@ -319,8 +321,8 @@ def treeNodes(treeRow,db):
     body = [nodeElt(nodeRow) for nodeRow in nodeRows]
     return body
     
-def treeEdges(tree,db):
-    nodeRows = getSNodeRowsForTree(tree,db)
+def treeEdges(treeRow,db):
+    nodeRows = getSNodeRowsForTree(treeRow,db)
     edgeList = list([])
     for nodeRow in nodeRows:
         parent = getNodeParent(nodeRow)
