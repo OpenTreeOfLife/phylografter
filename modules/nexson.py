@@ -231,7 +231,7 @@ def otuElt(otuRow,db):
 #will be added in the future.    
 def metaEltsForOtuElt(ottolNameRow):
     'generates meta elements for an otu element'
-    if ottolNameRow:
+    if ottolNameRow and ottolNameRow.accepted_uid:
         idElt = dict()
         idElt["@xsi:type"] = "nex:LiteralMeta"
         idElt["@property"] = "ot:ottolid"
