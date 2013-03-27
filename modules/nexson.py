@@ -46,6 +46,7 @@ def nexmlTree(tree,db):
     body.update(otus)
     body.update(trees)
     body.update(header)
+    body.update(metaElts)
     body["id"] = "study"
     body["@about"] = "#study"
     return dict(nexml = body)
@@ -73,26 +74,27 @@ def xmlNameSpace():
 def metaEltsForNexml(study_id,db):
     'generates nexml meta elements that are children of the root nexml element'
     metaArray = []
-    studyPublicationMeta = studyPublicationMetaElt(study_id,db)
+    studyRow = db.study(study_id)
+    studyPublicationMeta = studyPublicationMetaElt(studyRow)
     if studyPublicationMeta:
         metaArray.append(studyPublicationMeta)
-    doiMeta = doiMetaForStudy(study_id,db)
+    doiMeta = doiMetaForStudy(studyRow)
     if doiMeta:
         metaArray.append(doiMeta)
-    curatorMeta = curatorMetaForStudy(study_id,db)
+    curatorMeta = curatorMetaForStudy(studyRow)
     if curatorMeta:
         metaArray.append(curatorMeta)
-    treeBaseDepositMeta = treeBaseDepositMetaForStudy(study_id,db)
+    treeBaseDepositMeta = treeBaseDepositMetaForStudy(studyRow)
     if treeBaseDepositMeta:
         metaArray.append(treeBaseDepositMeta)
-    phylografterIdMeta = phylografterIdMetaForStudy(study_id,db)
+    phylografterIdMeta = phylografterIdMetaForStudy(studyRow)
     if phylografterIdMeta:
         metaArray.append(phylografterIdMeta)
     return dict(meta = metaArray)
 
-def curatorMetaForStudy(studyid,db):
+def curatorMetaForStudy(studyRow):
     'generates curator metadata element for a study'
-    curator = db.study(studyid).contributor
+    curator = studyRow.contributor
     if (curator):
         #names = metaNSForDCTerm()
         result = dict()
@@ -103,9 +105,9 @@ def curatorMetaForStudy(studyid,db):
     else:
         return
 
-def treeBaseDepositMetaForStudy(studyid,db):
+def treeBaseDepositMetaForStudy(studyRow):
     'generates text citation metadata element for a study'
-    treebaseId = db.study(studyid).treebase_id
+    treebaseId = studyRow.treebase_id
     if (treebaseId):
         #names = metaNSForDCTerm()
         result = dict()
@@ -119,9 +121,9 @@ def treeBaseDepositMetaForStudy(studyid,db):
 
 #returns an ot:studyPublication metadata element if a (possibly incomplete) doi or a 
 #suitable URI is available, else nothing
-def doiMetaForStudy(studyid,db):
+def doiMetaForStudy(studyRow):
     'generates ot:studyPublication metadata element for a study'
-    doi = db.study(studyid).doi
+    doi = studyRow.doi
     if (doi):
         if (doi.startswith('http://dx.doi.org/')):
             pass  #fine, leave as is
@@ -141,9 +143,9 @@ def doiMetaForStudy(studyid,db):
     else:
         return
 
-def studyPublicationMetaElt(studyid,db):
+def studyPublicationMetaElt(studyRow):
     'generates text citation metadata element for a study'
-    cite = db.study(studyid).citation
+    cite = studyRow.citation
     if (cite):
         result = dict()
         result["@xsi:type"] = "nex:LiteralMeta"
@@ -153,54 +155,53 @@ def studyPublicationMetaElt(studyid,db):
     else:
         return
 
-def phylografterIdMetaForStudy(study_id,db):
+def phylografterIdMetaForStudy(studyRow):
     'generates phylografter study id metadata element for a study'
     result = dict()
     result["@xsi:type"] = "nex:LiteralMeta"
     result["@property"] = "ot:studyid"
-    result["$"] = study_id
+    result["$"] = studyRow.id
     return result
 
 def otusEltForStudy(studyId,db):
     'Generates an otus block'
-    otuList = getOtuIDsForStudy(studyId,db)
-    metaElts = metaEltsForOtus(studyId,otuList,db)
-    otuElements = [otuElt(otu_id,db) for otu_id in otuList]
+    otuRows = getOtuRowsForStudy(studyId,db)
+    metaElts = metaEltsForOtus(studyId,otuRows,db)
+    otuElements = [otuElt(otuRow,db) for otuRow in otuRows]
     otusElement = dict()
     otusElement["otu"] = otuElements
     otusElement["@id"] = "otus" + str(studyId)
     return dict(otus = otusElement)
     
-def getOtuIDsForStudy(studyid,db):
+def getOtuRowsForStudy(studyid,db):
     'returns a list of otu ids for otu records that link to this study'
     otuStudy = db.otu.study
     s=db(otuStudy==studyid)
-    result = [row.id for row in s.select()]
-    return result
+    rows = s.select()
+    return rows
     
-def metaEltsForOtus(studyid,otuList,db):
+def metaEltsForOtus(studyid,otuRows,db):
     'generates nexml meta elements that are children of an otus element'
     result = dict()
     return result
     
-def getTreeIDsForStudy(studyid,db):
+def getTreeRowsForStudy(studyid,db):
     'returns a list of the trees associated with the specified study'
     treeStudy = db.stree.study
     s=db(treeStudy==studyid)
     rows = s.select()
-    result = [row.id for row in rows]
-    return result
+    return rows
     
 def otusEltForTree(tree,studyId,db):
     ##get the otus for this tree
     nodeList = getSNodeIdsForTree(tree,db)
-    otuList = list([])
+    otuRows = list([])
     for node_id in nodeList:
-        nodeOtu = getOtuForNode(node_id,db)
-        if (nodeOtu):
-            otuList.append(nodeOtu)
-    metaElts = metaEltsForOtus(studyId,otuList,db)
-    otuElements = [otuElt(otu_id,db) for otu_id in otuList] 
+        otuRow = getOtuRowForNode(node_id,db)
+        if (otuRow):
+            otuRows.append(otuRow)
+    metaElts = metaEltsForOtus(studyId,otuRows,db)
+    otuElements = [otuElt(otuRow,db) for otuRow in otuRows] 
     otusElement = dict()
     otusElement["otu"] = otuElements
     otusElement["@id"] = "otus" + str(studyId) + "." + str(tree)
@@ -208,50 +209,49 @@ def otusEltForTree(tree,studyId,db):
     result["otus"] = otusElement
     return result
        
-def getOtuForNode(node_id,db):
-    return db.snode(node_id).otu    
+def getOtuRowForNode(node_id,db):
+    return db.otu(db.snode(node_id).otu) #this may need more attention   
 
 #Generates an otu Element             
-def otuElt(otu_id,db):
-    ottol_name_id = db.otu(otu_id).ottol_name
-    metaElts = metaEltsForOtuElt(otu_id,ottol_name_id,db)
+def otuElt(otuRow,db):
+    ottolNameRow = db.ottol_name(otuRow.ottol_name)
+    metaElts = metaEltsForOtuElt(ottolNameRow)
     result = dict()
-    result["@id"] = "otu" + str(otu_id)
-    if (ottol_name_id):
-        result["@label"]= db.ottol_name(ottol_name_id).name
+    result["@id"] = "otu" + str(otuRow.id)
+    if (ottolNameRow):
+        result["@label"]= ottolNameRow.name
     else:
-        result["@label"]= db.otu(otu_id).label
+        result["@label"]= otuRow.label
     if metaElts:
-        result["@about"] = "#otu" + str(otu_id)
+        result["@about"] = "#otu" + str(otuRow.id)
         result.update(metaElts)
     return result
     
 #Name suggests more than one meta element; expect more than current ot:ottolid
 #will be added in the future.    
-def metaEltsForOtuElt(otu_id, ottol_name_id,db):
+def metaEltsForOtuElt(ottolNameRow):
     'generates meta elements for an otu element'
-    if db.ottol_name(ottol_name_id):
+    if ottolNameRow:
         idElt = dict()
         idElt["@xsi:type"] = "nex:LiteralMeta"
         idElt["@property"] = "ot:ottolid"
-        idElt["$"] = db.ottol_name(ottol_name_id).accepted_uid
+        idElt["$"] = ottolNameRow.accepted_uid
         return dict(meta = idElt)    
     else:
         return
     
 def treesElt(study,db):
     'generate trees element'
-    idList = getTreeIDsForStudy(study,db)
-    if (len(idList) == 1):
-        tree = idList[0]
-        treeList = [treeElt(tree,db)]
+    rowList = getTreeRowsForStudy(study,db)
+    if (len(rowList) == 1):
+        treeList = [treeElt(rowList[0],db)]
         body=dict()
         body["@otus"] = "otus" + str(study)
         body["tree"] = treeList
         result = dict()
         result["trees"] = body
     else:
-        treeElements = [treeElt(tree_id,db) for tree_id in idList]
+        treeElements = [treeElt(treeRow,db) for treeRow in rowList]
         treesElement = dict()
         treesElement["tree"] = treeElements
         treesElement["@otus"] = "otus" + str(study)
@@ -265,9 +265,10 @@ def metaEltsForTreesElt(study,db):
 
 def singletonTreesElt(tree,studyId,db):
     'generate the singleton tree element for a tree request'
-    treeList = [treeElt(tree,db)]
+    treeRow=db.stree(tree)
+    treeList = [treeElt(treeRow,db)]
     body=dict()
-    body["@otus"] = "otus" + str(studyId) + "." + str(tree)
+    body["@otus"] = "otus" + str(studyId) + "." + str(treeRow.id)
     body["tree"] = treeList
     result = dict()
     result["trees"] = body
@@ -276,24 +277,23 @@ def singletonTreesElt(tree,studyId,db):
 def getSingleTreeStudyId(tree,db):
     return db.stree(tree).study
     
-def treeElt(tree_id,db):
+def treeElt(treeRow,db):
     'generates a tree element'
-    t = db.stree(tree_id)
-    metaElts = metaEltsForTreeElt(tree_id,db)
+    metaElts = metaEltsForTreeElt(treeRow)
     result = dict()
-    result["@id"]='tree' + str(tree_id)
-    result["node"]=treeNodes(tree_id,db)
-    result["edge"]=treeEdges(tree_id,db)
+    result["@id"]='tree' + str(treeRow.id)
+    result["node"]=treeNodes(treeRow,db)
+    result["edge"]=treeEdges(treeRow,db)
     if metaElts:
-    	result["@about"] = "#tree" + str(tree_id)
+    	result["@about"] = "#tree" + str(treeRow.id)
     	result.update(metaElts)
     return result
     
 #Name suggests more than one meta element; expect more than current ot:branchLengthMode
 #will be added in the future.    
-def metaEltsForTreeElt(tree_id,db):
+def metaEltsForTreeElt(treeRow):
     'returns meta elements for a tree element'
-    blRep = db.stree(tree_id).branch_lengths_represent
+    blRep = treeRow.branch_lengths_represent
     if blRep:
         lengthsElt = dict()
         lengthsElt["@xsi:type"] = "nex:LiteralMeta"
@@ -314,27 +314,27 @@ def metaEltsForTreeElt(tree_id,db):
     else:
         return    
     
-def treeNodes(tree,db):
-    nodeList = getSNodeIdsForTree(tree,db)
-    body = [nodeElt(node_id,db) for node_id in nodeList]
+def treeNodes(treeRow,db):
+    nodeRows = getSNodeRowsForTree(treeRow,db)
+    body = [nodeElt(nodeRow) for nodeRow in nodeRows]
     return body
     
 def treeEdges(tree,db):
-    nodeList = getSNodeIdsForTree(tree,db)
+    nodeRows = getSNodeRowsForTree(tree,db)
     edgeList = list([])
-    for node_id in nodeList:
-        parent = getNodeParent(node_id,db)
-        child = node_id
-        length = getEdgeLength(node_id,db)
+    for nodeRow in nodeRows:
+        parent = getNodeParent(nodeRow)
+        child = nodeRow.id
+        length = getEdgeLength(nodeRow)
         if (parent):
             edgeList.append(edgeElt(parent,child,length))
     return edgeList
     
-def getNodeParent(childnode,db):
-    return db.snode(childnode).parent
+def getNodeParent(childNodeRow):
+    return childNodeRow.parent
 
-def getEdgeLength(childnode,db):
-    return db.snode(childnode).length        
+def getEdgeLength(nodeRow):
+    return nodeRow.length        
     
 def edgeElt(parent, child,length):
     result = dict()
@@ -345,20 +345,20 @@ def edgeElt(parent, child,length):
         result["@length"]=length
     return result
 
-def getSNodeIdsForTree(treeid,db):
+def getSNodeRowsForTree(treeRow,db):
     'returns a list of the nodes associated with the specified study'
     nodeSTree = db.snode.tree
-    s=db(nodeSTree==treeid)
-    return [row.id for row in s.select()]
+    s=db(nodeSTree==treeRow.id)
+    return s.select()
     
-def nodeElt(nodeid,db):
+def nodeElt(nodeRow):
     result = dict()
-    otu_id = db.snode(nodeid).otu
+    otu_id = nodeRow.otu
     if (otu_id):
         result["@otu"] = 'otu' + str(otu_id)
-    if getNodeParent(nodeid,db):
+    if getNodeParent(nodeRow):
         pass
     else:
         result["@root"] = 'true'
-    result["@id"] = 'node'+str(nodeid)
+    result["@id"] = 'node'+str(nodeRow.id)
     return result
