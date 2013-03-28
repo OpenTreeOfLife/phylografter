@@ -160,8 +160,8 @@ def phylografterIdMetaForStudy(studyRow):
     'generates phylografter study id metadata element for a study'
     result = dict()
     result["@xsi:type"] = "nex:LiteralMeta"
-    result["@property"] = "ot:studyid"
-    result["$"] = studyRow.id
+    result["@property"] = "ot:studyId"
+    result["$"] = str(studyRow.id)
     return result
 
 def otusEltForStudy(studyRow,db):
@@ -249,7 +249,8 @@ def treesElt(study,db):
     if (len(rowList) == 1):
         treeList = [treeElt(rowList[0],db)]
         body=dict()
-        body["@otus"] = "otus" + str(study)
+        body["@otus"] = "otus" + str(study.id)
+        body["@id"] = "trees" + str(study.id)
         body["tree"] = treeList
         result = dict()
         result["trees"] = body
@@ -257,8 +258,8 @@ def treesElt(study,db):
         treeElements = [treeElt(treeRow,db) for treeRow in rowList]
         treesElement = dict()
         treesElement["tree"] = treeElements
-        treesElement["@otus"] = "otus" + str(study)
-        treesElement["@id"] = "trees" + str(study)
+        treesElement["@otus"] = "otus" + str(study.id)
+        treesElement["@id"] = "trees" + str(study.id)
         result = dict()
         result["trees"] = treesElement
     return result
