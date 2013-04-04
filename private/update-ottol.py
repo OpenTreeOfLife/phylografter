@@ -3,6 +3,7 @@ from itertools import imap, ifilter
 dump_name = 'ottol_dump_w_uniquenames_preottol_ids'
 dump_loc = '/home/rree/SparkleShare/documents'
 p = os.path.join(dump_loc, dump_name)
+t = db.ottol_name
 delim = '\t|\t'
 split = lambda x: x.split(delim)[:-1]
 pre2uid = {}
@@ -24,8 +25,6 @@ with open(p) as f:
             pre2uid[pre] = uid
 
 # select used preottol names
-t = db.ottol_name
-
 q = ((db.otu.ottol_name==db.ottol_name.id)&
      (db.otu.ottol_name!=None))
 otu_used = set([ x.id for x in db(q).select(t.id, distinct=True) ])
@@ -92,11 +91,16 @@ for uid, row in uid2row.items():
 
 ## # insert synonym records
 p = '/home/rree/SparkleShare/documents/ottol_dump.synonyms'
+p = '/home/rree/ottol_dump.synonyms'
 def filt(x, yearpat=re.compile(r'\d{4}')):
-    s = x[3]; name = x[2]
+    s = x[3]; name = x[2]; uid = int(x[0])
     c = db(t.name==name).count()
-    return ((s in ('synonym', 'genbank synonym', 'equivalent name')) and
-            (not yearpat.search(name)) and (c == 0))
+    return ((s in (#'synonym', 'genbank synonym', 'equivalent name',
+                   'anamorph', 'teleomorph')) and
+            (not s[0] in '"\'') and
+            (db(t.uid==uid).count()==0) and
+            ## (not yearpat.search(name)) and
+            (c == 0))
 
 inserted = 0
 with open(p) as f:
