@@ -941,3 +941,6 @@ def modified_list():
 def export_csv():
     studies = db().select(db.study.ALL)
     return dict(studies=studies)
+
+def export_zipped_json():
+    return
