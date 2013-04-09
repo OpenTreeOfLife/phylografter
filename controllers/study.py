@@ -942,5 +942,11 @@ def export_csv():
     studies = db().select(db.study.ALL)
     return dict(studies=studies)
 
-def export_zipped_json():
+def export_zippedNexSON():
+    'Exports the otus and trees in the study specified by the argument as zipped JSON NeXML'
+    studyid = request.args(0)
+    if (db.study(studyid) is None):
+        raise HTTP(404)
+    else:
+        jsonText = nexson.nexmlStudy(studyid,db)
     return
