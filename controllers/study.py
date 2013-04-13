@@ -9,6 +9,7 @@ import json
 import time
 import nexson
 import tempfile
+import gzip
 
 from externalproc import get_external_proc_dir_for_upload, invoc_status, \
     ExternalProcStatus, get_logger, get_conf, do_ext_proc_launch
@@ -943,26 +944,24 @@ def export_csv():
     studies = db().select(db.study.ALL)
     return dict(studies=studies)
 
-def export_zippedNexSON():
-    'Exports the otus and trees in the study specified by the argument as zipped JSON NeXML'
+def export_gzipNexSON():
+    'Exports the otus and trees in the study specified by the argument as gzipped JSON NeXML'
     studyid = request.args(0)
     if (db.study(studyid) is None):
         raise HTTP(404)
     else:
         from gluon.serializers import json
         import cStringIO
-        import zipfile
-        jsonText = json(nexson.nexmlStudy(studyid,db))
-        zipdir = tempfile.mkdtemp()
-        print "Tempdir is %s; json size is %d\n" % (zipdir,len(jsonText))
-        filename = "%s/study%s.zip" % (zipdir,studyid)
         stream = cStringIO.StringIO()
-        zipFile = zipfile.ZipFile(filename, "w", zipfile.ZIP_DEFLATED, False)
-        zipFile.debug = 3
-        zipInfo = zipfile.ZipInfo("study%s.json"%studyid)
-        zipFile.writestr(zipInfo, jsonText)
-        zipFile.close()
-        response.headers['Content-Type'] = "application/zip"
-        response.headers['Content-Disposition'] = "attachment;filename=%s" % (filename)
-        return response.stream(stream, request=request)                
+        jsondict = nexson.nexmlStudy(studyid,db)
+        jsonText = json(jsondict)
+        zipdir = tempfile.mkdtemp()
+        zipfilename = "%s/study%s.json.gz" % (zipdir,studyid)
+        gzfile = gzip.open(filename=zipfilename, mode="wb")
+        gzfile.write(jsonText)
+        gzfile.write("\n")
+        gzfile.close()
+        response.headers['Content-Type'] = "application/gzip"
+        response.headers['Content-Disposition'] = "attachment;filename=study%s.json.gz"%studyid
+        return response.stream(open(zipfilename,'rb'),chunk_size=4096, request=request)                
     return
