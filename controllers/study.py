@@ -955,13 +955,12 @@ def export_gzipNexSON():
         stream = cStringIO.StringIO()
         jsondict = nexson.nexmlStudy(studyid,db)
         jsonText = json(jsondict)
-        zipdir = tempfile.mkdtemp()
-        zipfilename = "%s/study%s.json.gz" % (zipdir,studyid)
-        gzfile = gzip.open(filename=zipfilename, mode="wb")
+        zipfilename = "study%s.json.gz" % studyid
+        gzfile = gzip.GzipFile(filename=zipfilename, mode="wb", fileobj=stream)
         gzfile.write(jsonText)
         gzfile.write("\n")
-        gzfile.close()
+        gzfile.close() 
         response.headers['Content-Type'] = "application/gzip"
-        response.headers['Content-Disposition'] = "attachment;filename=study%s.json.gz"%studyid
-        return response.stream(open(zipfilename,'rb'),chunk_size=4096, request=request)                
+        response.headers['Content-Disposition'] = "attachment;filename=%s"%zipfilename
+        return stream.getvalue()              
     return
