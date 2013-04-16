@@ -8,6 +8,8 @@ import requests
 import json
 import time
 import nexson
+import tempfile
+import gzip
 
 from externalproc import get_external_proc_dir_for_upload, invoc_status, \
     ExternalProcStatus, get_logger, get_conf, do_ext_proc_launch
@@ -941,3 +943,24 @@ def modified_list():
 def export_csv():
     studies = db().select(db.study.ALL)
     return dict(studies=studies)
+
+def export_gzipNexSON():
+    'Exports the otus and trees in the study specified by the argument as gzipped JSON NeXML'
+    studyid = request.args(0)
+    if (db.study(studyid) is None):
+        raise HTTP(404)
+    else:
+        from gluon.serializers import json
+        import cStringIO
+        stream = cStringIO.StringIO()
+        jsondict = nexson.nexmlStudy(studyid,db)
+        jsonText = json(jsondict)
+        zipfilename = "study%s.json.gz" % studyid
+        gzfile = gzip.GzipFile(filename=zipfilename, mode="wb", fileobj=stream)
+        gzfile.write(jsonText)
+        gzfile.write("\n")
+        gzfile.close() 
+        response.headers['Content-Type'] = "application/gzip"
+        response.headers['Content-Disposition'] = "attachment;filename=%s"%zipfilename
+        return stream.getvalue()              
+    return
