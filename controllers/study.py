@@ -103,14 +103,14 @@ def index():
     t = db.study
     fields = t.fields
     colnames = ["Id", "Focal clade", "Citation",
-                "Year", "OTUs", "Trees", "Uploaded"]
-    widths = ["5%", "10%", "30%", "5%", "5%", "20%","15%"]
+                "Year", "OTUs", "Trees", "Uploaded", "By"]
+    widths = ["5%", "10%", "25%", "5%", "5%", "15%","10%","7%"]
     tid = "studies"
     table = TABLE(_id=tid, _class="display")
     table.append(THEAD(TR(*[ TH(f, _width=w)
                              for f, w in zip(colnames, widths) ])))
     table.append(TBODY(TR(TD("Loading data from server",
-                             _colspan=len(fields),
+                             _colspan=len(colnames),
                              _class="dataTables_empty"))))
     table.append(TFOOT(TR(
         TH(INPUT(_name="search_id",
@@ -129,7 +129,11 @@ def index():
         TH(),
         TH(INPUT(_name="search_uploaded",
                  _style="width:100%",_class="search_init",
-                 _title="search uploaded" )))))
+                 _title="search uploaded" )),
+        TH(INPUT(_name="search_person",
+                 _style="width:100%",_class="search_init",
+                 _title="search person" )),
+        )))
 
     return dict(tid=tid, table=table)
     
@@ -143,7 +147,7 @@ def dtrecords():
     left = db.otu.on(db.otu.study==db.study.id)
 
     fields = [ t.id, t.focal_clade_ottol, t.citation, t.year_published,
-               otu_count, None, t.uploaded ]
+               otu_count, None, t.uploaded, t.contributor ]
     orderby = []
     if request.vars.iSortCol_0:
         for i in range(int(request.vars.iSortingCols or 1)):
@@ -158,9 +162,12 @@ def dtrecords():
     end = start + int(request.vars.iDisplayLength or 10)
     limitby = (start,end)
     q = q0 = (t.id>0)
-    for i, f in enumerate(fields):
+    
+    for i, f in enumerate(
+        [ t.id, t.focal_clade_ottol, t.citation,
+          t.year_published, t.uploaded, t.contributor ]):
         sterm = request.vars.get("sSearch_%s" % i)
-        if f and sterm and f != otu_count:
+        if sterm:
             if f is t.focal_clade_ottol:
                 q &= ((t.focal_clade_ottol==db.ottol_name.id)&
                       (db.ottol_name.name.like('%'+sterm+'%')))
@@ -183,7 +190,10 @@ def dtrecords():
                if r.study.focal_clade_ottol else ''),
               r.study.study_url.xml(),
               r.study.year_published,
-              otus(r), r.study.trees, r.study.uploaded)
+              otus(r),
+              r.study.trees,
+              r.study.uploaded,
+              r.study.contributor)
              for r in rows ]
     totalrecs = db(q0).count()
     disprecs = db(q).count()
