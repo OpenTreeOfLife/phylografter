@@ -1,28 +1,19 @@
 import os, re
 from itertools import imap, ifilter
-dump_name = 'ottol_dump_w_uniquenames_preottol_ids'
-dump_loc = '/home/rree/SparkleShare/documents'
+dump_name = 'taxonomy'
+dump_loc = '/tmp/ott2.0'
 p = os.path.join(dump_loc, dump_name)
 t = db.ottol_name
 delim = '\t|\t'
 split = lambda x: x.split(delim)[:-1]
-pre2uid = {}
 uid2row = {}
-pre_many2one = {}
 
 with open(p) as f:
     fields = split(f.next())
-    PRE = fields.index('preottol_id')
     UID = fields.index('uid')
     for row in imap(split, f):
-        prevals = filter(None, [ int(x or 0) for x in row[PRE].split(',') ])
         uid = int(row[UID])
-        if len(prevals)>1:
-            pre_many2one[tuple(prevals)] = uid
         uid2row[uid] = row
-        for pre in prevals:
-            assert pre not in pre2uid, pre
-            pre2uid[pre] = uid
 
 # select used preottol names
 q = ((db.otu.ottol_name==db.ottol_name.id)&
