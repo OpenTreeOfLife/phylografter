@@ -115,8 +115,8 @@ def autocomplete():
     # for now, let's just match on the start
     q = (t.unique_name.like(searchText +"%"))
     ### TODO: also match on ottol ID?  q |= (t.id.like("%"+ searchText +"%")
-    fields = (t.id, t.unique_name)
+    fields = (t.accepted_uid, t.unique_name)
     rows = db(q).select(*fields, limitby=(0,4))
-    return ['<a href="%s">%s</a>' % (r.id, r.unique_name) for r in rows]
+    return ['<a href="%s">%s</a>' % (r.accepted_uid, r.unique_name) for r in rows]
 
 
