@@ -184,7 +184,7 @@ def dtrecords():
     def study_url(r):
         study = r.stree.study
         u = URL(c="study",f="view",args=[study],extension="html")
-        citation = s = db.study[study].citation
+        citation = s = db.study[study].citation.decode('utf8')
         N = 50
         if len(s)>N: s = s[:N-3]+" ..."
         return A(s, _href=u, _title=citation)
