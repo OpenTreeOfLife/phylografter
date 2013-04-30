@@ -105,3 +105,18 @@ def children():
     session.ottol_browse_expanded = s
     ## return dict(children=children)
     return dict(e=e)
+
+# provide (unsecured) autocomplete service for ottol names, used by the opentree app
+def autocomplete():
+    searchText = request.vars['search']
+    if searchText is None:
+        return "<p><i>No matching results</i></p>"
+    t = db.ottol_name
+    # for now, let's just match on the start
+    q = (t.unique_name.like(searchText +"%"))
+    ### TODO: also match on ottol ID?  q |= (t.id.like("%"+ searchText +"%")
+    fields = (t.accepted_uid, t.unique_name)
+    rows = db(q).select(*fields, limitby=(0,4))
+    return ['<a href="%s">%s</a>' % (r.accepted_uid, r.unique_name) for r in rows]
+
+
