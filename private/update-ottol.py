@@ -7,8 +7,22 @@ p = os.path.join(dump_loc, dump_name)
 t = db.ottol_name
 delim = '\t|\t'
 split = lambda x: x.split(delim)[:-1]
-NCBI = re.compile(r'ncbi:\(\d+\)')
-GBIF = re.compile(r'gbif:\(\d+\)')
+
+def query_used(fld='accepted_uid'):
+    q = ((db.otu.ottol_name==db.ottol_name.id)&
+         (db.otu.ottol_name!=None))
+    otu_used = set([ x[fld] for x in db(q).select(t[fld], distinct=True) ])
+
+    q = ((db.snode.ottol_name==db.ottol_name.id)&
+         (db.snode.ottol_name!=None))
+    snode_used = set([ x[fld] for x in db(q).select(t[fld], distinct=True) ])
+
+    q = ((db.study.focal_clade_ottol==db.ottol_name.id)&
+         (db.study.focal_clade_ottol!=None))
+    study_used = set([ x[fld] for x in db(q).select(t[fld], distinct=True) ])
+
+    used = otu_used | snode_used | study_used
+    return used
 
 name2none = {}
 for r in db(t.uid==None).select():
@@ -58,6 +72,8 @@ used = otu_used | snode_used | study_used
 # update used deprecated names
 q = t.accepted_uid.belongs(deprecated) & t.accepted_uid.belongs(used)
 used_deprecated = db(q).select(t.id, t.name)
+n = len(used_deprecated)
+print 'used_deprecated:', n
 i = 0; j = 0
 for row in used_deprecated:
     k = row.name; v = syn2uid.get(row.name)
@@ -69,7 +85,11 @@ for row in used_deprecated:
         #row.update_record(accepted_uid=v.pop())
         new_uid = v.pop()
         row.update_record(accepted_uid=new_uid)
+        print '%s\r' % n
+    n -= 1
 db.commit()
+
+## V = open('/tmp/update-ottol.sql','w')
 
 def split_sourceinfo(s):
     for x in s.split(','):
@@ -80,36 +100,46 @@ existing_uids = set([ x.accepted_uid for x in
                       db(t.id>0).select(t.accepted_uid, distinct=True) ])
 
 # update and insert name data
+print 'updating name data'
+n = len(uid2row)
 for row in uid2row.values():
     uid = int(row[0])
-    parent_uid = int(row[1]) or 0
+    parent_uid = int(row[1] or 0)
     name = row[2]
-    rank = row[3]
+    rank = row[3] or None
     sourceinfo = row[4]
     unique_name = row[5] or name
     
     d = dict(uid=uid, accepted_uid=uid, parent_uid=parent_uid,
              name=name, rank=rank, unique_name=unique_name)
     for k, v in split_sourceinfo(sourceinfo): d[k] = v
-    if (uid in existing_uids):
+    if uid in existing_uids:
         db(t.uid==uid).update(**d)
+        ## V.write('%s\n' % db(t.uid==uid)._update(**d))
     elif unique_name in name2none:
         rec = name2none[unique_name]
         rec.update_record(**d)
+        ## V.write('%s\n' % db(t.id==rec.id)._update(**d))
     else:
         t.insert(**d)
+        ## V.write('%s\n' % t._insert(**d))
+    print '%s\r' % n
+    n -= 1
 db.commit()
 
 # deal with ottol_name records without uids
+print 'updating names without uids'
 rows = db(t.uid==None).select()
+n = len(rows)
 for r in rows:
     name = r.unique_name
     v = syn2uid.get(name)
     if v and len(v)==1:
         uid = v.pop()
+        print name, uid
         parent_uid = int(row[1])
         name = row[2]
-        rank = row[3]
+        rank = row[3] or None
         sourceinfo = row[4]
         unique_name = row[5] or name
 
@@ -119,9 +149,23 @@ for r in rows:
         for kp, vp in split_sourceinfo(sourceinfo): d[kp] = vp
         row = uid2row[uid]
         r.update_record(**d)
-db.commit()
+        ## V.write('%s\n' % db(t.id==r.id)._update(**d))
+    elif name in name2row:
+        uid = int(name2row[name][0])
+        eid = db(t.accepted_uid==uid).select(t.id).first().id
+        print 'replacing', name, 'with', uid, eid
+        db(db.otu.ottol_name==r.id).update(ottol_name=eid)
+        db(db.snode.ottol_name==r.id).update(ottol_name=eid)
+        db(db.study.focal_clade_ottol==r.id).update(focal_clade_ottol=eid)
+        ## V.write('%s\n' % db(db.otu.ottol_name==r.id)._update(ottol_name=eid))
+        ## V.write('%s\n' % db(db.snode.ottol_name==r.id)._update(ottol_name=eid))
+        ## V.write('%s\n' % db(db.study.focal_clade_ottol==r.id)._update(focal_clade_ottol=eid))
+    ## print '%s\r' % n
+    n -= 1
+## db.commit()
 
 # delete unused deprecated names
+## print 'deleting unused deprecated names'
 q = ((db.otu.ottol_name==db.ottol_name.id)&
      (db.otu.ottol_name!=None))
 otu_used = set([ x[fld] for x in db(q).select(t[fld], distinct=True) ])
@@ -137,6 +181,44 @@ study_used = set([ x[fld] for x in db(q).select(t[fld], distinct=True) ])
 used = otu_used | snode_used | study_used
 
 q =(t.accepted_uid.belongs(deprecated))&(~t.accepted_uid.belongs(used)) 
-db(q).count()
+## db(q).delete()
+## V.write('%s\n' % db(q)._delete())
+## print 'names without uids:', db(t.uid==None).count()
+## V.close()
 
-print 'names without uids:', db(t.uid==None).count()
+# find uid by ncbi taxid
+q = ('select distinct ncbi_taxid, accepted_uid from ottol_name '
+     'where accepted_uid is not null and ncbi_taxid is not null')
+taxid2uid = dict(db.executesql(q))
+
+for r in db(t.uid==None)(t.ncbi_taxid!=None).select():
+    uid = taxid2uid.get(r.ncbi_taxid)
+    if uid:
+        print r.unique_name, r.ncbi_taxid, uid
+        r.update_record(accepted_uid=uid)
+
+q = ('select distinct gbif_taxid, accepted_uid from ottol_name '
+     'where accepted_uid is not null and gbif_taxid is not null')
+taxid2uid = dict(db.executesql(q))
+
+for r in db(t.uid==None)(t.gbif_taxid!=None).select():
+    uid = taxid2uid.get(r.gbif_taxid)
+    if uid:
+        print r.unique_name, r.gbif_taxid, uid
+        #r.update_record(accepted_uid=uid)
+    
+# find duplicate uids
+q = ('select unique_name, count(*) c from ottol_name '
+     ## 'where uid is not null '
+     'group by unique_name having c > 1')
+v = [ x[0] for x in db.executesql(q) ]
+w = db(t.unique_name.belongs(v)).select()
+i = 0
+todel = []
+for x in w:
+    uid = x.accepted_uid
+    if ((uid not in uid2row) and
+        (x.otu.isempty() and x.snode.isempty() and x.study.isempty())):
+        todel.append(uid)
+        i += 1
+db(t.accepted_uid.belongs(todel)).delete()
