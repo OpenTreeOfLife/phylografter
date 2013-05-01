@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # coding: utf8
 
-#This module implements the export of nexml in JSON syntax.  The json follows the badgerfish () rules for mapping xml to json
+#This module implements the export of nexml in JSON syntax.  The json follows the badgerfish 
+#(http://badgerfish.ning.com - original site?) rules for mapping xml to json
 
 #There are two entry points to this module: nexmlStudy (generate nexml for all the trees and otus for a study) and nexmlTree
 #(complete nexml but just including a single tree - but currently all the otus for its containing study)
 
 #local naming convention: getXXX are DAL queries, generally returning an id or list of ids', everything else is generating
-#dicts or lists that correspond to BadgerFish (http://badgerfish.ning.com - original site?) mappings of Elements
+#dicts or lists that correspond to BadgerFish  mappings of Elements
 
 #Output has been tested using the translator on http://dropbox.ashlock.us/open311/json-xml/ and validating the resulting
 #xml with the validator at nexml.org
@@ -91,6 +92,9 @@ def metaEltsForNexml(studyRow):
     phylografterIdMeta = phylografterIdMetaForStudy(studyRow)
     if phylografterIdMeta:
         metaArray.append(phylografterIdMeta)
+    yearMeta = yearMetaForStudy(studyRow)
+    if yearMeta:
+        metaArray.append(yearMeta)
     return dict(meta = metaArray)
 
 def curatorMetaForStudy(studyRow):
@@ -119,6 +123,18 @@ def treeBaseDepositMetaForStudy(studyRow):
     else:
         return
 
+def yearMetaForStudy(studyRow):
+    'generates study year published metadata element for a study'
+    year = studyRow.year_published
+    if (year):
+        #names = metaNSForDCTerm()
+        result = dict()
+        result["@xsi:type"] = "nex:LiteralMeta"
+        result["@property"] = "ot:studyYear"
+        result["$"] = year
+        return result
+    else:
+        return
 
 #returns an ot:studyPublication metadata element if a (possibly incomplete) doi or a 
 #suitable URI is available, else nothing
