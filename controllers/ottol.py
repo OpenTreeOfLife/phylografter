@@ -107,8 +107,10 @@ def children():
     return dict(e=e)
 
 # provide (unsecured) autocomplete service for ottol names, used by the opentree app
+# NOTE that we're using JSONP to overcome the same-domain origin policy
 def autocomplete():
     searchText = request.vars['search']
+    jsonCallback = request.vars['callback']
     if searchText is None:
         return "<p><i>No matching results</i></p>"
     t = db.ottol_name
@@ -117,6 +119,6 @@ def autocomplete():
     ### TODO: also match on ottol ID?  q |= (t.id.like("%"+ searchText +"%")
     fields = (t.accepted_uid, t.unique_name)
     rows = db(q).select(*fields, limitby=(0,4))
-    return ['<a href="%s">%s</a>' % (r.accepted_uid, r.unique_name) for r in rows]
+    return "%s( %s )" % (jsonCallback, ['<a href="%s">%s</a>' % (r.accepted_uid, r.unique_name) for r in rows])
 
 
