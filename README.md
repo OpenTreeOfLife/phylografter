@@ -10,6 +10,16 @@ done
 </pre>
 This builds from source, make sure a fortran compiler is installed.  May have problem where numpy doesn't load correctly and scipy install fails - try building numpy from github source.[PEM]
 
+Alternately, the included **requirements.txt** file lists known-good versions of all the
+required python modules for phylografter and opentree, plus a few convenience
+modules. To [install these modules using pip](http://www.pip-installer.org/en/latest/cookbook.html#requirements-files), 
+
+<pre>
+pip install -r requirements.txt
+</pre>
+
+_TODO: Add [installation instructions](http://pythonhosted.org/pyenchant/tutorial.html#installing-pyenchant) for **pyenchant** and **libenchant**._
+
 (2) Install MySQL.
 
 I'm assuming below that it is installed in /usr/local/mysql.
