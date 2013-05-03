@@ -6,7 +6,10 @@ NAMES = 'applications/phylografter/static/names.txt'
 d = enchant.request_pwl_dict(NAMES)
 
 def check(s):
-    return d.check(s)
+    try: return d.check(s)
+    except:
+        print 'spellcheck.check error', s
+        return None
 
 def suggest(s):
     return d.suggest(s)
@@ -17,6 +20,7 @@ def process_label(db, otu):
     if words[-1].lower() == 'sp':
         words = words[:-1]
     s = DIGITS.sub('', ' '.join(words))
+    if not s: return (False, options)
     if check(s):
         options = list(db(db.ottol_name.name==s).select())
         return (True, options)
