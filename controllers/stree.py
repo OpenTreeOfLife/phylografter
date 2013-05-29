@@ -682,6 +682,35 @@ def import_cached_nexml():
 
     return dict(study=study, tree=t, form=form)
 
+def taxon_search():
+    '''hook for advanced search for trees containing specified taxa, etc.'''
+    anyTaxaForm = FORM('Any tree containing taxa within: ', 
+                      INPUT(_name='anyParent',requires=IS_NOT_EMPTY()), 
+                      INPUT(_type='submit'))
+    mrcaForm = FORM('Any tree containing mrca of two taxa: ', 
+                   INPUT(_name='taxon1'), 
+                   INPUT(_name='taxon2'), 
+                   INPUT(_type='submit'))
+    withinForm = FORM('Any tree containing taxa 1 within taxa 2', 
+                     INPUT(_name='taxon1'), 
+                     INPUT(_name='taxon2'), 
+                     INPUT(_type='submit'))
+    if anyTaxaForm.accepts(request,session):
+        response.flash = 'Any tree containing taxa query accepted'
+    elif mrcaForm.accepts(request,session):
+        response.flash = 'mrca query accepted'
+    elif withinForm.accepts(request,session):
+        response.flash= 'contains query accepted'
+    elif anyTaxaForm.errors:
+        response.flash = 'Any tree containing taxa query has errors'
+    elif mrcaForm.errors:
+        response.flash = 'MRCA query has errors'
+    elif withinForm.errors:
+        response.flash = 'Contains query has errors'
+    ##else:
+    ##    response.flash = 'please fill a query'
+
+    return dict(anyTaxa=anyTaxaForm,mrca=mrcaForm,withinForm=withinForm)
 
 def export_NexSON():
     ''' This exports the tree specified by the argument as JSON NeXML.
