@@ -292,10 +292,11 @@ def getSingleTreeStudyId(tree,db):
 def treeElt(treeRow,db):
     'generates a tree element'
     metaElts = metaEltsForTreeElt(treeRow)
+    nodeRows = getSNodeRecsForTree(treeRow,db)
     result = dict()
     result["@id"]='tree%d' % treeRow.id
-    result["node"]=treeNodes(treeRow,db)
-    result["edge"]=treeEdges(treeRow,db)
+    result["node"]=treeNodes(treeRow,nodeRows)
+    result["edge"]=treeEdges(treeRow,nodeRows)
     if metaElts:
     	result["@about"] = "#tree%d" % treeRow.id
     	result.update(metaElts)
@@ -326,13 +327,11 @@ def metaEltsForTreeElt(treeRow):
     else:
         return    
     
-def treeNodes(treeRow,db):
-    nodeRows = getSNodeRecsForTree(treeRow,db)
+def treeNodes(treeRow,nodeRows):
     body = [nodeElt(nodeRow) for nodeRow in nodeRows]
     return body
     
-def treeEdges(treeRow,db):
-    nodeRows = getSNodeRecsForTree(treeRow,db)
+def treeEdges(treeRow,nodeRows):
     edgeList = [edgeElt(nodeRow) for nodeRow in nodeRows if nodeRow['parent']]
     return edgeList
     
