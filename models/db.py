@@ -24,11 +24,12 @@ else:
     password = conf.get("db", "password")
     dbname = conf.get("db", "dbname")
 
-if 'USE_MY_SQL_ADAPTOR' in os.environ:
+if 'USE_MYSQLDB_ADAPTOR' in os.environ:
     # see http://stackoverflow.com/questions/10055441/web2py-doesnt-connect-to-mysql
     import MySQLdb
     from gluon.dal import MySQLAdapter
-    MySQLAdapter.driver = globals().get('MySQLdb',None)
+    ## MySQLAdapter.driver = globals().get('MySQLdb',None)
+    MySQLAdapter.driver = MySQLdb
 
 db = DAL("mysql://%s:%s@%s/%s" % (user, password, host, dbname), migrate=False ) 
 #db = DAL("mysql://%s:%s@%s/%s" % (user, password, host, dbname), migrate=False, fake_migrate_all=True, migrate_enabled=False ) 
