@@ -118,6 +118,7 @@ def index():
                  _style="width:100%",_class="search_init",
                  _title="search person" )))))
 
+    
     return dict(tid=tid, table=table)
     
 def dtrecords():
@@ -685,28 +686,73 @@ def import_cached_nexml():
 def taxon_search():
     '''hook for advanced search for trees containing specified taxa, etc.'''
     anyTaxaForm = FORM('Any tree containing taxa within: ', 
-                      INPUT(_name='anyParent',requires=IS_NOT_EMPTY()), 
+                      INPUT(_name='anyParent'), 
                       INPUT(_type='submit'))
     mrcaForm = FORM('Any tree containing mrca of two taxa: ', 
-                   INPUT(_name='taxon1'), 
-                   INPUT(_name='taxon2'), 
+                   INPUT(_name='mrca1'), 
+                   INPUT(_name='mrca2'), 
                    INPUT(_type='submit'))
     withinForm = FORM('Any tree containing taxa 1 within taxa 2', 
-                     INPUT(_name='taxon1'), 
-                     INPUT(_name='taxon2'), 
+                     INPUT(_name='innerTaxon'), 
+                     INPUT(_name='withinTaxon'), 
                      INPUT(_type='submit'))
-    if anyTaxaForm.accepts(request,session):
-        response.flash = 'Any tree containing taxa query accepted'
-    elif mrcaForm.accepts(request,session):
-        response.flash = 'mrca query accepted'
-    elif withinForm.accepts(request,session):
-        response.flash= 'contains query accepted'
+    if anyTaxaForm.accepts(request,session,formname="anyParent"):
+        anyParent = anyTaxaForm.vars.anyParent
+        taxa = db(db.ottol_name.name==anyParent).select()
+        treeSet = set()
+        for taxon in taxa:
+            nodes = db(db.snode.ottol_name == taxon.id).select()
+            for tnode in nodes:
+                treeSet.add(tnode.tree)
+        response.flash = 'AnyParent found ' + str(len(treeSet)) + ' trees for ' + anyParent        
+        session.anyParent = anyTaxaForm.vars.anyParent
+        #redirect(URL('taxonSearchResults'))
+    elif mrcaForm.accepts(request,session,formname="mrca1"):
+        mrcaName1 = mrcaForm.vars.mrca1
+        mrcaName2 = mrcaForm.vars.mrca2
+        taxa1 = db(db.ottol_name.name==mrcaName1).select()
+        taxa2 = db(db.ottol_name.name==mrcaName2).select()
+        treeSet1 = set()
+        treeSet2 = set()
+        for taxon in taxa1:
+            nodes = db(db.snode.ottol_name == taxon.id).select()
+            for tnode in nodes:
+                treeSet1.add(tnode.tree)
+        for taxon in taxa2:
+            nodes = db(db.snode.ottol_name == taxon.id).select()
+            for tnode in nodes:
+                treeSet2.add(tnode.tree)
+        intersectSet = treeSet1.intersection(treeSet2)        
+        response.flash = 'mrca query found ' + str(len(intersectSet)) + ' trees containing a common ancestor for ' + mrcaName1 + ' and ' + mrcaName2
+        session.mrcaName1 = mrcaForm.vars.mrca1
+        session.mrcaName2 = mrcaForm.vars.mrca2
+        #redirect(URL('taxonSearchResults'))
+    elif withinForm.accepts(request,session,formname="innerTaxon"):
+        innerName = withinForm.vars.innerTaxon
+        withinName = withinForm.vars.withinTaxon
+        innerTaxa = db(db.ottol_name.name==innerName).select()
+        withinTaxa = db(db.ottol_name.name==withinName).select()
+        innerTreeSet = set()
+        withinTreeSet = set()
+        for taxon in innerTaxa:
+            nodes = db(db.snode.ottol_name == taxon.id).select()
+            for tnode in nodes:
+                innerTreeSet.add(tnode.tree)
+        for taxon in withinTaxa:
+            nodes = db(db.snode.ottol_name == taxon.id).select()
+            for tnode in nodes:
+                withinTreeSet.add(tnode.tree)
+        intersectSet = innerTreeSet.intersection(withinTreeSet)
+        response.flash = 'within query found ' + str(len(intersectSet)) + ' trees containing ' + innerName + ' within ' + withinName
+        session.innerName = withinForm.vars.innerName
+        session.withinName = withinForm.vars.withinName
+##        redirect(URL('taxonSearchResults'))
     elif anyTaxaForm.errors:
         response.flash = 'Any tree containing taxa query has errors'
-    elif mrcaForm.errors:
-        response.flash = 'MRCA query has errors'
-    elif withinForm.errors:
-        response.flash = 'Contains query has errors'
+##    elif mrcaForm.errors:
+##        response.flash = 'MRCA query has errors'
+##    elif withinForm.errors:
+##        response.flash = 'Contains query has errors'
     ##else:
     ##    response.flash = 'please fill a query'
 

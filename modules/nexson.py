@@ -348,6 +348,7 @@ def edgeElt(childRow):
 
 def getSNodeRecsForTree(treeRow,db):
     'returns a list of the nodes associated with the specified study'
+    print db.executesql('SELECT id,parent,otu,length FROM snode WHERE (tree = %d);' % treeRow.id)
     return db.executesql('SELECT id,parent,otu,length FROM snode WHERE (tree = %d);' % treeRow.id,as_dict="true")
     
 def nodeElt(nodeRow):
