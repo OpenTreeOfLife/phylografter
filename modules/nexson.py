@@ -192,7 +192,8 @@ def otusEltForStudy(studyRow,db):
     
 def getOtuRowsForStudy(studyRow,db):
     'returns a list of otu ids for otu records that link to this study'
-    return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.uid, ottol_name.parent_uid, ottol_name.accepted_uid, ottol_name.ncbi_taxid, ottol_name.gbif_taxid, ottol_name.namebank_taxid, ottol_name.treebase_taxid, ottol_name.name, ottol_name.unique_name, ottol_name.rank, ottol_name.comments FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % studyRow.id,as_dict="true")
+    return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.accepted_uid, ottol_name.name FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % studyRow.id)
+#    return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.uid, ottol_name.parent_uid, ottol_name.accepted_uid, ottol_name.ncbi_taxid, ottol_name.gbif_taxid, ottol_name.namebank_taxid, ottol_name.treebase_taxid, ottol_name.name, ottol_name.unique_name, ottol_name.rank, ottol_name.comments FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % studyRow.id,as_dict="true")
 #    return db.executesql('SELECT id,label,ottol_name FROM otu WHERE (study = %d);' % studyRow.id,as_dict="true")
     
 def metaEltsForOtus(studyRow,otuRows,db):
@@ -221,21 +222,18 @@ def otusEltForTree(treeRow,studyRow,db):
     result["otus"] = otusElement
     return result
        
-def getOtuRowForNode(nodeRow,db):
-    return db.executesql('SELECT id,label,ottol_name FROM otu WHERE (id = %d);' % nodeRow['otu'],as_dict="true")[0]
-#return db.otu(nodeRow['otu']) #this may need more attention   
-
 #Generates an otu Element             
 def otuElt(otuRec,db):
     metaElts = metaEltsForOtuElt(otuRec)
+    otu_id,label,ottol_name,accepted_uid,name = otuRec
     result = dict()
-    result["@id"] = "otu%d" % otuRec['id']
-    if (otuRec['name']):
-        result["@label"] = otuRec['name']
+    result["@id"] = "otu%d" % otu_id
+    if (name):
+        result["@label"] = name
     else:
-        result["@label"] = otuRec['label']
+        result["@label"] = label
     if metaElts:
-        result["@about"] = "#otu%d" % otuRec['id']
+        result["@about"] = "#otu%d" % otu_id
         result.update(metaElts)
     return result
     
@@ -243,11 +241,12 @@ def otuElt(otuRec,db):
 #will be added in the future.    
 def metaEltsForOtuElt(otuRec):
     'generates meta elements for an otu element'
-    if otuRec['accepted_uid']:
+    otu_id,label,ottol_name,accepted_uid,name = otuRec
+    if accepted_uid:
         idElt = dict()
         idElt["@xsi:type"] = "nex:LiteralMeta"
         idElt["@property"] = "ot:ottolid"
-        idElt["$"] = otuRec['accepted_uid']
+        idElt["$"] = accepted_uid
         return dict(meta = idElt)    
     else:
         return
@@ -292,10 +291,11 @@ def getSingleTreeStudyId(tree,db):
 def treeElt(treeRow,db):
     'generates a tree element'
     metaElts = metaEltsForTreeElt(treeRow)
+    nodeRows = getSNodeRecsForTree(treeRow,db)
     result = dict()
     result["@id"]='tree%d' % treeRow.id
-    result["node"]=treeNodes(treeRow,db)
-    result["edge"]=treeEdges(treeRow,db)
+    result["node"]=treeNodes(nodeRows)
+    result["edge"]=treeEdges(nodeRows)
     if metaElts:
     	result["@about"] = "#tree%d" % treeRow.id
     	result.update(metaElts)
@@ -326,39 +326,37 @@ def metaEltsForTreeElt(treeRow):
     else:
         return    
     
-def treeNodes(treeRow,db):
-    nodeRows = getSNodeRecsForTree(treeRow,db)
+def treeNodes(nodeRows):
     body = [nodeElt(nodeRow) for nodeRow in nodeRows]
     return body
     
-def treeEdges(treeRow,db):
-    nodeRows = getSNodeRecsForTree(treeRow,db)
-    edgeList = [edgeElt(nodeRow) for nodeRow in nodeRows if nodeRow['parent']]
+def treeEdges(nodeRows):
+    edgeList = [edgeElt(nodeRow) for nodeRow in nodeRows if nodeRow[1]]
     return edgeList
     
 def edgeElt(childRow):
     result = dict()
-    childStr = str(childRow['id'])
-    length = childRow['length']
-    result["@id"]='edge%d' % childRow['id']
-    result["@source"]='node%d' % childRow['parent']
-    result["@target"]='node%d' % childRow['id']
+    child_id,parent,otu_id,length = childRow
+    childStr = str(child_id)
+    result["@id"]='edge%d' % child_id
+    result["@source"]='node%d' % parent
+    result["@target"]='node%d' % child_id
     if (length):
         result["@length"]=length
     return result
 
 def getSNodeRecsForTree(treeRow,db):
-    'returns a list of the nodes associated with the specified study'
-    return db.executesql('SELECT id,parent,otu,length FROM snode WHERE (tree = %d);' % treeRow.id,as_dict="true")
+    'returns a list of the nodes associated with the specified study - now represented as tuples'
+    return db.executesql('SELECT id,parent,otu,length FROM snode WHERE (tree = %d);' % treeRow.id)
     
 def nodeElt(nodeRow):
     result = dict()
-    otu_id = nodeRow['otu']
+    node_id,parent,otu_id,length = nodeRow
     if (otu_id):
         result["@otu"] = 'otu%d' % otu_id
-    if nodeRow['parent']:
+    if parent:
         pass
     else:
         result["@root"] = 'true'
-    result["@id"] = 'node%d' % nodeRow['id']
+    result["@id"] = 'node%d' % node_id
     return result
