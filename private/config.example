@@ -4,6 +4,9 @@ host=localhost
 user=guest
 password=12345
 
+[hosting]
+hostdomain = localhost:8000
+
 #### [external]
 #### dir = /tmp/phylografter_external_tools/
 #### 2nexml = /usr/local/bin/2nexml
