@@ -16,29 +16,35 @@ def suggest(s):
 
 def process_label(db, otu):
     options = []
-    words = otu.label.replace('.',' ').replace('_',' ').split()
-    if words[-1].lower() == 'sp':
-        words = words[:-1]
-    s = DIGITS.sub('', ' '.join(words))
-    if not s: return (False, options)
+    s = otu.label.replace('_', ' ')
     if check(s):
         options = list(db(db.ottol_name.name==s).select())
         return (True, options)
-
     v = suggest(s)
-    if not v and INFRANK.search(s):
-        s = INFRANK.sub('', s)
-        v = suggest(s)
     if not v:
-        words = s.split()
-        N = len(words)
-        if N > 2:
-            i = N-1
-            while i >= 2:
-                t = ' '.join(words[:i])
-                v = suggest(t)
-                if v: break
-                else: i -= 1
+        words = s.replace('.',' ').split()
+        if words[-1].lower() == 'sp':
+            words = words[:-1]
+        s = DIGITS.sub('', ' '.join(words))
+        if not s: return (False, options)
+        if check(s):
+            options = list(db(db.ottol_name.name==s).select())
+            return (True, options)
+
+        v = suggest(s)
+        if not v and INFRANK.search(s):
+            s = INFRANK.sub('', s)
+            v = suggest(s)
+        if not v:
+            words = s.split()
+            N = len(words)
+            if N > 2:
+                i = N-1
+                while i >= 2:
+                    t = ' '.join(words[:i])
+                    v = suggest(t)
+                    if v: break
+                    else: i -= 1
     for w in v:
         for row in db(db.ottol_name.name==w).select():
             options.append(row)
