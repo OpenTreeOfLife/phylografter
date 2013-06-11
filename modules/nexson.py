@@ -95,6 +95,9 @@ def metaEltsForNexml(studyRow):
     yearMeta = yearMetaForStudy(studyRow)
     if yearMeta:
         metaArray.append(yearMeta)
+    focalCladeMeta = focalCladeMetaForStudy(studyRow)
+    if focalCladeMeta:
+        metaArray.append(focalCladeMeta)
     return dict(meta = metaArray)
 
 def curatorMetaForStudy(studyRow):
@@ -179,7 +182,19 @@ def phylografterIdMetaForStudy(studyRow):
     result["@property"] = "ot:studyId"
     result["$"] = str(studyRow.id)
     return result
-
+    
+def focalCladeMetaForStudy(studyRow):
+    'generates focal clade metadata element for a study'
+    focal_clade = studyRow.focal_clade_ottol
+    if (focal_clade):
+        result = dict()
+        result["@xsi:type"] = "nex:LiteralMeta"
+        result["@property"] = "ot:focalClade"
+        result["$"] = focal_clade
+        return result
+    else:
+        return
+        
 def otusEltForStudy(studyRow,db):
     'Generates an otus block'
     otuRows = getOtuRowsForStudy(studyRow,db)
