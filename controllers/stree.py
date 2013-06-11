@@ -236,8 +236,8 @@ def _lookup_taxa(nodes):
         except: return True
     v = [ (n.label or "").replace("_", " ") for n in filter(f, nodes) ]
     t = db.ottol_name
-    rows = db(t.name.belongs(v)).select(t.name, t.id)
-    return dict([ (x.name, x.id) for x in rows ])
+    rows = db(t.unique_name.belongs(v)).select(t.unique_name, t.id)
+    return dict([ (x.unique_name, x.id) for x in rows ])
 
 def _study_otus(study):
     q = ((db.otu.study==db.study.id)&(db.study.id==study))
@@ -654,7 +654,7 @@ def import_cached_nexml():
             if n.isleaf and n.otu.otu and n.otu.otu.ottol_name:
                 taxid = n.otu.otu.ottol_name
             else:
-                taxon = db(db.ottol_name.name==label).select().first()
+                taxon = db(db.ottol_name.unique_name==label).select().first()
                 if taxon: taxid=taxon.id
 
             i = db.snode.insert(label=label,
