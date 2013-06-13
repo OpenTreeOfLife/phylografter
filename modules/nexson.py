@@ -312,8 +312,8 @@ def treeElt(treeRow,db):
     result["node"]=treeNodes(nodeRows)
     result["edge"]=treeEdges(nodeRows)
     if metaElts:
-    	result["@about"] = "#tree%d" % treeRow.id
-    	result.update(metaElts)
+        result["@about"] = "#tree%d" % treeRow.id
+        result.update(metaElts)
     return result
     
 #Name suggests more than one meta element; expect more than current ot:branchLengthMode
@@ -326,7 +326,7 @@ def metaEltsForTreeElt(treeRow):
         lengthsElt["@xsi:type"] = "nex:LiteralMeta"
         lengthsElt["@property"] = "ot:branchLengthMode"
         if (blRep == "substitutions per site"):
-        	lengthsElt["$"] = "ot:substitutionCount"
+            lengthsElt["$"] = "ot:substitutionCount"
         elif (blRep == "character changes"):
             lengthsElt["$"] = "ot:changesCount"
         elif (blRep == "time (Myr)"):
@@ -336,7 +336,7 @@ def metaEltsForTreeElt(treeRow):
         elif (blRep == "posterior support"):
             lengthsElt["$"] = "ot:posteriorSupport"
         else:
-        	return   #this is a silent fail, maybe better to return 'unknown'?
+            return   #this is a silent fail, maybe better to return 'unknown'?
         return dict(meta=lengthsElt)
     else:
         return    
