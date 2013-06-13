@@ -14,3 +14,4 @@ requests==1.2.0
 virtualenv==1.9.1
 virtualenv-clone==0.2.4
 virtualenvwrapper==3.7
+pyenchant==1.6.5
