@@ -1,4 +1,11 @@
-The tree viewer was implemented as a web2py plugin ( http://web2py.com/books/default/chapter/29/12#Plugins ) with the intention of allowing another developer to be able to simply place our tree viewer into their application.  This is why some source code files associated with the viewer have the 'plugin_' prefix.  However, currently, the tree viewer relies on phylografter code not also contained in the plugin, so one is unable to simply drop this plugin into another web2py application.
+The tree viewer was implemented as a web2py plugin
+(http://web2py.com/books/default/chapter/29/12#Plugins) with the
+intention of allowing another developer to be able to simply place our
+tree viewer into their application.  This is why some source code
+files associated with the viewer have the 'plugin_' prefix.  However,
+currently, the tree viewer relies on phylografter code not also
+contained in the plugin, so one is unable to simply drop this plugin
+into another web2py application.
 
 Instantiating a Tree Viewer into a view
 
@@ -24,28 +31,75 @@ Here is an example from views/stree/svgView :
 
 Arguments :
 
-    treeId - the database row id of the tree to be viewed.  Currently, and I would argue, incorrectly, there are two different database tables that contain information for viewing trees - 'stree' and 'gtree'.  Therefore, a treeId and a 'treeType' are needed to map to a single tree.  Right now, the tree type is stored in the session and assigned in the controller - when someone makes a request to views/stree/svgView, we know they are looking for a source tree.
+    treeId - the database row id of the tree to be viewed.  Currently,
+    and I would argue, incorrectly, there are two different database
+    tables that contain information for viewing trees - 'stree' and
+    'gtree'.  Therefore, a treeId and a 'treeType' are needed to map
+    to a single tree.  Right now, the tree type is stored in the
+    session and assigned in the controller - when someone makes a
+    request to views/stree/svgView, we know they are looking for a
+    source tree.
 
-    menuInfo - a list of options that will appear when the control panel is hovered with a mouse.  Each of these options ( above: 'branchLength', 'search', 'treeSize' ) must be defined in static/controlPanel.js.  Obviously, it would have been easier to make the argument as a list of strings [ 'branchLength', 'search', 'treeSize' ], but I left it this way in case unforseen options wanted to creep into this argument.
+    menuInfo - a list of options that will appear when the control
+    panel is hovered with a mouse.  Each of these options ( above:
+    'branchLength', 'search', 'treeSize' ) must be defined in
+    static/controlPanel.js.  Obviously, it would have been easier to
+    make the argument as a list of strings [ 'branchLength', 'search',
+    'treeSize' ], but I left it this way in case unforseen options
+    wanted to creep into this argument.
 
-    eventInfo - a dictionary for customizing events.  When a label is clicked with the left mouse button, the function, 'showEditTaxonDialogue', located in, static/phylogramColumn.js, is called. When the user right clicks on a node, 'showNodeContextMenu', also defined in static/phylogramColumn.js is called.  This function iterates through all of the options associated with the handler defined in the view, using the 'test' attribute of each option to determine whether or not the menu item should be shown to the user.  The test attributes are just strings for function names that are also defined in static/phylogramColumn.js.  The text attribute refers to the menu item's text, and the handler refers to the function called when the menu item is selected.
+    eventInfo - a dictionary for customizing events.  When a label is
+    clicked with the left mouse button, the function,
+    'showEditTaxonDialogue', located in, static/phylogramColumn.js, is
+    called. When the user right clicks on a node,
+    'showNodeContextMenu', also defined in static/phylogramColumn.js
+    is called.  This function iterates through all of the options
+    associated with the handler defined in the view, using the 'test'
+    attribute of each option to determine whether or not the menu item
+    should be shown to the user.  The test attributes are just strings
+    for function names that are also defined in
+    static/phylogramColumn.js.  The text attribute refers to the menu
+    item's text, and the handler refers to the function called when
+    the menu item is selected.
 
-    viewInfo - a dictionary describing the tree visualization style.  Originally, there was to be many, but, as of now, a 'phylogram' type and a 'navigate' mode is all we have.
+    viewInfo - a dictionary describing the tree visualization style.
+    Originally, there was to be many, but, as of now, a 'phylogram'
+    type and a 'navigate' mode is all we have.
 
 
 
 
-What happens when a request is made to a web page ( view ) that contains a Tree Viewer instantiation :
+What happens when a request is made to a web page (view) that
+contains a Tree Viewer instantiation :
 
-A Tree Viewer instantiation is simply a function call.  In the models/plugin_treeViewer.py file, you'll find the definition of the plugin_treeViewer function.  Remember in web2py, all model files are executed for every request, so functions defined in models are always available.  Because its so small, I'll copy the plugin_treeViewer function definition here :
+A Tree Viewer instantiation is simply a function call.  In the
+models/plugin_treeViewer.py file, you'll find the definition of the
+plugin_treeViewer function.  Remember in web2py, all model files are
+executed for every request, so functions defined in models are always
+available.  Because its so small, I'll copy the plugin_treeViewer
+function definition here :
 
 return LOAD( 'plugin_treeViewer', 'treeViewer.load', ajax=True, vars=p )
 
-LOAD is a web2py function to be used by non programmers to make ajax calls from the view more simple.  Read more about it here : http://web2py.com/books/default/chapter/29/12#Components.  Concisely, it makes an ajax call to /plugin_treeViewer/treeViewer.load.  The arguments to this ajax call are the same arguments passed to the plugin_treeViewer function in the view.
+LOAD is a web2py function to be used by non programmers to make ajax
+calls from the view more simple.  Read more about it here :
+http://web2py.com/books/default/chapter/29/12#Components.  Concisely,
+it makes an ajax call to /plugin_treeViewer/treeViewer.load.  The
+arguments to this ajax call are the same arguments passed to the
+plugin_treeViewer function in the view.
 
-So the ajax request is made and the treeViewer function in controllers/plugin_treeViewer.py handles the request.  Because there are both Tree Viewers and Tree Grafters with common functionality, we use a module function to handle a viewer instantiation on the server.  In modules/plugin_treeViewer, the function is called handleViewerInstantiation.  It stores information about the tree in the session and processes parameter information for the client.
+So the ajax request is made and the treeViewer function in
+controllers/plugin_treeViewer.py handles the request.  Because there
+are both Tree Viewers and Tree Grafters with common functionality, we
+use a module function to handle a viewer instantiation on the server.
+In modules/plugin_treeViewer, the function is called
+handleViewerInstantiation.  It stores information about the tree in
+the session and processes parameter information for the client.
 
-Now that we've got what we want from the server, let's take a look at the view that will be passed to the client.  web2py's LOAD function will insert the corresponding view - views/plugin_treeViewer/treeViewer.load - into the DOM.  From the view :
+Now that we've got what we want from the server, let's take a look at
+the view that will be passed to the client.  web2py's LOAD function
+will insert the corresponding view -
+views/plugin_treeViewer/treeViewer.load - into the DOM.  From the view:
 
 
 <script type="text/javascript">
@@ -56,18 +110,24 @@ Now that we've got what we want from the server, let's take a look at the view t
     
 </script>
 
-Here, we are inserting javascript code into the DOM.  Again, because there are multiple types of Tree Viewers that have similar functionality, we reference modular view files to be used by multiple viewers.  Let's take a look at plugin_treeViewer/scripts.load :
+Here, we are inserting javascript code into the DOM.  Again, because
+there are multiple types of Tree Viewers that have similar
+functionality, we reference modular view files to be used by multiple
+viewers.  Let's take a look at plugin_treeViewer/scripts.load :
 
 if(  BioSync.TreeViewer == null ) {
     BioSync.Common.loadScript( { name: 'plugin_treeViewer' } );
     BioSync.Common.loadCSS( { name: 'plugin_treeViewer' } );
 }
 
-This javascript code loads Tree Viewer specific code and styling into memory.  Specifically, static/plugin_treeViewer.js and static/plugin_treeViewer.css are loaded into memory.
+This javascript code loads Tree Viewer specific code and styling into
+memory.  Specifically, static/plugin_treeViewer.js and
+static/plugin_treeViewer.css are loaded into memory.
 
 
 Regarding plugin_treeViewer/instantiate.load :
 
 BioSync.TreeViewer.instances['{{=request.cid}}'] = new BioSync.TreeViewer.viewer().start( eval( "(" + '{{response.write(instanceParams, escape=False)}}' + ")" ) );
 
-This javascript code instantiates a Tree Viewer javascript object on the client.
+This javascript code instantiates a Tree Viewer javascript object on
+the client.
