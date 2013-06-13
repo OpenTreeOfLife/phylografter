@@ -1,18 +1,32 @@
 Below here are notes on installing phylografter on installing phylografter on Mac.
 
-(1) Install prerequisites. You can get pip from http://www.pip-installer.org/en/latest/
+(1) Install prerequisites. You can get pip from http://www.pip-installer.org/en/latest/  The apt-get commands used on ubuntu for non-Python
+prerequisites and the pip commands are:
 
 <pre>
-for module in matplotlib numpy scipy biopython pyparsing ipython lxml PIL requests
-do
-    pip install --upgrade "$module" 
-done
+apt-get install -y libxml2-dev libxslt-dev # lxml prereq
+apt-get install -y g++ # scipy prereq
+apt-get install -y gfortran # scipy prereq
+apt-get install -y liblapack-dev # scipy prereq
+apt-get install -y libpng-dev # matplotlib prereq
+apt-get install -y libfreetype6-dev # matplotlib prereq
+apt-get install -y libjpeg8-dev # matplotlib prereq
+easy_install pyparsing==1.5.7
+pip install --upgrade numpy
+pip install --upgrade scipy
+pip install --upgrade biopython
+pip install --upgrade ipython
+pip install --upgrade lxml
+pip install --upgrade PIL
+pip install --upgrade requests
+pip install --upgrade matplotlib
+pip install --upgrade pyenchant
 </pre>
 This builds from source, make sure a fortran compiler is installed.  May have problem where numpy doesn't load correctly and scipy install fails - try building numpy from github source.[PEM]
 
 Alternately, the included **requirements.txt** file lists known-good versions of all the
 required python modules for phylografter and opentree, plus a few convenience
-modules. To [install these modules using pip](http://www.pip-installer.org/en/latest/cookbook.html#requirements-files), 
+modules. To [install these modules using pip](http://www.pip-installer.org/en/latest/cookbook.html#requirements-files),
 
 <pre>
 pip install -r requirements.txt
@@ -58,7 +72,7 @@ dbname = phylografter
 pip install lxml
 </pre>
 
-(6) Download and unpack the source code version of web2py from 
+(6) Download and unpack the source code version of web2py from
 http://www.web2py.com/examples/default/download .  I used Version 1.99.7
 
 
@@ -74,7 +88,7 @@ README file.
 
 
 (8) Bootstrap the DB tables for phylografter. Download new mysql dump from
-http://reelab.net/~rree/phylografter.sql.gz 
+http://reelab.net/~rree/phylografter.sql.gz
 To load a SQL dump: launch the mysql daemon with large packet sizes:
 
 <pre>
@@ -98,7 +112,7 @@ python web2py.py --nogui -a '&lt;recycle&gt;'
 (10) Direct a browser to http://127.0.0.1:8000/phylografter/stree/index
 (should display a "Source trees" table).
 
-    
+
 Authorizing users to upload
 --------------
 
@@ -124,10 +138,10 @@ dir = /tmp/phylografter_external_tools/
 2nexml = /usr/local/bin/2nexml
 </pre>
 
-to the private/config file, then you should be able to use the NEXUS to NeXML 
+to the private/config file, then you should be able to use the NEXUS to NeXML
 conversion facility. The "dir" setting in the "external" section
 specifies a directory on the filesystem that will be the parent of the scratch
-directory used when invoking external processes.  
+directory used when invoking external processes.
 
 The "2nexml" setting in the "external" section is the absolute path of the 2nexml
 executable on the server's filesystem. Consult https://github.com/OpenTreeOfLife/2nexml
@@ -136,7 +150,7 @@ for details on how to install the 2nexml tool.
 The URL for invoking this controller is:
 DOMAIN/phylografter/study/to_nexml/ID
 where the ID is the filename that web2py generates for a file that is uploaded
-as part of a study. This is the same ID scheme used in the study/download/ID 
+as part of a study. This is the same ID scheme used in the study/download/ID
 URLs, so this filename should be unique.
 
 When the controller is invoked, phylografter will try to find a row in the
