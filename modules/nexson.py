@@ -251,20 +251,25 @@ def otuElt(otuRec,db):
         result["@about"] = "#otu%d" % otu_id
         result.update(metaElts)
     return result
-    
+
+def createLiteralMeta(key, value):
+    '''
+    Creates a dict for the @property key -> value mapping of nex:LiteralMeta type
+    '''
+    return { "@xsi:type": "nex:LiteralMeta",
+             "@property": key,
+             "$": value,
+           }
 #Name suggests more than one meta element; expect more than current ot:ottolid
 #will be added in the future.    
 def metaEltsForOtuElt(otuRec):
     'generates meta elements for an otu element'
     otu_id,label,ottol_name,accepted_uid,name = otuRec
+    orig_label_el = createLiteralMeta("ot:originalLabel", label)
     if accepted_uid:
-        idElt = dict()
-        idElt["@xsi:type"] = "nex:LiteralMeta"
-        idElt["@property"] = "ot:ottolid"
-        idElt["$"] = accepted_uid
-        return dict(meta = idElt)    
-    else:
-        return
+        a = createLiteralMeta("ot:ottolid", accepted_uid)
+        return {"meta" : [a, orig_label_el]}
+    return {"meta": orig_label_el}
     
 def treesElt(study,db):
     'generate trees element'
