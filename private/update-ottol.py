@@ -212,13 +212,37 @@ q = ('select unique_name, count(*) c from ottol_name '
      ## 'where uid is not null '
      'group by unique_name having c > 1')
 v = [ x[0] for x in db.executesql(q) ]
-w = db(t.unique_name.belongs(v)).select()
+w = db(t.unique_name.belongs(v)).select(orderby=t.unique_name)
 i = 0
 todel = []
 for x in w:
-    uid = x.accepted_uid
-    if ((uid not in uid2row) and
+    uid = x.uid
+    if ((x.unique_name not in syn2uid) and
+        (x.uid not in uid2row) and
+        (x.parent_uid is None) and
         (x.otu.isempty() and x.snode.isempty() and x.study.isempty())):
-        todel.append(uid)
+        todel.append(x.id)
         i += 1
-db(t.accepted_uid.belongs(todel)).delete()
+    elif (x.accepted_uid not in uid2row):
+        print x.uid, x.accepted_uid, x.unique_name
+    elif ((x.accepted_uid not in uid2row) and
+          (x.otu.isempty() and x.snode.isempty() and x.study.isempty())):
+        print x.uid, x.accepted_uid, x.unique_name
+        del t[x.id]
+    elif ((x.accepted_uid not in uid2row) and
+          not (x.otu.isempty() and x.snode.isempty() and x.study.isempty())):
+        q = (t.unique_name==x.unique_name)&(t.accepted_uid!=x.accepted_uid)
+        r = db(q).select().first()
+        print x.uid, x.accepted_uid, x.unique_name, r.accepted_uid
+        x.otu.update(ottol_name=r.id)
+        x.snode.update(ottol_name=r.id)
+        x.study.update(focal_clade_ottol=r.id)
+    else:
+        if x.unique_name in syn2uid and x.parent_uid is None:
+            u = syn2uid[x.unique_name][0]
+            realname = db(t.uid==u).select().first()
+            assert realname, str([x.unique_name, u])
+            s = '%s (synonym of %s)' % (x.unique_name, realname.unique_name)
+            print s
+            x.update_record(unique_name=s)
+#db(t.accepted_uid.belongs(todel)).delete()

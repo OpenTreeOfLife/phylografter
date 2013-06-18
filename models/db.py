@@ -78,7 +78,7 @@ auth.settings.login_form = RPXAccount(
 if request.controller=='default' and request.function=='user' and request.args(0)=='login':
     auth.settings.login_next = session._next or URL('index')
 else:
-    session._next = request.env.path_info
+    session._next = URL('index')#request.env.path_info
 
 ## other login methods are in gluon/contrib/login_methods
 #########################################################################

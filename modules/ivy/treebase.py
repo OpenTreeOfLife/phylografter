@@ -147,7 +147,7 @@ def parse_nexml(doc):
             
     otus = parse_otus(doc)
     return Storage(meta = meta, otus = otus,
-                   chars = parse_chars(doc, otus),
+                   #chars = parse_chars(doc, otus),
                    trees = parse_trees(doc, otus))
 
 def parse_states(e):
