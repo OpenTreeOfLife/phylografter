@@ -305,7 +305,7 @@ def getSingleTreeStudyId(tree,db):
     
 def treeElt(treeRow,db):
     'generates a tree element'
-    metaElts = metaEltsForTreeElt(treeRow)
+    metaElts = metaEltsForTreeElt(treeRow,db)
     nodeRows = getSNodeRecsForTree(treeRow,db)
     result = dict()
     result["@id"]='tree%d' % treeRow.id
@@ -318,8 +318,10 @@ def treeElt(treeRow,db):
     
 #Name suggests more than one meta element; expect more than current ot:branchLengthMode
 #will be added in the future.    
-def metaEltsForTreeElt(treeRow):
+def metaEltsForTreeElt(treeRow,db):
     'returns meta elements for a tree element'
+    result = []
+    ingroupNode = treeInGroupNode(treeRow,db)
     blRep = treeRow.branch_lengths_represent
     if blRep:
         lengthsElt = dict()
@@ -335,12 +337,37 @@ def metaEltsForTreeElt(treeRow):
             lengthsElt["$"] = "ot:bootstrapValues"                            
         elif (blRep == "posterior support"):
             lengthsElt["$"] = "ot:posteriorSupport"
-        else:
-        	return   #this is a silent fail, maybe better to return 'unknown'?
-        return dict(meta=lengthsElt)
+        result.append(lengthsElt)
+    if ingroupNode:
+        ingroupElt = dict()
+        ingroupElt["xsi:type"] = "nex:LiteralMeta"
+        ingroupElt["@property"] = "ot:inGroupClade"
+        ingroupElt["$"] = 'node%d' % ingroupNode.id
+        result.append(ingroupElt)
+    if result:
+        return dict(meta=result)
     else:
-        return    
-    
+        return
+
+def treeInGroupNode(treeRow,db):
+    'returns the id of a (the best) node that is tagged as the ingroup'
+    treeid = treeRow.id
+    nodes = db((db.snode.tree==treeid) & (db.snode.ingroup=="T")).select()
+    if len(nodes) == 0:
+        return
+    elif len(nodes) == 1: 
+        return nodes.first()
+    else:
+        return deepestIngroup(treeRow,nodes)
+        
+def deepestIngroup(treeRow,nodes):
+    'chooses the deepest (closer to root) node when more than one is tagged'
+    best = nodes.first()
+    for node in nodes:
+        if (node.next < best.next) and (node.back > best.back):
+            best = node
+    return best
+                        
 def treeNodes(nodeRows):
     body = [nodeElt(nodeRow) for nodeRow in nodeRows]
     return body
