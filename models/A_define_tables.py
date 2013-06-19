@@ -128,6 +128,9 @@ def define_tables(db, migrate=False):
         ## Field("preottol_homonym_flag", "boolean"),
         ## Field("preottol_pdb_flag", "boolean"),
         Field("mtime", "datetime", readable=False, writable=False),
+        Field("next", "integer", readable=False, writable=False),
+        Field("back", "integer", readable=False, writable=False),
+        Field("depth", "integer", readable=False, writable=False),
         format="%(name)s",
         migrate=migrate
         )
