@@ -728,3 +728,30 @@ def modified_list():
     wrapper['from']=fromTime.strftime(dtimeFormat)
     wrapper['to']=toTime.strftime(dtimeFormat)
     return wrapper
+
+def newick():
+    """
+    return newick string for stree.id = request.args(0)
+
+    optional parameters are 'lfmt' (leaf format) and 'ifmt' (internal
+    node format), which are comma-separated table.field values to be
+    pulled out of the node.rec Row objects. These are converted to
+    strings, joined by '_', and attached to nodes as labels to be
+    written in the newick string.
+    """
+    treeid = int(request.args(0) or 0)
+    assert treeid
+    root = build.stree(db, treeid)
+    lfmt = [ x.split('.') for x in
+             (request.vars['lfmt'] or 'snode.id,otu.label').split(',') ]
+    ifmt = [ x.split('.') for x in request.vars['ifmt'] or '' ]
+    def proc(node, table, field):
+        try: s = str(getattr(getattr(node.rec, table), field))
+        except AttributeError: s = ''
+        return '_'.join(s.split())
+    for n in root:
+        n.label = ''
+        if n.isleaf: n.label = '_'.join([ proc(n, t, f) for t, f in lfmt ])
+        else:
+            if ifmt: n.label = '_'.join([ proc(n, t, f) for t, f in ifmt ])
+    return dict(newick=root.write())
