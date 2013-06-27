@@ -138,18 +138,18 @@ def index_aux(node_id,n):
     setr.update(next=n)
     row = setr.select().first()
     print "row: %d, next: %d" % (node_id, row.next)
-    if (row.parent_uid==0):
-        setr.update(depth=0)
-    else:
-        parents = db(t.accepted_uid == row.parent_uid).select()
-        realParent = None
-        for parent in parents:
-           if (parent.uid == parent.accepted_uid):  # synonym uids won't match
-               realParent=parent
-        if (realParent == None):
-            print "No parent found for Node: %s (%d), parent uid: %s" % (row.name, row.id, row.parent_uid)
-        else:
-            print "Node: %s (%d), parent uid: %s" % (row.name, row.id, realParent.accepted_uid)
+#    if (row.parent_uid==0):
+#        setr.update(depth=0)
+#    else:
+#        parents = db(t.accepted_uid == row.parent_uid).select()
+#        realParent = None
+#        for parent in parents:
+#           if (parent.uid == parent.accepted_uid):  # synonym uids won't match
+#               realParent=parent
+#        if (realParent == None):
+#            print "No parent found for Node: %s (%d), parent uid: %s" % (row.name, row.id, row.parent_uid)
+#        else:
+#            print "Node: %s (%d), parent uid: %s" % (row.name, row.id, realParent.accepted_uid)
         #setr.update(depth=realParent.depth+1)
         #row = setr.select().first()  # update
         #print "row: %d,parent depth: %s, depth: %s" % (node_id, realParent.depth, row.depth)
