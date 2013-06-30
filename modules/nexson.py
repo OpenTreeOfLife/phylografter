@@ -323,6 +323,7 @@ def metaEltsForTreeElt(treeRow,db):
     result = []
     ingroupNode = treeInGroupNode(treeRow,db)
     blRep = treeRow.branch_lengths_represent
+    tree_tags = get_tree_tags(treeRow,db)
     if blRep:
         lengthsElt = dict()
         lengthsElt["@xsi:type"] = "nex:LiteralMeta"
@@ -344,6 +345,12 @@ def metaEltsForTreeElt(treeRow,db):
         ingroupElt["@property"] = "ot:inGroupClade"
         ingroupElt["$"] = 'node%d' % ingroupNode.id
         result.append(ingroupElt)
+    if tree_tags:
+       tags_elt = dict()
+       tags_elt["xsi:type"] = "nex:LiteralMeta"
+       tags_elt["@property"] = "ot:tags"
+       tags_elt["$"] = tree_tags
+       result.append(tags_elt)
     if result:
         return dict(meta=result)
     else:
@@ -367,6 +374,16 @@ def deepestIngroup(treeRow,nodes):
         if (node.next < best.next) and (node.back > best.back):
             best = node
     return best
+                        
+def get_tree_tags(tree_row,db):
+    result = []
+    ta = db.stree_tag
+    q = (ta.stree == tree_row.id)
+    rows = db(q).select()
+    for row in rows:
+        ##Note: name and value in stree_tag table are never used 
+        result.append(row.tag)
+    return
                         
 def treeNodes(nodeRows):
     body = [nodeElt(nodeRow) for nodeRow in nodeRows]
