@@ -126,10 +126,10 @@ def autocomplete():
 def index_ottol_names():
     '''fill in next,back and depth fields in ottol_name - based on ivy indexing for snodes'''
     t = db.ottol_name
-    print "**"
     setr = db(t.parent_uid==0)
     root_id = setr.select().first().id
-    index_aux(root_id,1);
+    index_aux(root_id,1)
+    index_ottol_synonyms()
     return db(t.id==root_id).select().first().name
     
 def index_aux(node_id,n):
@@ -137,22 +137,6 @@ def index_aux(node_id,n):
     setr = db(t.id==node_id)
     setr.update(next=n)
     row = setr.select().first()
-    print "row: %d, next: %d" % (node_id, row.next)
-#    if (row.parent_uid==0):
-#        setr.update(depth=0)
-#    else:
-#        parents = db(t.accepted_uid == row.parent_uid).select()
-#        realParent = None
-#        for parent in parents:
-#           if (parent.uid == parent.accepted_uid):  # synonym uids won't match
-#               realParent=parent
-#        if (realParent == None):
-#            print "No parent found for Node: %s (%d), parent uid: %s" % (row.name, row.id, row.parent_uid)
-#        else:
-#            print "Node: %s (%d), parent uid: %s" % (row.name, row.id, realParent.accepted_uid)
-        #setr.update(depth=realParent.depth+1)
-        #row = setr.select().first()  # update
-        #print "row: %d,parent depth: %s, depth: %s" % (node_id, realParent.depth, row.depth)
     n += 1
     childList = db(t.parent_uid == row.accepted_uid).select()
     for i,child in enumerate(childList):
@@ -166,3 +150,19 @@ def index_aux(node_id,n):
     else:
         setr.update(back=n)
     return row.back
+    
+def index_ottol_synonyms():
+    t=db.ottol_name
+    synset = db(t.accepted_uid != t.uid)
+    print "Have synset"
+    synrows = synset.select()
+    print "Have synrows"
+    for row in synrows:
+        valid_taxon = db(t.uid == row.accepted_uid).select().first()
+        if valid_taxon:
+            synset.update(next=valid_taxon.next)
+            synset.update(back=valid_taxon.back)
+            print "updating %s %d" % (row.name, row.id)
+        else:
+            print "no valid taxon found for %d" % row.accepted_uid
+    return
