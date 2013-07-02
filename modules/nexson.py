@@ -225,7 +225,7 @@ def getTreeRowsForStudy(studyRow,db):
     return rows
     
 def otusEltForTree(treeRow,studyRow,db):
-    ##get the otus for this tree (actually its study)
+    'get the otus for this tree (actually its study)'
     otuRows = getOtuRowsForStudy(studyRow,db)
     nodeRows = getSNodeRecsForTree(treeRow,db)
     metaElts = metaEltsForOtus(studyRow,otuRows,db)
@@ -316,12 +316,11 @@ def treeElt(treeRow,db):
     	result.update(metaElts)
     return result
     
-#Name suggests more than one meta element; expect more than current ot:branchLengthMode
-#will be added in the future.    
+
 def metaEltsForTreeElt(treeRow,db):
     'returns meta elements for a tree element'
     result = []
-    ingroupNode = treeInGroupNode(treeRow,db)
+    ingroup_node = tree_ingroup_node(treeRow,db)
     blRep = treeRow.branch_lengths_represent
     tree_tags = get_tree_tags(treeRow,db)
     if blRep:
@@ -339,35 +338,36 @@ def metaEltsForTreeElt(treeRow,db):
         elif (blRep == "posterior support"):
             lengthsElt["$"] = "ot:posteriorSupport"
         result.append(lengthsElt)
-    if ingroupNode:
-        ingroupElt = dict()
-        ingroupElt["xsi:type"] = "nex:LiteralMeta"
-        ingroupElt["@property"] = "ot:inGroupClade"
-        ingroupElt["$"] = 'node%d' % ingroupNode.id
-        result.append(ingroupElt)
+    if ingroup_node:
+        ingroup_elt = dict()
+        ingroup_elt["@xsi:type"] = "nex:LiteralMeta"
+        ingroup_elt["@property"] = "ot:inGroupClade"
+        ingroup_elt["$"] = 'node%d' % ingroup_node.id
+        result.append(ingroup_elt)
     if tree_tags:
-       tags_elt = dict()
-       tags_elt["xsi:type"] = "nex:LiteralMeta"
-       tags_elt["@property"] = "ot:tags"
-       tags_elt["$"] = tree_tags
-       result.append(tags_elt)
+       for tag in tree_tags:
+           tag_elt = dict()
+           tag_elt["@xsi:type"] = "nex:LiteralMeta"
+           tag_elt["@property"] = "ot:tag"
+           tag_elt["$"] = tag
+           result.append(tag_elt)
     if result:
         return dict(meta=result)
     else:
         return
 
-def treeInGroupNode(treeRow,db):
+def tree_ingroup_node(tree_row,db):
     'returns the id of a (the best) node that is tagged as the ingroup'
-    treeid = treeRow.id
+    treeid = tree_row.id
     nodes = db((db.snode.tree==treeid) & (db.snode.ingroup=="T")).select()
     if len(nodes) == 0:
         return
     elif len(nodes) == 1: 
         return nodes.first()
     else:
-        return deepestIngroup(treeRow,nodes)
+        return deepest_ingroup(nodes)
         
-def deepestIngroup(treeRow,nodes):
+def deepest_ingroup(nodes):
     'chooses the deepest (closer to root) node when more than one is tagged'
     best = nodes.first()
     for node in nodes:
@@ -383,7 +383,7 @@ def get_tree_tags(tree_row,db):
     for row in rows:
         ##Note: name and value in stree_tag table are never used 
         result.append(row.tag)
-    return
+    return result
                         
 def treeNodes(nodeRows):
     body = [nodeElt(nodeRow) for nodeRow in nodeRows]
