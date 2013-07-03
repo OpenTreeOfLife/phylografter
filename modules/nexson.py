@@ -395,6 +395,7 @@ def deepest_ingroup(nodes):
     return best
                         
 def get_tree_tags(tree_row,db):
+    'returns a list of tag strings associated with the stree'
     result = []
     ta = db.stree_tag
     q = (ta.stree == tree_row.id)
@@ -408,14 +409,14 @@ def treeNodes(nodeRows):
     body = [nodeElt(nodeRow) for nodeRow in nodeRows]
     return body
     
-def treeEdges(nodeRows):
-    edgeList = [edgeElt(nodeRow) for nodeRow in nodeRows if nodeRow[1]]
-    return edgeList
+def treeEdges(node_rows):
+    edges = [edgeElt(node_row) for node_row in node_rows if node_row[1]]
+    return edges
     
-def edgeElt(childRow):
+def edgeElt(child_row):
+    'returns an element for a node - note that the information for this comes from the child node'
     result = dict()
-    child_id,parent,otu_id,length = childRow
-    childStr = str(child_id)
+    child_id,parent,otu_id,length = child_row
     result["@id"]='edge%d' % child_id
     result["@source"]='node%d' % parent
     result["@target"]='node%d' % child_id
@@ -423,13 +424,14 @@ def edgeElt(childRow):
         result["@length"]=length
     return result
 
-def getSNodeRecsForTree(treeRow,db):
+def getSNodeRecsForTree(tree_row,db):
     'returns a list of the nodes associated with the specified study - now represented as tuples'
-    return db.executesql('SELECT id,parent,otu,length FROM snode WHERE (tree = %d);' % treeRow.id)
+    return db.executesql('SELECT id,parent,otu,length FROM snode WHERE (tree = %d);' % tree_row.id)
     
-def nodeElt(nodeRow):
+def nodeElt(node_row):
+    'returns an element for a node'
     result = dict()
-    node_id,parent,otu_id,length = nodeRow
+    node_id,parent,otu_id,length = node_row
     if (otu_id):
         result["@otu"] = 'otu%d' % otu_id
     if parent:
