@@ -23,7 +23,7 @@ def nexmlStudy(studyId,db):
        study - the study to export
        db - database connection'''
     studyRow = db.study(studyId)
-    metaElts = metaEltsForNexml(studyRow) 
+    metaElts = metaEltsForNexml(studyRow,db) 
     otus = otusEltForStudy(studyRow,db)
     trees = treesElt(studyRow,db)
     header = nexmlHeader()
@@ -40,7 +40,7 @@ def nexmlTree(tree,db):
     '''Exports one tree from a study (still a complete JSON NeXML with
     headers, otus, and trees blocks)'''
     studyRow = db.study(getSingleTreeStudyId(tree,db))
-    metaElts = metaEltsForNexml(studyRow)
+    metaElts = metaEltsForNexml(studyRow,db)
     treeRow = db.stree(tree)
     otus = otusEltForTree(treeRow,studyRow,db)
     trees = singletonTreesElt(treeRow,studyRow,db)
@@ -59,7 +59,7 @@ def nexmlHeader():
     result = dict()
     result["@xmlns"] = xmlNameSpace()
     result["@version"] = "0.9"
-    result["@nexmljson"] = "http://www.somewhere.org"
+    result["@nexmljson"] = "http://opentree.wikispaces.com/NexSON"
     result["@generator"] = "Phylografter nexml-json exporter"
     return result
         
@@ -74,7 +74,7 @@ def xmlNameSpace():
     result["xsd"] = "http://www.w3.org/2001/XMLSchema#"
     return result
 
-def metaEltsForNexml(studyRow):
+def metaEltsForNexml(studyRow,db):
     'generates nexml meta elements that are children of the root nexml element'
     metaArray = []
     studyPublicationMeta = studyPublicationMetaElt(studyRow)
@@ -98,6 +98,14 @@ def metaEltsForNexml(studyRow):
     focalCladeMeta = focalCladeMetaForStudy(studyRow)
     if focalCladeMeta:
         metaArray.append(focalCladeMeta)
+    study_tags = get_study_tags(studyRow,db)
+    if study_tags:
+        for tag in study_tags:
+           tag_elt = dict()
+           tag_elt["@xsi:type"] = "nex:LiteralMeta"
+           tag_elt["@property"] = "ot:tag"
+           tag_elt["$"] = tag
+           metaArray.append(tag_elt)
     return dict(meta = metaArray)
 
 def curatorMetaForStudy(studyRow):
@@ -195,6 +203,17 @@ def focalCladeMetaForStudy(studyRow):
     else:
         return
         
+def get_study_tags(study_row,db):
+    result = []
+    ta = db.study_tag
+    q = (ta.study == study_row.id)
+    rows = db(q).select()
+    for row in rows:
+        ##Note: name and value in study_tag table are never used 
+        result.append(row.tag)
+    return result
+
+                
 def otusEltForStudy(studyRow,db):
     'Generates an otus block'
     otuRows = getOtuRowsForStudy(studyRow,db)
