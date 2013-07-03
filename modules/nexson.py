@@ -23,7 +23,7 @@ def nexmlStudy(studyId,db):
        study - the study to export
        db - database connection'''
     studyRow = db.study(studyId)
-    metaElts = metaEltsForNexml(studyRow) 
+    metaElts = metaEltsForNexml(studyRow,db) 
     otus = otusEltForStudy(studyRow,db)
     trees = treesElt(studyRow,db)
     header = nexmlHeader()
@@ -40,7 +40,7 @@ def nexmlTree(tree,db):
     '''Exports one tree from a study (still a complete JSON NeXML with
     headers, otus, and trees blocks)'''
     studyRow = db.study(getSingleTreeStudyId(tree,db))
-    metaElts = metaEltsForNexml(studyRow)
+    metaElts = metaEltsForNexml(studyRow,db)
     treeRow = db.stree(tree)
     otus = otusEltForTree(treeRow,studyRow,db)
     trees = singletonTreesElt(treeRow,studyRow,db)
@@ -59,7 +59,7 @@ def nexmlHeader():
     result = dict()
     result["@xmlns"] = xmlNameSpace()
     result["@version"] = "0.9"
-    result["@nexmljson"] = "http://www.somewhere.org"
+    result["@nexmljson"] = "http://opentree.wikispaces.com/NexSON"
     result["@generator"] = "Phylografter nexml-json exporter"
     return result
         
@@ -74,7 +74,7 @@ def xmlNameSpace():
     result["xsd"] = "http://www.w3.org/2001/XMLSchema#"
     return result
 
-def metaEltsForNexml(studyRow):
+def metaEltsForNexml(studyRow,db):
     'generates nexml meta elements that are children of the root nexml element'
     metaArray = []
     studyPublicationMeta = studyPublicationMetaElt(studyRow)
@@ -98,6 +98,14 @@ def metaEltsForNexml(studyRow):
     focalCladeMeta = focalCladeMetaForStudy(studyRow)
     if focalCladeMeta:
         metaArray.append(focalCladeMeta)
+    study_tags = get_study_tags(studyRow,db)
+    if study_tags:
+        for tag in study_tags:
+           tag_elt = dict()
+           tag_elt["@xsi:type"] = "nex:LiteralMeta"
+           tag_elt["@property"] = "ot:tag"
+           tag_elt["$"] = tag
+           metaArray.append(tag_elt)
     return dict(meta = metaArray)
 
 def curatorMetaForStudy(studyRow):
@@ -195,6 +203,17 @@ def focalCladeMetaForStudy(studyRow):
     else:
         return
         
+def get_study_tags(study_row,db):
+    result = []
+    ta = db.study_tag
+    q = (ta.study == study_row.id)
+    rows = db(q).select()
+    for row in rows:
+        ##Note: name and value in study_tag table are never used 
+        result.append(row.tag)
+    return result
+
+                
 def otusEltForStudy(studyRow,db):
     'Generates an otus block'
     otuRows = getOtuRowsForStudy(studyRow,db)
@@ -225,7 +244,7 @@ def getTreeRowsForStudy(studyRow,db):
     return rows
     
 def otusEltForTree(treeRow,studyRow,db):
-    ##get the otus for this tree (actually its study)
+    'get the otus for this tree (actually its study)'
     otuRows = getOtuRowsForStudy(studyRow,db)
     nodeRows = getSNodeRecsForTree(treeRow,db)
     metaElts = metaEltsForOtus(studyRow,otuRows,db)
@@ -316,13 +335,13 @@ def treeElt(treeRow,db):
     	result.update(metaElts)
     return result
     
-#Name suggests more than one meta element; expect more than current ot:branchLengthMode
-#will be added in the future.    
+
 def metaEltsForTreeElt(treeRow,db):
     'returns meta elements for a tree element'
     result = []
-    ingroupNode = treeInGroupNode(treeRow,db)
+    ingroup_node = tree_ingroup_node(treeRow,db)
     blRep = treeRow.branch_lengths_represent
+    tree_tags = get_tree_tags(treeRow,db)
     if blRep:
         lengthsElt = dict()
         lengthsElt["@xsi:type"] = "nex:LiteralMeta"
@@ -338,29 +357,36 @@ def metaEltsForTreeElt(treeRow,db):
         elif (blRep == "posterior support"):
             lengthsElt["$"] = "ot:posteriorSupport"
         result.append(lengthsElt)
-    if ingroupNode:
-        ingroupElt = dict()
-        ingroupElt["xsi:type"] = "nex:LiteralMeta"
-        ingroupElt["@property"] = "ot:inGroupClade"
-        ingroupElt["$"] = 'node%d' % ingroupNode.id
-        result.append(ingroupElt)
+    if ingroup_node:
+        ingroup_elt = dict()
+        ingroup_elt["@xsi:type"] = "nex:LiteralMeta"
+        ingroup_elt["@property"] = "ot:inGroupClade"
+        ingroup_elt["$"] = 'node%d' % ingroup_node.id
+        result.append(ingroup_elt)
+    if tree_tags:
+       for tag in tree_tags:
+           tag_elt = dict()
+           tag_elt["@xsi:type"] = "nex:LiteralMeta"
+           tag_elt["@property"] = "ot:tag"
+           tag_elt["$"] = tag
+           result.append(tag_elt)
     if result:
         return dict(meta=result)
     else:
         return
 
-def treeInGroupNode(treeRow,db):
+def tree_ingroup_node(tree_row,db):
     'returns the id of a (the best) node that is tagged as the ingroup'
-    treeid = treeRow.id
+    treeid = tree_row.id
     nodes = db((db.snode.tree==treeid) & (db.snode.ingroup=="T")).select()
     if len(nodes) == 0:
         return
     elif len(nodes) == 1: 
         return nodes.first()
     else:
-        return deepestIngroup(treeRow,nodes)
+        return deepest_ingroup(nodes)
         
-def deepestIngroup(treeRow,nodes):
+def deepest_ingroup(nodes):
     'chooses the deepest (closer to root) node when more than one is tagged'
     best = nodes.first()
     for node in nodes:
@@ -368,18 +394,29 @@ def deepestIngroup(treeRow,nodes):
             best = node
     return best
                         
+def get_tree_tags(tree_row,db):
+    'returns a list of tag strings associated with the stree'
+    result = []
+    ta = db.stree_tag
+    q = (ta.stree == tree_row.id)
+    rows = db(q).select()
+    for row in rows:
+        ##Note: name and value in stree_tag table are never used 
+        result.append(row.tag)
+    return result
+                        
 def treeNodes(nodeRows):
     body = [nodeElt(nodeRow) for nodeRow in nodeRows]
     return body
     
-def treeEdges(nodeRows):
-    edgeList = [edgeElt(nodeRow) for nodeRow in nodeRows if nodeRow[1]]
-    return edgeList
+def treeEdges(node_rows):
+    edges = [edgeElt(node_row) for node_row in node_rows if node_row[1]]
+    return edges
     
-def edgeElt(childRow):
+def edgeElt(child_row):
+    'returns an element for a node - note that the information for this comes from the child node'
     result = dict()
-    child_id,parent,otu_id,length = childRow
-    childStr = str(child_id)
+    child_id,parent,otu_id,length = child_row
     result["@id"]='edge%d' % child_id
     result["@source"]='node%d' % parent
     result["@target"]='node%d' % child_id
@@ -387,13 +424,14 @@ def edgeElt(childRow):
         result["@length"]=length
     return result
 
-def getSNodeRecsForTree(treeRow,db):
+def getSNodeRecsForTree(tree_row,db):
     'returns a list of the nodes associated with the specified study - now represented as tuples'
-    return db.executesql('SELECT id,parent,otu,length FROM snode WHERE (tree = %d);' % treeRow.id)
+    return db.executesql('SELECT id,parent,otu,length FROM snode WHERE (tree = %d);' % tree_row.id)
     
-def nodeElt(nodeRow):
+def nodeElt(node_row):
+    'returns an element for a node'
     result = dict()
-    node_id,parent,otu_id,length = nodeRow
+    node_id,parent,otu_id,length = node_row
     if (otu_id):
         result["@otu"] = 'otu%d' % otu_id
     if parent:
