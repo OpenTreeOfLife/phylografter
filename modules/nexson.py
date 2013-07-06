@@ -270,20 +270,25 @@ def otuElt(otuRec,db):
         result["@about"] = "#otu%d" % otu_id
         result.update(metaElts)
     return result
-    
+
+def createLiteralMeta(key, value):
+    '''
+    Creates a dict for the @property key -> value mapping of nex:LiteralMeta type
+    '''
+    return { "@xsi:type": "nex:LiteralMeta",
+             "@property": key,
+             "$": value,
+           }
 #Name suggests more than one meta element; expect more than current ot:ottolid
 #will be added in the future.    
 def metaEltsForOtuElt(otuRec):
     'generates meta elements for an otu element'
     otu_id,label,ottol_name,accepted_uid,name = otuRec
+    orig_label_el = createLiteralMeta("ot:originalLabel", label)
     if accepted_uid:
-        idElt = dict()
-        idElt["@xsi:type"] = "nex:LiteralMeta"
-        idElt["@property"] = "ot:ottolid"
-        idElt["$"] = accepted_uid
-        return dict(meta = idElt)    
-    else:
-        return
+        a = createLiteralMeta("ot:ottolid", accepted_uid)
+        return {"meta" : [a, orig_label_el]}
+    return {"meta": orig_label_el}
     
 def treesElt(study,db):
     'generate trees element'
@@ -331,8 +336,8 @@ def treeElt(treeRow,db):
     result["node"]=treeNodes(nodeRows)
     result["edge"]=treeEdges(nodeRows)
     if metaElts:
-    	result["@about"] = "#tree%d" % treeRow.id
-    	result.update(metaElts)
+        result["@about"] = "#tree%d" % treeRow.id
+        result.update(metaElts)
     return result
     
 
@@ -347,7 +352,7 @@ def metaEltsForTreeElt(treeRow,db):
         lengthsElt["@xsi:type"] = "nex:LiteralMeta"
         lengthsElt["@property"] = "ot:branchLengthMode"
         if (blRep == "substitutions per site"):
-        	lengthsElt["$"] = "ot:substitutionCount"
+            lengthsElt["$"] = "ot:substitutionCount"
         elif (blRep == "character changes"):
             lengthsElt["$"] = "ot:changesCount"
         elif (blRep == "time (Myr)"):
@@ -373,7 +378,7 @@ def metaEltsForTreeElt(treeRow,db):
     if result:
         return dict(meta=result)
     else:
-        return
+        return       #this is a silent fail, maybe better to return 'unknown'?
 
 def tree_ingroup_node(tree_row,db):
     'returns the id of a (the best) node that is tagged as the ingroup'
