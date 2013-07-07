@@ -162,13 +162,16 @@ BioSync.TreeViewer.RenderUtil.Column.prototype = {
 
         var viewerEventObj = this.renderObj.viewer.events;
 
-        if( ( p.which == 1 ) && ( viewerEventObj.nodeClick ) ) {
+        if ( (( p.which == 3 ) || (( p.which == 1 ) && ( p.ctrlKey )))   // right-click, or ctrl-click, or double-tap (OS X)
+          && viewerEventObj.nodeRightClick ) {
+
+            this[ viewerEventObj.nodeRightClick.handler ]( viewerEventObj.nodeRightClick );
+
+        } else if( ( p.which == 1 )   // left-click (default)
+          && viewerEventObj.nodeClick ) {
 
             this[ viewerEventObj.nodeClick.handler ]( viewerEventObj.nodeClick );
-
-        } else if( ( p.which == 3 ) && ( viewerEventObj.nodeRightClick ) ) {
             
-            this[ viewerEventObj.nodeRightClick.handler ]( viewerEventObj.nodeRightClick );
         }
     },
 
