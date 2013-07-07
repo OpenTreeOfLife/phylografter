@@ -186,8 +186,9 @@ BioSync.TreeViewer.RenderUtil.Column.prototype = {
 
         this.nodeContextMenu =
             this.make('div')
-                .css( { 'left': this.nodeInfo[ this.closestNodeToMouse.id ].x,
-                        'top': this.nodeInfo[ this.closestNodeToMouse.id ].y,
+                .css( { // nudge left and up, to make sure menu appears under the mouse
+                        'left': this.nodeInfo[ this.closestNodeToMouse.id ].x - 8,
+                        'top': this.nodeInfo[ this.closestNodeToMouse.id ].y - 8,
                         'background-color': '#DADADA',
                         'font-size': '.75em',
                         'text-align': 'center',
@@ -222,7 +223,8 @@ BioSync.TreeViewer.RenderUtil.Column.prototype = {
              }
         }
    
-       $(document).bind( 'click', { }, $.proxy( this.checkForClickOutsideOfNodeContextMenu, this ) );
+       // NOTE that the page will respond to click (mouseup) versus this method, triggered by mousedown
+       $(document).bind( 'click.nodeContextMenu', { }, $.proxy( this.checkForClickOutsideOfNodeContextMenu, this ) );
     },
 
     isUserLoggedIn: function( p ) {
@@ -411,16 +413,25 @@ BioSync.TreeViewer.RenderUtil.Column.prototype = {
     },
 
     checkForClickOutsideOfNodeContextMenu: function( e ) {
+                                               /*
+                                               console.log("checkForClickOutsideOfNodeContextMenu()...");
+                                               console.log(" this.nodeContextMenu = "+ this.nodeContextMenu);
+                                               console.log(" e.pageX = "+ e.pageX);
+                                               console.log(" e.pageY = "+ e.pageY);
+                                               console.log(" this.nodeContextMenu = "+ this.nodeContextMenu);
+                                               if (this.nodeContextMenu) {
+                                                   console.log(" isMouseOnElement = "+ BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: this.nodeContextMenu } ));
+                                               }
+                                               */
         
         if( ( this.nodeContextMenu ) && ( ! BioSync.Common.isMouseOnElement( { x: e.pageX, y: e.pageY, el: this.nodeContextMenu } ) ) ) {
-
             this.closeNodeContextMenu();
         }
     },
 
     closeNodeContextMenu: function() {
-    
-       $(document).unbind( 'click', { }, $.proxy( this.checkForClickOutsideOfNodeContextMenu, this ) );
+       // properly unbind, using a namespaced event
+       $(document).unbind( 'click.nodeContextMenu');
 
        this.nodeContextMenu.empty().remove();
 
