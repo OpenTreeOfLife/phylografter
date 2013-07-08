@@ -121,4 +121,12 @@ def autocomplete():
     rows = db(q).select(*fields, limitby=(0,4))
     return "%s( %s )" % (jsonCallback, ['<a href="%s">%s</a>' % (r.accepted_uid, r.unique_name) for r in rows])
 
-
+def ottol_names_report():
+    '''
+    Drives generation of a csv formatted report listing the ottol_name's uid for each otu
+    (with a non-empty ottol uid) along with the study uid.  This report is useful in maintaining
+    the taxonomy.
+    '''
+    o = db.otu;
+    report = db((db.ottol_name.id==db.otu.ottol_name) & (db.ottol_name.uid != None)).select(db.ottol_name.uid,db.otu.study,orderby=db.otu.study)
+    return dict(report = report)
