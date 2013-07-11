@@ -124,45 +124,53 @@ def autocomplete():
     return "%s( %s )" % (jsonCallback, ['<a href="%s">%s</a>' % (r.accepted_uid, r.unique_name) for r in rows])
 
 def index_ottol_names():
-    '''fill in next,back and depth fields in ottol_name - based on ivy indexing for snodes'''
+    '''
+    fill in next,back and depth fields in ottol_name - based on ivy indexing for snodes
+    '''
     t = db.ottol_name
     setr = db(t.parent_uid==0)
     root_id = setr.select().first().id
-    index_aux(root_id,1)
+    index_aux(root_id,0)
     index_ottol_synonyms()
     return db(t.id==root_id).select().first().name
     
 def index_aux(node_id,n):
     t = db.ottol_name
     setr = db(t.id==node_id)
+    n = n+1
     setr.update(next=n)
     row = setr.select().first()
-    n += 1
-    childList = db(t.parent_uid == row.accepted_uid).select()
-    for i,child in enumerate(childList):
-        if (i > 0):
-            n = (db(t.id == childList[i-1].id).select().first().back)+1
-            pass
-        index_aux(child.id,n)
-    if len(childList)>0:
-        b = (db(t.id == childList[-1].id).select().first().back)+1
-        setr.update(back=b)  #node.back = node.children[-1].back + 1
+    if (n % 100) == 0:
+        print "name = %s, next = %d" % (row.name,n)
+    child_list = db(t.parent_uid == row.accepted_uid).select()
+    if child_list:
+        last_back = n  ##probably unnecessary
+        for i,child in enumerate(child_list):
+            if (i > 0):
+                n = last_back + 1 ##(db(t.id == child_list[i-1].id).select().first().back)+1
+            last_back = index_aux(child.id,n)
+        next_back = last_back + 1
     else:
-        setr.update(back=n)
-    return row.back
+        next_back=n+1
+    setr.update(back=next_back)
+    ##print "returning %d" % next_back
+    return next_back
     
 def index_ottol_synonyms():
+    print "starting synonym indexing"
     t=db.ottol_name
     synset = db(t.accepted_uid != t.uid)
     print "Have synset"
     synrows = synset.select()
-    print "Have synrows"
+    print "Have %d synrows" % len(synrows)
+    counter = 0
     for row in synrows:
         valid_taxon = db(t.uid == row.accepted_uid).select().first()
         if valid_taxon:
             synset.update(next=valid_taxon.next)
             synset.update(back=valid_taxon.back)
-            print "updating %s %d" % (row.name, row.id)
+            print "updating row %d %s" % (counter, row.name)
         else:
             print "no valid taxon found for %d" % row.accepted_uid
+        counter = counter + 1
     return
