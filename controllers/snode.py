@@ -31,7 +31,6 @@ def update_snode():
 
     if form.process(message_onsuccess='Node updated',
                     onvalidation=valid).accepted:
-
         for ( attr, value ) in rec.as_dict().iteritems():
 
             if( attr not in form.vars ):
@@ -55,14 +54,15 @@ def update_snode():
                     updatedValue = form.vars[ attr ]
                     previousValue = str( rec[attr] )
 
-
                 db.userEdit.insert( userName = ' '.join( [ auth.user.first_name, auth.user.last_name ] ),
                                     tableName = 'snode',
                                     rowId = rec.id,
                                     fieldName = attr,
                                     previousValue = previousValue,
                                     updatedValue = updatedValue )
-                
+                mytree = db.stree(rec.tree)
+                mytree.update_record( last_modified = datetime.datetime.now() )
+
 
         ## print ' form.vars.ingroup now', form.vars.ingroup
         ## print ' request.vars.ingroup now', request.vars.ingroup
@@ -71,7 +71,7 @@ def update_snode():
         name = form.vars.ottol_name
         if name and rec.otu:
             rec.otu.update_record(ottol_name=name)
-
+        print "trying to bracket"
     return dict(form=form)
 
 def editSnodeTaxon():
@@ -122,4 +122,3 @@ def get_node_html():
     width, height, style = tree.style_nodes(root, wscale=0.9)
     div = tree.render_node_html(node, style, onclick, session)
     return div.xml()
-    
