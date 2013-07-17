@@ -71,7 +71,6 @@ def update_snode():
         name = form.vars.ottol_name
         if name and rec.otu:
             rec.otu.update_record(ottol_name=name)
-        print "trying to bracket"
     return dict(form=form)
 
 def editSnodeTaxon():
