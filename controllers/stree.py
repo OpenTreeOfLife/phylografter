@@ -744,7 +744,7 @@ def newick():
     root = build.stree(db, treeid)
     lfmt = [ x.split('.') for x in
              (request.vars['lfmt'] or 'snode.id,otu.label').split(',') ]
-    ifmt = [ x.split('.') for x in request.vars['ifmt'] or '' ]
+    ifmt = [ x.split('.') for x in (request.vars['ifmt'] or '').split(',') ]
     def proc(node, table, field):
         try: s = str(getattr(getattr(node.rec, table), field))
         except AttributeError: s = ''
