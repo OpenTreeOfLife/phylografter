@@ -77,7 +77,7 @@ auth.settings.login_form = RPXAccount(
 
 if request.controller=='default' and request.function=='user' and request.args(0)=='login':
     _next = session._next
-    if 'plugin_' in url:
+    if 'plugin_' in _next:
         _next = URL('default', 'index')
     auth.settings.login_next = _next
 else:
