@@ -58,7 +58,7 @@ auth.messages.reset_password = 'Click on the link http://'+request.env.http_host
 ## If you need to use OpenID, Facebook, MySpace, Twitter, Linkedin, etc.
 ## register with janrain.com, uncomment and customize following
 host = socket.gethostname()
-if host == "rickroll":
+if host == "splinter":
     host = "www.reelab.net"
 else:
     try:
@@ -76,7 +76,10 @@ auth.settings.login_form = RPXAccount(
     )
 
 if request.controller=='default' and request.function=='user' and request.args(0)=='login':
-    auth.settings.login_next = session._next or URL('default', 'index')
+    _next = session._next
+    if 'plugin_' in url:
+        _next = URL('default', 'index')
+    auth.settings.login_next = _next
 else:
     session._next = URL('default', 'index')#request.env.path_info
 
