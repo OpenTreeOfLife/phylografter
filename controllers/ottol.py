@@ -127,50 +127,68 @@ def index_ottol_names():
     '''
     fill in next,back and depth fields in ottol_name - based on ivy indexing for snodes
     '''
+    import tempfile
     t = db.ottol_name
     setr = db(t.parent_uid==0)
     root_id = setr.select().first().id
-    index_aux(root_id,0)
-    index_ottol_synonyms()
+    temp_file = tempfile.NamedTemporaryFile(mode="r+w",delete=False);
+    temp_file_name = temp_file.name
+    print "primary temp_file_name = %s" % temp_file_name
+    index_aux(root_id,0,temp_file)
+    temp_file.close()
+    #execute_update(temp_file_name)
+    temp_file = tempfile.NamedTemporaryFile(mode="r+w",delete=False);
+    temp_file_name = temp_file.name
+    print "synonym temp_file_name = %s" % temp_file_name
+    index_ottol_synonyms(temp_file)
+    temp_file.close()
+    #execute_update(temp_file_name)
+    temp_file.close()
     return db(t.id==root_id).select().first().name
     
-def index_aux(node_id,n):
-    t = db.ottol_name
-    setr = db(t.id==node_id)
+def index_aux(node_id,n,tfile):
+    rdict = db.executesql('SELECT id,accepted_uid,name FROM ottol_name WHERE (ottol_name.id = %d);' % node_id,as_dict="true")    
     n = n+1
-    setr.update(next=n)
-    row = setr.select().first()
-    if (n % 100) == 0:
-        print "name = %s, next = %d" % (row.name,n)
-    child_list = db(t.parent_uid == row.accepted_uid).select()
-    if child_list:
+    primary_next = n
+    first = rdict[0]
+    primary_id = first.get('id')
+    if (n % 10000) == 0:
+        print "name = %s, next = %d" % (first.get('name'),n)
+    cl = db.executesql('SELECT id FROM ottol_name WHERE(parent_uid = %d);' % first.get('accepted_uid'), as_dict="true")
+    if cl:
         last_back = n  ##probably unnecessary
-        for i,child in enumerate(child_list):
+        for i,child in enumerate(cl):
             if (i > 0):
-                n = last_back + 1 ##(db(t.id == child_list[i-1].id).select().first().back)+1
-            last_back = index_aux(child.id,n)
+                n = last_back
+            last_back = index_aux(child.get('id'),n,tfile)
         next_back = last_back + 1
     else:
         next_back=n+1
-    setr.update(back=next_back)
-    ##print "returning %d" % next_back
+    primary_back = next_back
+    db.executesql("UPDATE ottol_name SET next=%d, back=%d WHERE id = %d\n" %(primary_next,primary_back,primary_id))
     return next_back
     
-def index_ottol_synonyms():
-    print "starting synonym indexing"
-    t=db.ottol_name
-    synset = db(t.accepted_uid != t.uid)
-    print "Have synset"
-    synrows = synset.select()
-    print "Have %d synrows" % len(synrows)
+def index_ottol_synonyms(tfile):
+    synrows = db.executesql('SELECT id,uid,accepted_uid,name from ottol_name WHERE uid != accepted_uid;', as_dict="true")
     counter = 0
     for row in synrows:
-        valid_taxon = db(t.uid == row.accepted_uid).select().first()
-        if valid_taxon:
-            synset.update(next=valid_taxon.next)
-            synset.update(back=valid_taxon.back)
-            print "updating row %d %s" % (counter, row.name)
+        valid_taxa = db.executesql('SELECT id,next,back from ottol_name WHERE uid = %d;' % 
+            row.get('id'), as_dict="true")
+        if valid_taxa:
+            valid_taxon = valid_taxa[0]  #db(t.uid == row.accepted_uid).select().first()
+            syn_id = row.get('id')
+            #synset.update(next=valid_taxon.next)
+            #synset.update(back=valid_taxon.back)
+            valid_next = valid_taxon.get('next')
+            valid_back = valid_taxon.get('back')
+            valid_id = valid_taxon.get('id')
+            if (valid_next and valid_back):
+                db.executesql("UPDATE ottol_name SET next=%d, back=%d WHERE id = %d\n" % 
+                    (valid_next,valid_back,syn_id))
+                print "saving row %d %s" % (counter, row.get('name'))
+            else:
+                print "missing update; valid id = %s, synonym id = %s, next = %s, back = %s" % (valid_id, syn_id, valid_next, valid_back)
         else:
-            print "no valid taxon found for %d" % row.accepted_uid
+            print "no valid taxon found for %d" % row.get('accepted_uid')
         counter = counter + 1
     return
