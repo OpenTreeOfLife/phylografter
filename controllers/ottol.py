@@ -128,22 +128,45 @@ def index_ottol_names():
     fill in next,back and depth fields in ottol_name - based on ivy indexing for snodes
     '''
     import tempfile
+    import subprocess
+    dtimeFormat = '%Y-%m-%dT%H:%M:%S'
+    start_time = datetime.datetime.now()
+    print "Start time: %s" % start_time.strftime(dtimeFormat)
     t = db.ottol_name
     setr = db(t.parent_uid==0)
     root_id = setr.select().first().id
-    temp_file = tempfile.NamedTemporaryFile(mode="r+w",delete=False);
-    temp_file_name = temp_file.name
-    print "primary temp_file_name = %s" % temp_file_name
-    index_aux(root_id,0,temp_file)
-    temp_file.close()
-    #execute_update(temp_file_name)
-    temp_file = tempfile.NamedTemporaryFile(mode="r+w",delete=False);
-    temp_file_name = temp_file.name
-    print "synonym temp_file_name = %s" % temp_file_name
-    index_ottol_synonyms(temp_file)
-    temp_file.close()
-    #execute_update(temp_file_name)
-    temp_file.close()
+    primary_sql_file = tempfile.NamedTemporaryFile(mode="r+w",delete=False);
+    print "primary sql file name = %s" % primary_sql_file.name
+    index_aux(root_id,0,primary_sql_file)
+    primary_sql_file.close()
+    primary_script_file = tempfile.NamedTemporaryFile(mode="r+w",delete=False);
+    print "primary script file name = %s" % primary_script_file.name
+    primary_script_contents = " ".join(["mysql","--user='tester'","--password='abc123'","phylografter","<" + primary_sql_file.name+"\n"])
+    primary_script_file.write(primary_script_contents);
+    primary_script_file.close()
+    primary_args = ["/bin/sh", primary_script_file.name]
+    print "About to launch"
+    primary_update = subprocess.Popen(primary_args);
+    result = primary_update.wait()
+    print "primary script result: %d" % result
+    end_time = datetime.datetime.now()
+    print "Finished primary update: %s" % end_time.strftime(dtimeFormat)
+    syn_sql_file = tempfile.NamedTemporaryFile(mode="r+w",delete=False);
+    print "synonym sql file name = %s" % syn_sql_file.name
+    index_ottol_synonyms(syn_sql_file)
+    syn_sql_file.close()
+    syn_script_file = tempfile.NamedTemporaryFile(mode="r+w",delete=False);
+    print "synonym script file name = %s" % syn_script_file.name
+    syn_script_contents = " ".join(["mysql","--user='tester'","--password='abc123'","phylografter","<" + syn_sql_file.name+"\n"])
+    syn_script_file.write(syn_script_contents);
+    syn_script_file.close()
+    syn_args = ["/bin/sh", syn_script_file.name]
+    print "About to launch"
+    syn_update = subprocess.Popen(syn_args)
+    result = syn_update.wait()
+    print "synonym script result: %d" % result
+    end_time = datetime.datetime.now()
+    print "Finished synonym update: %s" % end_time.strftime(dtimeFormat)
     return db(t.id==root_id).select().first().name
     
 def index_aux(node_id,n,tfile):
@@ -152,8 +175,6 @@ def index_aux(node_id,n,tfile):
     primary_next = n
     first = rdict[0]
     primary_id = first.get('id')
-    if (n % 10000) == 0:
-        print "name = %s, next = %d" % (first.get('name'),n)
     cl = db.executesql('SELECT id FROM ottol_name WHERE(parent_uid = %d);' % first.get('accepted_uid'), as_dict="true")
     if cl:
         last_back = n  ##probably unnecessary
@@ -165,7 +186,7 @@ def index_aux(node_id,n,tfile):
     else:
         next_back=n+1
     primary_back = next_back
-    db.executesql("UPDATE ottol_name SET next=%d, back=%d WHERE id = %d\n" %(primary_next,primary_back,primary_id))
+    tfile.write("UPDATE ottol_name SET next=%d, back=%d WHERE id = %d;\n" %(primary_next,primary_back,primary_id))
     return next_back
     
 def index_ottol_synonyms(tfile):
@@ -183,9 +204,9 @@ def index_ottol_synonyms(tfile):
             valid_back = valid_taxon.get('back')
             valid_id = valid_taxon.get('id')
             if (valid_next and valid_back):
-                db.executesql("UPDATE ottol_name SET next=%d, back=%d WHERE id = %d\n" % 
+                tfile.write("UPDATE ottol_name SET next=%d, back=%d WHERE id = %d;\n" % 
                     (valid_next,valid_back,syn_id))
-                print "saving row %d %s" % (counter, row.get('name'))
+                #print "saving row %d %s" % (counter, row.get('name'))
             else:
                 print "missing update; valid id = %s, synonym id = %s, next = %s, back = %s" % (valid_id, syn_id, valid_next, valid_back)
         else:
