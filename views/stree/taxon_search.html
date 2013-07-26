@@ -1,0 +1,16 @@
+{{extend 'layout.html'}}
+<h1>Search for Trees containing taxa</h1>
+{{=anyTaxa}}
+{{=mrca}}
+{{=withinForm}}
+<h2>Submitted variables</h2>
+{{=BEAUTIFY(request.vars)}}
+<h2>Accepted variables</h2>
+{{=BEAUTIFY(anyTaxa.vars)}}
+{{=BEAUTIFY(mrca.vars)}}
+{{=BEAUTIFY(withinForm.vars)}}
+<h2>Errors in form</h2>
+{{=BEAUTIFY(anyTaxa.errors)}}
+{{=BEAUTIFY(mrca.errors)}}
+{{=BEAUTIFY(withinForm.errors)}}
+{{=response.toolbar()}}

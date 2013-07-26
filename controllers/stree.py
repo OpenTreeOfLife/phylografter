@@ -686,7 +686,7 @@ def import_cached_nexml():
 def taxon_search():
     '''hook for advanced search for trees containing specified taxa, etc.'''
     anyTaxaForm = FORM('Any tree containing taxa within: ', 
-                      INPUT(_name='anyParent'), 
+                      INPUT(_name='parent_taxon'), 
                       INPUT(_type='submit'))
     mrcaForm = FORM('Any tree containing mrca of two taxa: ', 
                    INPUT(_name='mrca1'), 
@@ -696,54 +696,30 @@ def taxon_search():
                      INPUT(_name='innerTaxon'), 
                      INPUT(_name='withinTaxon'), 
                      INPUT(_type='submit'))
-    if anyTaxaForm.accepts(request,session,formname="anyParent"):
-        anyParent = anyTaxaForm.vars.anyParent
-        taxa = db(db.ottol_name.name==anyParent).select()
-        treeSet = set()
-        for taxon in taxa:
-            nodes = db(db.snode.ottol_name == taxon.id).select()
-            for tnode in nodes:
-                treeSet.add(tnode.tree)
-        response.flash = 'AnyParent found ' + str(len(treeSet)) + ' trees for ' + anyParent        
-        session.anyParent = anyTaxaForm.vars.anyParent
+    if anyTaxaForm.accepts(request,session,formname="parent_taxon"):
+        any_parent = anyTaxaForm.vars.parent_taxon
+        #print "assigning any_parent to %s" % anyTaxaForm.vars.parent_taxon
+        tree_set = any_taxon_within_search(any_parent)
+        response.flash = 'Any tree containing taxa with found %d trees containing taxa within %s' % (len(tree_set), any_parent)        
+        session.anyParent = any_parent
         #redirect(URL('taxonSearchResults'))
     elif mrcaForm.accepts(request,session,formname="mrca1"):
-        mrcaName1 = mrcaForm.vars.mrca1
-        mrcaName2 = mrcaForm.vars.mrca2
-        taxa1 = db(db.ottol_name.name==mrcaName1).select()
-        taxa2 = db(db.ottol_name.name==mrcaName2).select()
-        treeSet1 = set()
-        treeSet2 = set()
-        for taxon in taxa1:
-            nodes = db(db.snode.ottol_name == taxon.id).select()
-            for tnode in nodes:
-                treeSet1.add(tnode.tree)
-        for taxon in taxa2:
-            nodes = db(db.snode.ottol_name == taxon.id).select()
-            for tnode in nodes:
-                treeSet2.add(tnode.tree)
-        intersectSet = treeSet1.intersection(treeSet2)        
-        response.flash = 'mrca query found ' + str(len(intersectSet)) + ' trees containing a common ancestor for ' + mrcaName1 + ' and ' + mrcaName2
+        mrca_name1 = mrcaForm.vars.mrca1
+        mrca_name2 = mrcaForm.vars.mrca2
+        tree_set1 = any_taxon_within_search(mrca_name1)
+        tree_set2 = any_taxon_within_search(mrca_name2)
+        intersect_set = tree_set1.intersection(tree_set2)        
+        response.flash = 'mrca query found %d trees containing a common ancestor for %s and %s' % (len(intersectSet),mrca_name1,mrcaName2)
         session.mrcaName1 = mrcaForm.vars.mrca1
         session.mrcaName2 = mrcaForm.vars.mrca2
         #redirect(URL('taxonSearchResults'))
     elif withinForm.accepts(request,session,formname="innerTaxon"):
-        innerName = withinForm.vars.innerTaxon
-        withinName = withinForm.vars.withinTaxon
-        innerTaxa = db(db.ottol_name.name==innerName).select()
-        withinTaxa = db(db.ottol_name.name==withinName).select()
-        innerTreeSet = set()
-        withinTreeSet = set()
-        for taxon in innerTaxa:
-            nodes = db(db.snode.ottol_name == taxon.id).select()
-            for tnode in nodes:
-                innerTreeSet.add(tnode.tree)
-        for taxon in withinTaxa:
-            nodes = db(db.snode.ottol_name == taxon.id).select()
-            for tnode in nodes:
-                withinTreeSet.add(tnode.tree)
-        intersectSet = innerTreeSet.intersection(withinTreeSet)
-        response.flash = 'within query found ' + str(len(intersectSet)) + ' trees containing ' + innerName + ' within ' + withinName
+        inner_name = withinForm.vars.innerTaxon
+        outer_name = withinForm.vars.withinTaxon
+        outer_tree_set = containing_taxon_search(outerName)
+        inner_tree_set = any_taxon_within_search(innerName)
+        intersectSet = outer_tree_set.intersection(inner_tree_set)
+        response.flash = 'within query found %d trees containing %s within %s' % (len(intersectSet),inner_name,outer_name)
         session.innerName = withinForm.vars.innerName
         session.withinName = withinForm.vars.withinName
 ##        redirect(URL('taxonSearchResults'))
@@ -757,6 +733,20 @@ def taxon_search():
     ##    response.flash = 'please fill a query'
 
     return dict(anyTaxa=anyTaxaForm,mrca=mrcaForm,withinForm=withinForm)
+
+#TODO implement this
+def any_taxon_within_search(parent):
+    taxa = db(db.ottol_name.name==parent).select()
+    tree_set = set()
+    for taxon in taxa:
+        nodes = db(db.snode.ottol_name == taxon.id).select()
+        for tnode in nodes:
+            tree_set.add(tnode.tree)
+    return tree_set
+
+#TODO implement
+def containing_taxon_search(taxon):
+    return set()
 
 def export_NexSON():
     ''' This exports the tree specified by the argument as JSON NeXML.
