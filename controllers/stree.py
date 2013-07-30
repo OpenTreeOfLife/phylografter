@@ -698,21 +698,19 @@ def taxon_search():
                      INPUT(_type='submit'))
     if anyTaxaForm.accepts(request,session,formname="parent_taxon"):
         any_parent = anyTaxaForm.vars.parent_taxon
-        tree_overlap_test(any_parent)
-        #print "assigning any_parent to %s" % anyTaxaForm.vars.parent_taxon
-        #tree_set = any_taxon_within_search(any_parent)
-        #response.flash = 'Any tree containing taxa with found %d trees containing taxa within %s' % (len(tree_set), any_parent)        
+        tree_set = tree_overlap_test(any_parent)
+        response.flash = 'Any tree containing taxa with found %d trees containing taxa within %s' % (len(tree_set), any_parent)        
         session.anyParent = any_parent
         #redirect(URL('taxonSearchResults'))
     elif mrcaForm.accepts(request,session,formname="mrca1"):
         mrca_name1 = mrcaForm.vars.mrca1
         mrca_name2 = mrcaForm.vars.mrca2
-        tree_set1 = any_taxon_within_search(mrca_name1)
-        tree_set2 = any_taxon_within_search(mrca_name2)
+        tree_set1 = tree_overlap_test(mrca_name1)
+        tree_set2 = tree_overlap_test(mrca_name2)
         intersect_set = tree_set1.intersection(tree_set2)        
-        response.flash = 'mrca query found %d trees containing a common ancestor for %s and %s' % (len(intersectSet),mrca_name1,mrcaName2)
-        session.mrcaName1 = mrcaForm.vars.mrca1
-        session.mrcaName2 = mrcaForm.vars.mrca2
+        response.flash = 'mrca query found %d trees containing a common ancestor for %s and %s' % (len(intersect_set),mrca_name1,mrca_name2)
+        session.mrcaName1 = mrca_name1
+        session.mrcaName2 = mrca_name2
         #redirect(URL('taxonSearchResults'))
     elif withinForm.accepts(request,session,formname="innerTaxon"):
         inner_name = withinForm.vars.innerTaxon
@@ -740,19 +738,17 @@ def tree_overlap_test(taxon):
     start_time = datetime.datetime.now()
     print "Start time: %s" % start_time.strftime(dtimeFormat)
     taxon_ottol = db.executesql("SELECT next,back FROM ottol_name WHERE (name = '%s');" % taxon,as_dict="true")
+    if len(taxon_ottol) == 0:
+        return set()
     taxon_next = taxon_ottol[0].get('next')
     taxon_back = taxon_ottol[0].get('back')
     studies = db.executesql('SELECT id FROM study')
     good_study_ids = set()
     for study in studies:
         study_id = study[0]
-        otulist = db.executesql('SELECT ottol_name.next, ottol_name.back FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % study_id) 
-        for otu in otulist:
-            otu_next = otu[0]
-            otu_back = otu[1]
-            if (otu_next > taxon_next and otu_back < taxon_back):
-               good_study_ids.add(study_id)
-               break    
+        otulist = db.executesql('SELECT ottol_name.next, ottol_name.back FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d AND ottol_name.next > %d AND ottol_name.back < %d);' % (study_id,taxon_next,taxon_back))
+        if otulist:
+            good_study_ids.add(study_id) 
     good_tree_ids = set()
     t1_time = datetime.datetime.now()
     print "first pass time: %s" % t1_time.strftime(dtimeFormat)
@@ -761,22 +757,14 @@ def tree_overlap_test(taxon):
         tree_list = db.executesql('SELECT id from stree WHERE stree.study = %d;' % good_id) 
         for tree in tree_list:
             tree_id = tree[0]
-            tree_nodes = db.executesql('SELECT id,ottol_name FROM snode WHERE snode.tree = %d AND snode.ottol_name IS NOT NULL;' % tree_id)
-            for tree_node in tree_nodes:
-                node_id = tree_node[0]
-                node_ottol_name = tree_node[1]
-                ottol_names = db.executesql('SELECT ottol_name.next,ottol_name.back FROM ottol_name WHERE ottol_name.id = %d;' % node_ottol_name)
-                ottol_name = ottol_names[0]
-                ottol_name_next = ottol_name[0]
-                ottol_name_back = ottol_name[1]
-                if (ottol_name_next > taxon_next and ottol_name_back < taxon_back):
-                    good_tree_ids.add(tree_id)
-                    break;
+            tree_nodes = db.executesql('SELECT ottol_name.next,ottol_name.back FROM snode LEFT JOIN ottol_name ON (snode.ottol_name = ottol_name.id) WHERE (snode.tree = %d AND ottol_name.next > %d AND ottol_name.back < %d);' % (tree_id,taxon_next,taxon_back))
+            if tree_nodes:
+                good_tree_ids.add(tree_id)
     print "Found %d trees" % len(good_tree_ids)
     print "Trees are: %s" % str(good_tree_ids)
     end_time = datetime.datetime.now()
     print "End time: %s" % end_time.strftime(dtimeFormat)
-    return
+    return good_tree_ids
     
     
 
