@@ -733,11 +733,11 @@ def newick():
     """
     return newick string for stree.id = request.args(0)
 
-    optional parameters are 'lfmt' (leaf format) and 'ifmt' (internal
-    node format), which are comma-separated table.field values to be
-    pulled out of the node.rec Row objects. These are converted to
-    strings, joined by '_', and attached to nodes as labels to be
-    written in the newick string.
+    optional request.variables are 'lfmt' (leaf format) and 'ifmt'
+    (internal node format), which are comma-separated table.field
+    values to be pulled out of the node.rec Row objects. These are
+    converted to strings, joined by '_', and attached to nodes as
+    labels to be written in the newick string.
     """
     treeid = int(request.args(0) or 0)
     assert treeid
@@ -754,4 +754,5 @@ def newick():
         if n.isleaf: n.label = '_'.join([ proc(n, t, f) for t, f in lfmt ])
         else:
             if ifmt: n.label = '_'.join([ proc(n, t, f) for t, f in ifmt ])
+        n.label = n.label.replace('(','--').replace(')','--')
     return dict(newick=root.write())
