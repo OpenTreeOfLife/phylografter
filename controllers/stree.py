@@ -696,16 +696,21 @@ def taxon_search():
         any_parent = anyTaxaForm.vars.any_children
         tree_set = any_taxa_tree_test(any_parent)
         response.flash = 'Any tree containing taxa with found %d trees containing taxa within %s' % (len(tree_set), any_parent)        
-        session.anyParent = any_parent
+        session.any = True
+        session.taxon = any_parent
         results = dict(treeset=tree_set)
-        #redirect(URL('taxonSearchResults'))
+        session.results = results
+        redirect(URL('taxon_search_results'))
     elif allTaxaForm.accepts(request,session,formname="all_children"):
         all_parent = allTaxaForm.vars.all_children
         tree_set = all_taxa_tree_test(all_parent)
         response.flash = 'Any tree containing only taxa within found %d trees containing only taxa within %s' % (len(tree_set),all_parent)
         session.allParent = all_parent
         results = dict(treeset=tree_set)
-        #redirect(URL('taxonSearchResults'))
+        session.taxon = all_parent
+        session.any = False
+        session.results = results
+        redirect(URL('taxon_search_results'))
     elif anyTaxaForm.errors :
         response.flash = 'Any taxa form reports errors'
         results = dict()
@@ -713,10 +718,10 @@ def taxon_search():
         response.flash = 'All taxa form reports errors'
     return dict(anyTaxa=anyTaxaForm,allTaxa=allTaxaForm,results = results)
 
+def taxon_search_results():
+    return dict();
+
 def any_taxa_tree_test(taxon):
-    dtimeFormat = '%Y-%m-%dT%H:%M:%S'
-    start_time = datetime.datetime.now()
-    print "Start time: %s" % start_time.strftime(dtimeFormat)
     taxon_ottol = db.executesql("SELECT next,back FROM ottol_name WHERE (name = '%s');" % taxon,as_dict="true")
     if len(taxon_ottol) == 0:
         return set()
@@ -731,8 +736,6 @@ def any_taxa_tree_test(taxon):
             good_study_ids.add(study_id) 
     good_tree_ids = set()
     t1_time = datetime.datetime.now()
-    print "first pass time: %s" % t1_time.strftime(dtimeFormat)
-    print "found %d studies" % len(good_study_ids)
     for good_id in good_study_ids:
         tree_list = db.executesql('SELECT id from stree WHERE stree.study = %d;' % good_id) 
         for tree in tree_list:
@@ -740,16 +743,9 @@ def any_taxa_tree_test(taxon):
             tree_nodes = db.executesql('SELECT ottol_name.next,ottol_name.back FROM snode LEFT JOIN ottol_name ON (snode.ottol_name = ottol_name.id) WHERE (snode.tree = %d AND ottol_name.next > %d AND ottol_name.back < %d);' % (tree_id,taxon_next,taxon_back))
             if tree_nodes:
                 good_tree_ids.add(tree_id)
-    print "Found %d trees" % len(good_tree_ids)
-    print "Trees are: %s" % str(good_tree_ids)
-    end_time = datetime.datetime.now()
-    print "End time: %s" % end_time.strftime(dtimeFormat)
     return good_tree_ids
     
 def all_taxa_tree_test(taxon):
-    dtimeFormat = '%Y-%m-%dT%H:%M:%S'
-    start_time = datetime.datetime.now()
-    print "All Taxa Start time: %s" % start_time.strftime(dtimeFormat)
     taxon_ottol = db.executesql("SELECT next,back FROM ottol_name WHERE (name = '%s');" % taxon,as_dict="true")
     if len(taxon_ottol) == 0:
         return set()
@@ -764,8 +760,6 @@ def all_taxa_tree_test(taxon):
             good_study_ids.add(study_id) 
     good_tree_ids = set()
     t1_time = datetime.datetime.now()
-    print "first pass time: %s" % t1_time.strftime(dtimeFormat)
-    print "found %d studies" % len(good_study_ids)
     good_tree_ids = set()
     for good_id in good_study_ids:
         tree_list = db.executesql('SELECT id from stree WHERE stree.study = %d;' % good_id) 
@@ -778,8 +772,6 @@ def all_taxa_tree_test(taxon):
                 all_count = all_nodes[0][0]
                 if all_count == good_count:
                     good_tree_ids.add(tree_id)
-    end_time = datetime.datetime.now()
-    print "All Taxa End time: %s" % end_time.strftime(dtimeFormat)
     return good_tree_ids
 
 
