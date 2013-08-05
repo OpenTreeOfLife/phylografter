@@ -685,55 +685,35 @@ def import_cached_nexml():
 
 def taxon_search():
     '''hook for advanced search for trees containing specified taxa, etc.'''
-    anyTaxaForm = FORM('Any tree containing taxa within: ', 
-                      INPUT(_name='parent_taxon'), 
+    anyTaxaForm = FORM('Any tree containing any taxa within: ', 
+                      INPUT(_name='any_children'), 
                       INPUT(_type='submit'))
-    mrcaForm = FORM('Any tree containing mrca of two taxa: ', 
-                   INPUT(_name='mrca1'), 
-                   INPUT(_name='mrca2'), 
+    allTaxaForm = FORM('Any tree containing only taxa within: ', 
+                   INPUT(_name='all_children'), 
                    INPUT(_type='submit'))
-    withinForm = FORM('Any tree containing taxa 1 within taxa 2', 
-                     INPUT(_name='innerTaxon'), 
-                     INPUT(_name='withinTaxon'), 
-                     INPUT(_type='submit'))
-    if anyTaxaForm.accepts(request,session,formname="parent_taxon"):
-        any_parent = anyTaxaForm.vars.parent_taxon
-        tree_set = tree_overlap_test(any_parent)
+    results = dict()
+    if anyTaxaForm.accepts(request,session,formname="any_children"):
+        any_parent = anyTaxaForm.vars.any_children
+        tree_set = any_taxa_tree_test(any_parent)
         response.flash = 'Any tree containing taxa with found %d trees containing taxa within %s' % (len(tree_set), any_parent)        
         session.anyParent = any_parent
+        results = dict(treeset=tree_set)
         #redirect(URL('taxonSearchResults'))
-    elif mrcaForm.accepts(request,session,formname="mrca1"):
-        mrca_name1 = mrcaForm.vars.mrca1
-        mrca_name2 = mrcaForm.vars.mrca2
-        tree_set1 = tree_overlap_test(mrca_name1)
-        tree_set2 = tree_overlap_test(mrca_name2)
-        intersect_set = tree_set1.intersection(tree_set2)        
-        response.flash = 'mrca query found %d trees containing a common ancestor for %s and %s' % (len(intersect_set),mrca_name1,mrca_name2)
-        session.mrcaName1 = mrca_name1
-        session.mrcaName2 = mrca_name2
+    elif allTaxaForm.accepts(request,session,formname="all_children"):
+        all_parent = allTaxaForm.vars.all_children
+        tree_set = all_taxa_tree_test(all_parent)
+        response.flash = 'Any tree containing only taxa within found %d trees containing only taxa within %s' % (len(tree_set),all_parent)
+        session.allParent = all_parent
+        results = dict(treeset=tree_set)
         #redirect(URL('taxonSearchResults'))
-    elif withinForm.accepts(request,session,formname="innerTaxon"):
-        inner_name = withinForm.vars.innerTaxon
-        outer_name = withinForm.vars.withinTaxon
-        outer_tree_set = containing_taxon_search(outerName)
-        inner_tree_set = any_taxon_within_search(innerName)
-        intersectSet = outer_tree_set.intersection(inner_tree_set)
-        response.flash = 'within query found %d trees containing %s within %s' % (len(intersectSet),inner_name,outer_name)
-        session.innerName = withinForm.vars.innerName
-        session.withinName = withinForm.vars.withinName
-##        redirect(URL('taxonSearchResults'))
-    elif anyTaxaForm.errors:
-        response.flash = 'Any tree containing taxa query has errors'
-##    elif mrcaForm.errors:
-##        response.flash = 'MRCA query has errors'
-##    elif withinForm.errors:
-##        response.flash = 'Contains query has errors'
-    ##else:
-    ##    response.flash = 'please fill a query'
+    elif anyTaxaForm.errors :
+        response.flash = 'Any taxa form reports errors'
+        results = dict()
+    elif allTaxaForm.errors :
+        response.flash = 'All taxa form reports errors'
+    return dict(anyTaxa=anyTaxaForm,allTaxa=allTaxaForm,results = results)
 
-    return dict(anyTaxa=anyTaxaForm,mrca=mrcaForm,withinForm=withinForm)
-
-def tree_overlap_test(taxon):
+def any_taxa_tree_test(taxon):
     dtimeFormat = '%Y-%m-%dT%H:%M:%S'
     start_time = datetime.datetime.now()
     print "Start time: %s" % start_time.strftime(dtimeFormat)
@@ -766,21 +746,42 @@ def tree_overlap_test(taxon):
     print "End time: %s" % end_time.strftime(dtimeFormat)
     return good_tree_ids
     
-    
+def all_taxa_tree_test(taxon):
+    dtimeFormat = '%Y-%m-%dT%H:%M:%S'
+    start_time = datetime.datetime.now()
+    print "All Taxa Start time: %s" % start_time.strftime(dtimeFormat)
+    taxon_ottol = db.executesql("SELECT next,back FROM ottol_name WHERE (name = '%s');" % taxon,as_dict="true")
+    if len(taxon_ottol) == 0:
+        return set()
+    taxon_next = taxon_ottol[0].get('next')
+    taxon_back = taxon_ottol[0].get('back')
+    studies = db.executesql('SELECT id FROM study')
+    good_study_ids = set()
+    for study in studies:
+        study_id = study[0]
+        otulist = db.executesql('SELECT ottol_name.next, ottol_name.back FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d AND ottol_name.next > %d AND ottol_name.back < %d);' % (study_id,taxon_next,taxon_back))
+        if otulist:
+            good_study_ids.add(study_id) 
+    good_tree_ids = set()
+    t1_time = datetime.datetime.now()
+    print "first pass time: %s" % t1_time.strftime(dtimeFormat)
+    print "found %d studies" % len(good_study_ids)
+    good_tree_ids = set()
+    for good_id in good_study_ids:
+        tree_list = db.executesql('SELECT id from stree WHERE stree.study = %d;' % good_id) 
+        for tree in tree_list:
+            tree_id = tree[0]
+            good_nodes = db.executesql('SELECT COUNT(*) FROM snode LEFT JOIN ottol_name ON (snode.ottol_name = ottol_name.id) WHERE (snode.tree = %d AND (ottol_name.next > %d AND ottol_name.back < %d));' % (tree_id,taxon_next,taxon_back))
+            good_count =good_nodes[0][0]
+            if good_count > 0 :
+                all_nodes = db.executesql('SELECT COUNT(*) FROM snode WHERE (snode.tree = %d AND snode.ottol_name IS NOT NULL);' % tree_id)
+                all_count = all_nodes[0][0]
+                if all_count == good_count:
+                    good_tree_ids.add(tree_id)
+    end_time = datetime.datetime.now()
+    print "All Taxa End time: %s" % end_time.strftime(dtimeFormat)
+    return good_tree_ids
 
-#TODO implement this
-def any_taxon_within_search(parent):
-    taxa = db(db.ottol_name.name==parent).select()
-    tree_set = set()
-    for taxon in taxa:
-        nodes = db(db.snode.ottol_name == taxon.id).select()
-        for tnode in nodes:
-            tree_set.add(tnode.tree)
-    return tree_set
-
-#TODO implement
-def containing_taxon_search(taxon):
-    return set()
 
 def export_NexSON():
     ''' This exports the tree specified by the argument as JSON NeXML.
