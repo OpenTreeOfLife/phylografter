@@ -685,16 +685,23 @@ def import_cached_nexml():
 
 def taxon_search():
     '''hook for advanced search for trees containing specified taxa, etc.'''
-    anyTaxaForm = FORM('Any tree containing any taxa within: ', 
-                      INPUT(_name='any_children'), 
-                      INPUT(_type='submit'))
+    field = Field("taxon", "integer")
+    field.widget = SQLFORM.widgets.autocomplete(
+        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
+        orderby=db.ottol_name.unique_name)
+    anyTaxaForm = SQLFORM.factory(field, formstyle="divs")
+
+    ## anyTaxaForm = FORM('Any tree containing any taxa within: ', 
+    ##                   INPUT(_name='any_children'), 
+    ##                   INPUT(_type='submit'))
     allTaxaForm = FORM('Any tree containing only taxa within: ', 
                    INPUT(_name='all_children'), 
                    INPUT(_type='submit'))
     results = dict()
     if anyTaxaForm.accepts(request,session,formname="any_children"):
-        any_parent = anyTaxaForm.vars.any_children
-        tree_set = any_taxa_tree_test(any_parent)
+        any_parent = anyTaxaForm.vars.taxon
+        ## any_parent = anyTaxaForm.vars.any_children
+        tree_set = any_taxa_tree_test2(any_parent)
         response.flash = 'Any tree containing taxa with found %d trees containing taxa within %s' % (len(tree_set), any_parent)        
         session.any = True
         session.taxon = any_parent
@@ -720,6 +727,16 @@ def taxon_search():
 
 def taxon_search_results():
     return dict();
+
+def any_taxa_tree_test2(ottol_name_id):
+    t = db.ottol_name
+    r = t[ottol_name_id]
+    q = ('select distinct stree.id from stree, study, otu, ottol_name '
+         'where stree.study=study.id and otu.study=study.id '
+         'and otu.ottol_name=ottol_name.id '
+         'and ottol_name.next >= %d and ottol_name.back <= %d'
+         % (r.next, r.back))
+    rows = db.executesql(q)
 
 def any_taxa_tree_test(taxon):
     taxon_ottol = db.executesql("SELECT next,back FROM ottol_name WHERE (name = '%s');" % taxon,as_dict="true")
