@@ -227,8 +227,6 @@ def otusEltForStudy(studyRow,db):
 def getOtuRowsForStudy(studyRow,db):
     'returns a list of otu ids for otu records that link to this study'
     return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.accepted_uid, ottol_name.name FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % studyRow.id)
-#    return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.uid, ottol_name.parent_uid, ottol_name.accepted_uid, ottol_name.ncbi_taxid, ottol_name.gbif_taxid, ottol_name.namebank_taxid, ottol_name.treebase_taxid, ottol_name.name, ottol_name.unique_name, ottol_name.rank, ottol_name.comments FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % studyRow.id,as_dict="true")
-#    return db.executesql('SELECT id,label,ottol_name FROM otu WHERE (study = %d);' % studyRow.id,as_dict="true")
     
 def metaEltsForOtus(studyRow,otuRows,db):
     'generates nexml meta elements that are children of an otus element'
@@ -249,12 +247,9 @@ def otusEltForTree(treeRow,studyRow,db):
     nodeRows = getSNodeRecsForTree(treeRow,db)
     metaElts = metaEltsForOtus(studyRow,otuRows,db)
     otuElements = [otuElt(otuRow,db) for otuRow in otuRows] 
-    otusElement = dict()
-    otusElement["otu"] = otuElements
+    otusElement = {"otu",otuElements}
     otusElement["@id"] = "otus" + str(studyRow.id) + "." + str(treeRow.id)
-    result = dict()
-    result["otus"] = otusElement
-    return result
+    return {"otus",otusElement}
        
 #Generates an otu Element             
 def otuElt(otuRec,db):
@@ -327,17 +322,17 @@ def singletonTreesElt(treeRow,studyRow,db):
 def getSingleTreeStudyId(tree,db):
     return db.stree(tree).study
     
-def treeElt(treeRow,db):
+def treeElt(tree_row,db):
     'generates a tree element'
-    metaElts = metaEltsForTreeElt(treeRow,db)
-    nodeRows = getSNodeRecsForTree(treeRow,db)
+    meta_elts = metaEltsForTreeElt(tree_row,db)
+    node_rows = getSNodeRecsForTree(tree_row,db)
     result = dict()
-    result["@id"]='tree%d' % treeRow.id
-    result["node"]=treeNodes(nodeRows)
-    result["edge"]=treeEdges(nodeRows)
-    if metaElts:
-        result["@about"] = "#tree%d" % treeRow.id
-        result.update(metaElts)
+    result["@id"]='tree%d' % tree_row.id
+    result["node"]=treeNodes(node_rows)
+    result["edge"]=treeEdges(node_rows)
+    if meta_elts:
+        result["@about"] = "#tree%d" % tree_row.id
+        result.update(meta_elts)
     return result
     
 
