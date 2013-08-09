@@ -29,7 +29,9 @@ response.menu = [
         ("Import from TreeBASE", False, URL('study','tbimport', []))
         ]),
     ## (T('OTUs'), False, URL('otu','index'), []),
-    (T('Source Trees'), False, URL('stree','index'), []),
+    (T('Source Trees'), False, URL('stree','index'), [
+      ("Taxon Search", False, URL('stree','otus_within',[]))
+      ]),
     (T('Grafted Trees'), False, URL('gtree','index'), [])
     #(T('Share Your Trees'), False, URL('collab','index'), [])
     ]

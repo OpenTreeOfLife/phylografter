@@ -52,6 +52,7 @@ def nodexml(rec, load=False):
     print "nodexml end:", rec.name
     return e
 
+## this appears to be depreciated due to its use of ottol_node (PEM 6-20-2013)
 def browse():
     if not request.args and not request.vars:
         session.ottol_browse_expanded = set([1])
@@ -89,6 +90,7 @@ def browse():
     session.ottol_browse_expanded = s
     return dict(e=nodexml(root), path=path, form=form)
 
+## this appears to be depreciated due to its use of ottol_node (PEM 6-20-2013)
 def children():
     s = session.ottol_browse_expanded or set([1])
     ## import nodetable
@@ -122,11 +124,12 @@ def autocomplete():
     return "%s( %s )" % (jsonCallback, ['<a href="%s">%s</a>' % (r.accepted_uid, r.unique_name) for r in rows])
 
 def ottol_names_report():
-    '''
+    """
     Drives generation of a csv formatted report listing the ottol_name's uid for each otu
     (with a non-empty ottol uid) along with the study uid.  This report is useful in maintaining
     the taxonomy.
-    '''
+    """
     o = db.otu;
     report = db((db.ottol_name.id==db.otu.ottol_name) & (db.ottol_name.uid != None)).select(db.ottol_name.uid,db.otu.study,orderby=db.otu.study)
     return dict(report = report)
+

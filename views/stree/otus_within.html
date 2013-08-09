@@ -1,0 +1,31 @@
+{{extend 'layout.html'}}
+{{=form.custom.begin}}
+<table>
+  <tr>
+    <td>Search for trees with</td>
+    <td>{{=form.custom.widget.any_all}}</td>
+  </tr>
+  <tr>
+    <td>within taxon:</td>
+    <td>{{=form.custom.widget.taxon}}</td>
+  </tr>
+  <tr><td colspan="2">{{=form.custom.submit}}</tr>
+</table>
+{{=form.custom.end}}
+
+{{if rows:}}
+<table><tr><th>Studies</th><th>Trees</th></tr>
+{{for i, ((study, citation), strees) in enumerate(rows):}}
+  <tr style="border-top:1px dotted gray; border-bottom:1px dotted gray">
+    <td>Study {{=study}}: {{=A(citation, _href=URL(c='study',f='view',args=[study]))}}</td>
+    <td>
+    {{while strees:}}
+      {{stree, stree_type = strees.pop(0)}}
+      {{stree_type = XML(stree_type.replace(' ','&nbsp;'))}}
+      <span>Tree&nbsp;{{=stree}}:&nbsp;{{=A(stree_type, _href=URL('svgView',args=[stree]))}}</span>{{if strees:}},&nbsp;{{pass}}
+    {{pass}}
+    </td>
+  </tr>
+{{pass}}
+</table>
+{{pass}}
