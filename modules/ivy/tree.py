@@ -35,7 +35,7 @@ class Tokenizer(shlex):
     def __init__(self, infile):
         shlex.__init__(self, infile)
         self.commenters = ''
-        self.wordchars = self.wordchars+"-.|"
+        self.wordchars = self.wordchars+"-.|/"
         self.quotes = "'"
 
     def parse_comment(self):

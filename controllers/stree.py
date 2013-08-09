@@ -237,8 +237,8 @@ def _lookup_taxa(nodes):
         except: return True
     v = [ (n.label or "").replace("_", " ") for n in filter(f, nodes) ]
     t = db.ottol_name
-    rows = db(t.name.belongs(v)).select(t.name, t.id)
-    return dict([ (x.name, x.id) for x in rows ])
+    rows = db(t.unique_name.belongs(v)).select(t.unique_name, t.id)
+    return dict([ (x.unique_name, x.id) for x in rows ])
 
 def _study_otus(study):
     q = ((db.otu.study==db.study.id)&(db.study.id==study))
@@ -655,7 +655,7 @@ def import_cached_nexml():
             if n.isleaf and n.otu.otu and n.otu.otu.ottol_name:
                 taxid = n.otu.otu.ottol_name
             else:
-                taxon = db(db.ottol_name.name==label).select().first()
+                taxon = db(db.ottol_name.unique_name==label).select().first()
                 if taxon: taxid=taxon.id
 
             i = db.snode.insert(label=label,
@@ -869,3 +869,30 @@ def modified_list():
     wrapper['from']=fromTime.strftime(dtimeFormat)
     wrapper['to']=toTime.strftime(dtimeFormat)
     return wrapper
+
+def newick():
+    """
+    return newick string for stree.id = request.args(0)
+
+    optional parameters are 'lfmt' (leaf format) and 'ifmt' (internal
+    node format), which are comma-separated table.field values to be
+    pulled out of the node.rec Row objects. These are converted to
+    strings, joined by '_', and attached to nodes as labels to be
+    written in the newick string.
+    """
+    treeid = int(request.args(0) or 0)
+    assert treeid
+    root = build.stree(db, treeid)
+    lfmt = [ x.split('.') for x in
+             (request.vars['lfmt'] or 'snode.id,otu.label').split(',') ]
+    ifmt = [ x.split('.') for x in (request.vars['ifmt'] or '').split(',') ]
+    def proc(node, table, field):
+        try: s = str(getattr(getattr(node.rec, table), field))
+        except AttributeError: s = ''
+        return '_'.join(s.split())
+    for n in root:
+        n.label = ''
+        if n.isleaf: n.label = '_'.join([ proc(n, t, f) for t, f in lfmt ])
+        else:
+            if ifmt: n.label = '_'.join([ proc(n, t, f) for t, f in ifmt ])
+    return dict(newick=root.write())

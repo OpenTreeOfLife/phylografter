@@ -1,0 +1,7 @@
+{{
+###
+# response._vars contains the dictionary returned by the controller action
+###
+response.write(response._vars['newick'])
+response.headers['Content-Type']='text/plain'
+}}

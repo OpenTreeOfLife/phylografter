@@ -24,11 +24,12 @@ else:
     password = conf.get("db", "password")
     dbname = conf.get("db", "dbname")
 
-if 'USE_MY_SQL_ADAPTOR' in os.environ:
+if 'USE_MYSQLDB_ADAPTOR' in os.environ:
     # see http://stackoverflow.com/questions/10055441/web2py-doesnt-connect-to-mysql
     import MySQLdb
     from gluon.dal import MySQLAdapter
-    MySQLAdapter.driver = globals().get('MySQLdb',None)
+    ## MySQLAdapter.driver = globals().get('MySQLdb',None)
+    MySQLAdapter.driver = MySQLdb
 
 db = DAL("mysql://%s:%s@%s/%s" % (user, password, host, dbname), migrate=False ) 
 #db = DAL("mysql://%s:%s@%s/%s" % (user, password, host, dbname), migrate=False, fake_migrate_all=True, migrate_enabled=False ) 
@@ -57,7 +58,7 @@ auth.messages.reset_password = 'Click on the link http://'+request.env.http_host
 ## If you need to use OpenID, Facebook, MySpace, Twitter, Linkedin, etc.
 ## register with janrain.com, uncomment and customize following
 host = socket.gethostname()
-if host == "rickroll":
+if host == "splinter":
     host = "www.reelab.net"
 else:
     try:
@@ -75,9 +76,13 @@ auth.settings.login_form = RPXAccount(
     )
 
 if request.controller=='default' and request.function=='user' and request.args(0)=='login':
-    auth.settings.login_next = session._next or URL('index')
+    _next = session._next
+    if _next and 'plugin_' in _next:
+        _next = URL('default', 'index')
+        session._next = _next
+    auth.settings.login_next = _next
 else:
-    session._next = request.env.path_info
+    session._next = URL('default', 'index')#request.env.path_info
 
 ## other login methods are in gluon/contrib/login_methods
 #########################################################################
