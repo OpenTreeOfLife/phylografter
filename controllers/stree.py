@@ -118,6 +118,7 @@ def index():
                  _style="width:100%",_class="search_init",
                  _title="search person" )))))
 
+    
     return dict(tid=tid, table=table)
     
 def dtrecords():
@@ -681,6 +682,146 @@ def import_cached_nexml():
         redirect(URL('study','tbimport_trees'))
 
     return dict(study=study, tree=t, form=form)
+
+def otus_within():
+    from collections import defaultdict
+
+    any_all = Field("any_all", "string",
+                    requires=IS_IN_SET(['any OTU','all OTUs']),
+                    default=request.vars.any_all or 'any OTU',
+                    widget=SQLFORM.widgets.options.widget)
+
+    taxon = Field("taxon", "integer", requires=IS_NOT_EMPTY())
+    taxon.widget = SQLFORM.widgets.autocomplete(
+        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
+        orderby=db.ottol_name.unique_name)
+    taxon.default = request.vars.taxon
+    f = SQLFORM.factory(any_all, taxon)
+
+    d = defaultdict(list)
+    if f.process().accepted:
+        t = db.ottol_name
+        r = t[int(f.vars.taxon)]
+        if f.vars.any_all == 'any OTU':
+            q = ('select distinct study.id, study.citation, '
+                 'stree.id, stree.type '
+                 'from stree, study, otu, ottol_name '
+                 'where stree.study = study.id '
+                 'and otu.study = study.id '
+                 'and otu.ottol_name = ottol_name.id '
+                 'and ottol_name.next >= %d '
+                 'and ottol_name.back <= %d '
+                 'order by stree.id asc'
+                 % (r.next, r.back))
+        elif f.vars.any_all == 'all OTUs':
+            q = ('select distinct stree.study, study.citation, '
+                 'stree.id, stree.type '
+                 'from stree, study, otu, ottol_name '
+                 'where stree.study = study.id '
+                 'and otu.study = study.id '
+                 'and otu.ottol_name = ottol_name.id '
+                 'group by stree.id '
+                 'having min(ottol_name.next) >= %d '
+                 'and max(ottol_name.back) <= %d '
+                 'order by stree.study, stree.id asc'
+                 % (r.next, r.back))
+        else:
+            pass
+        for study, citation, stree, stree_type in db.executesql(q):
+            d[(study, citation)].append((stree, stree_type))
+        response.flash = '%d studies found' % len(d)
+    return dict(form=f, rows=sorted(d.items()))
+
+def taxon_search():
+    '''hook for advanced search for trees containing specified taxa, etc.'''
+    anyTaxaForm = FORM('Any tree containing any taxa within: ', 
+                      INPUT(_name='any_children'), 
+                      INPUT(_type='submit'))
+    allTaxaForm = FORM('Any tree containing only taxa within: ', 
+                   INPUT(_name='all_children'), 
+                   INPUT(_type='submit'))
+    results = dict()
+    if anyTaxaForm.accepts(request,session,formname="any_children"):
+        any_parent = anyTaxaForm.vars.any_children
+        tree_set = any_taxa_tree_test2(any_parent)
+        response.flash = 'Any tree containing taxa with found %d trees containing taxa within %s' % (len(tree_set), any_parent)        
+        session.any = True
+        session.taxon = any_parent
+        results = dict(treeset=tree_set)
+        session.results = results
+        redirect(URL('taxon_search_results'))
+    elif allTaxaForm.accepts(request,session,formname="all_children"):
+        all_parent = allTaxaForm.vars.all_children
+        tree_set = all_taxa_tree_test(all_parent)
+        response.flash = 'Any tree containing only taxa within found %d trees containing only taxa within %s' % (len(tree_set),all_parent)
+        session.allParent = all_parent
+        results = dict(treeset=tree_set)
+        session.taxon = all_parent
+        session.any = False
+        session.results = results
+        redirect(URL('taxon_search_results'))
+    elif anyTaxaForm.errors :
+        response.flash = 'Any taxa form reports errors'
+        results = dict()
+    elif allTaxaForm.errors :
+        response.flash = 'All taxa form reports errors'
+    return dict(anyTaxa=anyTaxaForm,allTaxa=allTaxaForm,results = results)
+
+def taxon_search_results():
+    return dict();
+
+def any_taxa_tree_test(taxon):
+    taxon_ottol = db.executesql("SELECT next,back FROM ottol_name WHERE (name = '%s');" % taxon,as_dict="true")
+    if len(taxon_ottol) == 0:
+        return set()
+    taxon_next = taxon_ottol[0].get('next')
+    taxon_back = taxon_ottol[0].get('back')
+    studies = db.executesql('SELECT id FROM study')
+    good_study_ids = set()
+    for study in studies:
+        study_id = study[0]
+        otulist = db.executesql('SELECT ottol_name.next, ottol_name.back FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d AND ottol_name.next > %d AND ottol_name.back < %d);' % (study_id,taxon_next,taxon_back))
+        if otulist:
+            good_study_ids.add(study_id) 
+    good_tree_ids = set()
+    t1_time = datetime.datetime.now()
+    for good_id in good_study_ids:
+        tree_list = db.executesql('SELECT id from stree WHERE stree.study = %d;' % good_id) 
+        for tree in tree_list:
+            tree_id = tree[0]
+            tree_nodes = db.executesql('SELECT ottol_name.next,ottol_name.back FROM snode LEFT JOIN ottol_name ON (snode.ottol_name = ottol_name.id) WHERE (snode.tree = %d AND ottol_name.next > %d AND ottol_name.back < %d);' % (tree_id,taxon_next,taxon_back))
+            if tree_nodes:
+                good_tree_ids.add(tree_id)
+    return good_tree_ids
+    
+def all_taxa_tree_test(taxon):
+    taxon_ottol = db.executesql("SELECT next,back FROM ottol_name WHERE (name = '%s');" % taxon,as_dict="true")
+    if len(taxon_ottol) == 0:
+        return set()
+    taxon_next = taxon_ottol[0].get('next')
+    taxon_back = taxon_ottol[0].get('back')
+    studies = db.executesql('SELECT id FROM study')
+    good_study_ids = set()
+    for study in studies:
+        study_id = study[0]
+        otulist = db.executesql('SELECT ottol_name.next, ottol_name.back FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d AND ottol_name.next > %d AND ottol_name.back < %d);' % (study_id,taxon_next,taxon_back))
+        if otulist:
+            good_study_ids.add(study_id) 
+    good_tree_ids = set()
+    t1_time = datetime.datetime.now()
+    good_tree_ids = set()
+    for good_id in good_study_ids:
+        tree_list = db.executesql('SELECT id from stree WHERE stree.study = %d;' % good_id) 
+        for tree in tree_list:
+            tree_id = tree[0]
+            good_nodes = db.executesql('SELECT COUNT(*) FROM snode LEFT JOIN ottol_name ON (snode.ottol_name = ottol_name.id) WHERE (snode.tree = %d AND (ottol_name.next > %d AND ottol_name.back < %d));' % (tree_id,taxon_next,taxon_back))
+            good_count =good_nodes[0][0]
+            if good_count > 0 :
+                all_nodes = db.executesql('SELECT COUNT(*) FROM snode WHERE (snode.tree = %d AND snode.ottol_name IS NOT NULL);' % tree_id)
+                all_count = all_nodes[0][0]
+                if all_count == good_count:
+                    good_tree_ids.add(tree_id)
+    return good_tree_ids
 
 
 def export_NexSON():

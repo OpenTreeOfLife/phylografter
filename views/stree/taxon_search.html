@@ -1,0 +1,7 @@
+{{extend 'layout.html'}}
+<h1>Search for Trees containing taxa</h1>
+{{=anyTaxa}}
+{{=allTaxa}}
+{{if results.get('treeset'):}}
+{{=TABLE(*[TR(A(tree,_href=URL('svgView',args=[tree]))) for tree in results.get('treeset')])}}
+{{pass}}
