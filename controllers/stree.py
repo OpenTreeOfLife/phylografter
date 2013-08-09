@@ -683,24 +683,66 @@ def import_cached_nexml():
 
     return dict(study=study, tree=t, form=form)
 
-def taxon_search():
-    '''hook for advanced search for trees containing specified taxa, etc.'''
-    field = Field("taxon", "integer")
-    field.widget = SQLFORM.widgets.autocomplete(
+def otus_within():
+    from collections import defaultdict
+
+    any_all = Field("any_all", "string",
+                    requires=IS_IN_SET(['any OTU','all OTUs']),
+                    default=request.vars.any_all or 'any OTU',
+                    widget=SQLFORM.widgets.options.widget)
+
+    taxon = Field("taxon", "integer", requires=IS_NOT_EMPTY())
+    taxon.widget = SQLFORM.widgets.autocomplete(
         request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
         orderby=db.ottol_name.unique_name)
-    anyTaxaForm = SQLFORM.factory(field, formstyle="divs")
+    taxon.default = request.vars.taxon
+    f = SQLFORM.factory(any_all, taxon)
 
-    ## anyTaxaForm = FORM('Any tree containing any taxa within: ', 
-    ##                   INPUT(_name='any_children'), 
-    ##                   INPUT(_type='submit'))
+    d = defaultdict(list)
+    if f.process().accepted:
+        t = db.ottol_name
+        r = t[int(f.vars.taxon)]
+        if f.vars.any_all == 'any OTU':
+            q = ('select distinct study.id, study.citation, '
+                 'stree.id, stree.type '
+                 'from stree, study, otu, ottol_name '
+                 'where stree.study = study.id '
+                 'and otu.study = study.id '
+                 'and otu.ottol_name = ottol_name.id '
+                 'and ottol_name.next >= %d '
+                 'and ottol_name.back <= %d '
+                 'order by stree.id asc'
+                 % (r.next, r.back))
+        elif f.vars.any_all == 'all OTUs':
+            q = ('select distinct stree.study, study.citation, '
+                 'stree.id, stree.type '
+                 'from stree, study, otu, ottol_name '
+                 'where stree.study = study.id '
+                 'and otu.study = study.id '
+                 'and otu.ottol_name = ottol_name.id '
+                 'group by stree.id '
+                 'having min(ottol_name.next) >= %d '
+                 'and max(ottol_name.back) <= %d '
+                 'order by stree.study, stree.id asc'
+                 % (r.next, r.back))
+        else:
+            pass
+        for study, citation, stree, stree_type in db.executesql(q):
+            d[(study, citation)].append((stree, stree_type))
+        response.flash = '%d studies found' % len(d)
+    return dict(form=f, rows=sorted(d.items()))
+
+def taxon_search():
+    '''hook for advanced search for trees containing specified taxa, etc.'''
+    anyTaxaForm = FORM('Any tree containing any taxa within: ', 
+                      INPUT(_name='any_children'), 
+                      INPUT(_type='submit'))
     allTaxaForm = FORM('Any tree containing only taxa within: ', 
                    INPUT(_name='all_children'), 
                    INPUT(_type='submit'))
     results = dict()
     if anyTaxaForm.accepts(request,session,formname="any_children"):
-        any_parent = anyTaxaForm.vars.taxon
-        ## any_parent = anyTaxaForm.vars.any_children
+        any_parent = anyTaxaForm.vars.any_children
         tree_set = any_taxa_tree_test2(any_parent)
         response.flash = 'Any tree containing taxa with found %d trees containing taxa within %s' % (len(tree_set), any_parent)        
         session.any = True
@@ -727,16 +769,6 @@ def taxon_search():
 
 def taxon_search_results():
     return dict();
-
-def any_taxa_tree_test2(ottol_name_id):
-    t = db.ottol_name
-    r = t[ottol_name_id]
-    q = ('select distinct stree.id from stree, study, otu, ottol_name '
-         'where stree.study=study.id and otu.study=study.id '
-         'and otu.ottol_name=ottol_name.id '
-         'and ottol_name.next >= %d and ottol_name.back <= %d'
-         % (r.next, r.back))
-    rows = db.executesql(q)
 
 def any_taxa_tree_test(taxon):
     taxon_ottol = db.executesql("SELECT next,back FROM ottol_name WHERE (name = '%s');" % taxon,as_dict="true")

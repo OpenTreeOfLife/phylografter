@@ -30,7 +30,7 @@ response.menu = [
         ]),
     ## (T('OTUs'), False, URL('otu','index'), []),
     (T('Source Trees'), False, URL('stree','index'), [
-      ("Taxon Search", False, URL('stree','taxon_search',[]))
+      ("Taxon Search", False, URL('stree','otus_within',[]))
       ]),
     (T('Grafted Trees'), False, URL('gtree','index'), [])
     #(T('Share Your Trees'), False, URL('collab','index'), [])
