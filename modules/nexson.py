@@ -27,13 +27,11 @@ def nexmlStudy(studyId,db):
     otus = otusEltForStudy(studyRow,db)
     trees = treesElt(studyRow,db)
     header = nexmlHeader()
-    body = dict()
+    body = {'@id':'study','@about':'#study'}
     body.update(otus)
     body.update(trees)
     body.update(header)
     body.update(metaElts)
-    body["@id"] = "study"
-    body["@about"] = "#study"
     return dict(nexml = body)
 
 def nexmlTree(tree,db):
@@ -45,34 +43,29 @@ def nexmlTree(tree,db):
     otus = otusEltForTree(treeRow,studyRow,db)
     trees = singletonTreesElt(treeRow,studyRow,db)
     header = nexmlHeader()
-    body = dict()
+    body = {'@id':'study','@about':'#study'}
     body.update(otus)
     body.update(trees)
     body.update(header)
     body.update(metaElts)
-    body["id"] = "study"
-    body["@about"] = "#study"
     return dict(nexml = body)
 
 def nexmlHeader():
     'Header for nexml - includes namespaces and version tag (see nexml.org)'
-    result = dict()
-    result["@xmlns"] = xmlNameSpace()
-    result["@version"] = "0.9"
-    result["@nexmljson"] = "http://opentree.wikispaces.com/NexSON"
-    result["@generator"] = "Phylografter nexml-json exporter"
-    return result
+    return {'@xmlns':xmlNameSpace(),
+            '@version':'0.9',
+            '@nexmljson':'http://opentree.wikispaces.com/NexSON',
+            '@generator':'Phylografter nexml-json exporter'}
+
         
 def xmlNameSpace():
     '''namespace definitions for nexml; will be value of xmlns attribute in header (per badgerfish 
     treatment of namespaces)'''
-    result = dict()
-    result["$"] = "http://www.nexml.org/2009"
-    result["nex"] = "http://www.nexml.org/2009"
-    result["xsi"] = "http://www.w3.org/2001/XMLSchema-instance"
-    result["ot"] = "http://purl.org/opentree-terms#"
-    result["xsd"] = "http://www.w3.org/2001/XMLSchema#"
-    return result
+    return {'$':'http://www.nexml.org/2009',
+            'nex':'http://www.nexml.org/2009',
+            'xsi':'http://www.w3.org/2001/XMLSchema-instance',
+            'ot':'http://purl.org/opentree-terms#',
+            'xsd':'http://www.w3.org/2001/XMLSchema#'}
 
 def metaEltsForNexml(studyRow,db):
     'generates nexml meta elements that are children of the root nexml element'
@@ -101,10 +94,9 @@ def metaEltsForNexml(studyRow,db):
     study_tags = get_study_tags(studyRow,db)
     if study_tags:
         for tag in study_tags:
-           tag_elt = dict()
-           tag_elt["@xsi:type"] = "nex:LiteralMeta"
-           tag_elt["@property"] = "ot:tag"
-           tag_elt["$"] = tag
+           tag_elt = {"@xsi:type":"nex:LiteralMeta",
+                      "@property":"ot:tag",
+                      "$":tag}
            metaArray.append(tag_elt)
     return dict(meta = metaArray)
 
