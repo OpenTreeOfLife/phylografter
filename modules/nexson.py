@@ -14,7 +14,6 @@
 #xml with the validator at nexml.org
 
 from gluon.storage import Storage
-from gluon import *
 
 # Note - the nexml root element can have meta elements as direct children; unlike everywhere else, there are no id or about
 # attributes as seem to be required for other element types (e.g., otu, node) when they have meta children
