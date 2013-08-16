@@ -204,12 +204,12 @@ def focal_clade_meta_for_study(study_row):
         
 def get_study_tags(study_row,db):
     '''
-    returns list of tags associated with the study; although
-    name and value fields were defined for study tags, they were never used
+    returns list of tags associated with the study; 
     '''
     ta = db.study_tag
     q = (ta.study == study_row.id)
     rows = db(q).select()
+    # although name and value fields were defined for study tags, they were never used
     return [row.tag for row in rows]
 
 def otus_elt_for_study(study_row,db):
@@ -345,22 +345,14 @@ def meta_elts_for_tree_elt(tree_row,db):
     blRep = tree_row.branch_lengths_represent
     tree_tags = get_tree_tags(tree_row,db)
     if blRep in bltypes:
-        lengthsElt = {"@xsi:type": "nex:LiteralMeta",
-                      "@property": "ot:branchLengthMode",
-                      "$": bltypes[blRep]}
+        lengthsElt = createLiteralMeta("ot:branchLengthMode",bltypes[blRep])
         result.append(lengthsElt)
     if ingroup_node:
-        ingroup_elt = dict()
-        ingroup_elt["@xsi:type"] = "nex:LiteralMeta"
-        ingroup_elt["@property"] = "ot:inGroupClade"
-        ingroup_elt["$"] = 'node%d' % ingroup_node.id
+        ingroup_elt = createLiteralMeta("ot:inGroupClade",'node%d' % ingroup_node.id)
         result.append(ingroup_elt)
     if tree_tags:
        for tag in tree_tags:
-           tag_elt = dict()
-           tag_elt["@xsi:type"] = "nex:LiteralMeta"
-           tag_elt["@property"] = "ot:tag"
-           tag_elt["$"] = tag
+           tag_elt = createLiteralMeta("ot:tag",tag)
            result.append(tag_elt)
     if result:
         return dict(meta=result)
@@ -410,6 +402,7 @@ def tree_edges(node_rows):
     '''
     formats the edges leading to each node in the rows in node_rows
     '''
+    #node_row[1] is parent - test excludes root node
     return [edge_elt(node_row) for node_row in node_rows if node_row[1]]
     
 def edge_elt(child_row):
