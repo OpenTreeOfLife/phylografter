@@ -7,152 +7,161 @@
 #There are two entry points to this module: nexmlStudy (generate nexml for all the trees and otus for a study) and nexmlTree
 #(complete nexml but just including a single tree - but currently all the otus for its containing study)
 
-#local naming convention: getXXX are DAL queries, generally returning an id or list of ids', everything else is generating
+#local naming convention: get_XXX are DAL queries, generally returning an id or list of ids', everything else is generating
 #dicts or lists that correspond to BadgerFish  mappings of Elements
 
 #Output has been tested using the translator on http://dropbox.ashlock.us/open311/json-xml/ and validating the resulting
 #xml with the validator at nexml.org
 
 from gluon.storage import Storage
-from gluon import *
 
 # Note - the nexml root element can have meta elements as direct children; unlike everywhere else, there are no id or about
 # attributes as seem to be required for other element types (e.g., otu, node) when they have meta children
-def nexmlStudy(studyId,db):
-    '''Exports the set of trees associated with a study as JSON Nexml
-       study - the study to export
-       db - database connection'''
-    studyRow = db.study(studyId)
-    metaElts = metaEltsForNexml(studyRow,db) 
-    otus = otusEltForStudy(studyRow,db)
-    trees = treesElt(studyRow,db)
-    header = nexmlHeader()
-    body = dict()
+def nexmlStudy(study_id,db):
+    '''
+    Exports the set of trees associated with a study as JSON Nexml
+    study - the study to export
+    db - database connection
+    '''
+    study_row = db.study(study_id)
+    meta_elts = meta_elts_for_nexml(study_row,db) 
+    otus = otus_elt_for_study(study_row,db)
+    trees = trees_elt(study_row,db)
+    header = nexml_header()
+    body = {"@id":"study","@about":"#study"}
+    body.update(header)
+    body.update(meta_elts)
     body.update(otus)
     body.update(trees)
-    body.update(header)
-    body.update(metaElts)
-    body["@id"] = "study"
-    body["@about"] = "#study"
-    return dict(nexml = body)
+    return {"nexml":body}
 
 def nexmlTree(tree,db):
-    '''Exports one tree from a study (still a complete JSON NeXML with
-    headers, otus, and trees blocks)'''
-    studyRow = db.study(getSingleTreeStudyId(tree,db))
-    metaElts = metaEltsForNexml(studyRow,db)
-    treeRow = db.stree(tree)
-    otus = otusEltForTree(treeRow,studyRow,db)
-    trees = singletonTreesElt(treeRow,studyRow,db)
-    header = nexmlHeader()
-    body = dict()
+    '''
+    Exports one tree from a study (still a complete JSON NeXML with
+    headers, otus, and trees blocks)
+    '''
+    study_row = db.study(get_single_tree_study_id(tree,db))
+    meta_elts = meta_elts_for_nexml(study_row,db)
+    tree_row = db.stree(tree)
+    otus = otus_elt_for_tree(tree_row,study_row,db)
+    trees = singleton_trees_elt(tree_row,study_row,db)
+    header = nexml_header()
+    body = {"@id":"study","@about":"#study"}
     body.update(otus)
     body.update(trees)
     body.update(header)
-    body.update(metaElts)
-    body["id"] = "study"
-    body["@about"] = "#study"
+    body.update(meta_elts)
     return dict(nexml = body)
 
-def nexmlHeader():
-    'Header for nexml - includes namespaces and version tag (see nexml.org)'
-    result = dict()
-    result["@xmlns"] = xmlNameSpace()
-    result["@version"] = "0.9"
-    result["@nexmljson"] = "http://opentree.wikispaces.com/NexSON"
-    result["@generator"] = "Phylografter nexml-json exporter"
-    return result
-        
-def xmlNameSpace():
-    '''namespace definitions for nexml; will be value of xmlns attribute in header (per badgerfish 
-    treatment of namespaces)'''
-    result = dict()
-    result["$"] = "http://www.nexml.org/2009"
-    result["nex"] = "http://www.nexml.org/2009"
-    result["xsi"] = "http://www.w3.org/2001/XMLSchema-instance"
-    result["ot"] = "http://purl.org/opentree-terms#"
-    result["xsd"] = "http://www.w3.org/2001/XMLSchema#"
-    return result
+def nexml_header():
+    '''
+    Header for nexml - includes namespaces and version tag (see nexml.org)
+    '''
+    return {"@xmlns":xmlNameSpace(),
+            "@version":'0.9',
+            "@nexmljson":"http://opentree.wikispaces.com/NexSON",
+            "@generator":"Phylografter nexml-json exporter"}
 
-def metaEltsForNexml(studyRow,db):
-    'generates nexml meta elements that are children of the root nexml element'
-    metaArray = []
-    studyPublicationMeta = studyPublicationMetaElt(studyRow)
-    if studyPublicationMeta:
-        metaArray.append(studyPublicationMeta)
-    doiMeta = doiMetaForStudy(studyRow)
-    if doiMeta:
-        metaArray.append(doiMeta)
-    curatorMeta = curatorMetaForStudy(studyRow)
-    if curatorMeta:
-        metaArray.append(curatorMeta)
-    treeBaseDepositMeta = treeBaseDepositMetaForStudy(studyRow)
-    if treeBaseDepositMeta:
-        metaArray.append(treeBaseDepositMeta)
-    phylografterIdMeta = phylografterIdMetaForStudy(studyRow)
-    if phylografterIdMeta:
-        metaArray.append(phylografterIdMeta)
-    yearMeta = yearMetaForStudy(studyRow)
-    if yearMeta:
-        metaArray.append(yearMeta)
-    focalCladeMeta = focalCladeMetaForStudy(studyRow)
-    if focalCladeMeta:
-        metaArray.append(focalCladeMeta)
-    study_tags = get_study_tags(studyRow,db)
+def xmlNameSpace():
+    '''
+    namespace definitions for nexml; will be value of xmlns attribute in header (per badgerfish 
+    treatment of namespaces)
+    '''
+    return {"$":"http://www.nexml.org/2009",
+            "nex":"http://www.nexml.org/2009",
+            "xsi":"http://www.w3.org/2001/XMLSchema-instance",
+            "ot":"http://purl.org/opentree-terms#",
+            "xsd":"http://www.w3.org/2001/XMLSchema#"}
+
+def createLiteralMeta(key, value):
+    '''
+    Creates a dict for the @property key -> value mapping of nex:LiteralMeta type
+    '''
+    return { "@xsi:type": "nex:LiteralMeta",
+             "@property": key,
+             "$": value,
+           }
+
+def createResourceMeta(key, value):
+    '''
+    creates a dict for the @property key -> value mapping of nex:ResourceMeta type
+    '''
+    return {"@xsi:type": "nex:ResourceMeta",
+            "@property": key,
+            "@href": value
+           }
+
+def meta_elts_for_nexml(study_row,db):
+    '''
+    generates nexml meta elements that are children of the root nexml element
+    '''
+    meta_array = []
+    study_publication_meta = study_publication_meta_elt(study_row)
+    if study_publication_meta:
+        meta_array.append(study_publication_meta)
+    doi_meta = doi_meta_for_study(study_row)
+    if doi_meta:
+        meta_array.append(doi_meta)
+    curator_meta = curator_meta_for_study(study_row)
+    if curator_meta:
+        meta_array.append(curator_meta)
+    treebase_deposit_meta = treebase_deposit_meta_for_study(study_row)
+    if treebase_deposit_meta:
+        meta_array.append(treebase_deposit_meta)
+    phylografter_id_meta = phylografter_id_meta_for_study(study_row)
+    if phylografter_id_meta:
+        meta_array.append(phylografter_id_meta)
+    year_meta = year_meta_for_study(study_row)
+    if year_meta:
+        meta_array.append(year_meta)
+    focal_clade_meta = focal_clade_meta_for_study(study_row)
+    if focal_clade_meta:
+        meta_array.append(focal_clade_meta)
+    study_tags = get_study_tags(study_row,db)
     if study_tags:
         for tag in study_tags:
-           tag_elt = dict()
-           tag_elt["@xsi:type"] = "nex:LiteralMeta"
-           tag_elt["@property"] = "ot:tag"
-           tag_elt["$"] = tag
-           metaArray.append(tag_elt)
-    return dict(meta = metaArray)
+           tag_elt = createLiteralMeta("ot:tag", tag)
+           meta_array.append(tag_elt)
+    return {"meta": meta_array}
 
-def curatorMetaForStudy(studyRow):
-    'generates curator metadata element for a study'
-    curator = studyRow.contributor
-    if (curator):
-        #names = metaNSForDCTerm()
-        result = dict()
-        result["@xsi:type"] = "nex:LiteralMeta"
-        result["@property"] = "ot:curatorName"
-        result["$"] = curator
-        return result
+def curator_meta_for_study(study_row):
+    '''
+    generates curator metadata element for a study
+    '''
+    curator = study_row.contributor
+    if curator:
+        return createLiteralMeta("ot:curatorName", curator)
     else:
         return
 
-def treeBaseDepositMetaForStudy(studyRow):
-    'generates text citation metadata element for a study'
-    treebaseId = studyRow.treebase_id
-    if (treebaseId):
-        #names = metaNSForDCTerm()
-        result = dict()
-        result["@xsi:type"] = "nex:ResourceMeta"
-        result["@property"] = "ot:dataDeposit"
-        result["@href"] = "http://purl.org/phylo/treebase/phylows/study/TB2:S%d" % treebaseId
-        return result
+def treebase_deposit_meta_for_study(study_row):
+    '''
+    generates text citation metadata element for a study
+    '''
+    treebaseId = study_row.treebase_id
+    if treebaseId:
+        return createResourceMeta("ot:dataDeposit",
+                                  "http://purl.org/phylo/treebase/phylows/study/TB2:S%d" % treebaseId)
     else:
         return
 
-def yearMetaForStudy(studyRow):
-    'generates study year published metadata element for a study'
-    year = studyRow.year_published
-    if (year):
-        #names = metaNSForDCTerm()
-        result = dict()
-        result["@xsi:type"] = "nex:LiteralMeta"
-        result["@property"] = "ot:studyYear"
-        result["$"] = year
-        return result
+def year_meta_for_study(study_row):
+    '''
+    generates study year published metadata element for a study
+    '''
+    year = study_row.year_published
+    if year:
+        return createLiteralMeta("ot:studyYear",year)
     else:
         return
 
-#returns an ot:studyPublication metadata element if a (possibly incomplete) doi or a 
-#suitable URI is available, else nothing
-def doiMetaForStudy(studyRow):
-    'generates ot:studyPublication metadata element for a study'
-    doi = studyRow.doi
-    if (doi):
+def doi_meta_for_study(study_row):
+    '''
+    generates returns an ot:studyPublication metadata element if a (possibly incomplete) doi or a 
+    suitable URI is available for the study, else nothing
+    '''
+    doi = study_row.doi
+    if doi:
         if (doi.startswith('http://dx.doi.org/')):
             pass  #fine, leave as is
         elif (doi.startswith('http://www.')): #not a doi, but an identifier of some sort
@@ -163,126 +172,108 @@ def doiMetaForStudy(studyRow):
             return
         else:
            doi = 'http://dx.doi.org/' + doi
-        result = dict()
-        result["@xsi:type"] = "nex:ResourceMeta"
-        result["@property"] = "ot:studyPublication"
-        result["@href"] = doi
-        return result
+        return createResourceMeta("ot:studyPublication", doi)
     else:
         return
 
-def studyPublicationMetaElt(studyRow):
-    'generates text citation metadata element for a study'
-    cite = studyRow.citation
+def study_publication_meta_elt(study_row):
+    '''
+    generates text citation metadata element for a study
+    '''
+    cite = study_row.citation
     if (cite):
-        result = dict()
-        result["@xsi:type"] = "nex:LiteralMeta"
-        result["@property"] = "ot:studyPublicationReference"
-        result["$"] = cite
-        return result
+        return createLiteralMeta("ot:studyPublicationReference", cite)
     else:
         return
 
-def phylografterIdMetaForStudy(studyRow):
-    'generates phylografter study id metadata element for a study'
-    result = dict()
-    result["@xsi:type"] = "nex:LiteralMeta"
-    result["@property"] = "ot:studyId"
-    result["$"] = str(studyRow.id)
-    return result
+def phylografter_id_meta_for_study(study_row):
+    '''
+    generates phylografter study id metadata element for a study
+    '''
+    return createLiteralMeta("ot:studyId",str(study_row.id))
     
-def focalCladeMetaForStudy(studyRow):
-    'generates focal clade metadata element for a study'
-    focal_clade = studyRow.focal_clade_ottol
+def focal_clade_meta_for_study(study_row):
+    '''
+    generates focal clade metadata element for a study
+    '''
+    focal_clade = study_row.focal_clade_ottol
     if (focal_clade):
-        result = dict()
-        result["@xsi:type"] = "nex:LiteralMeta"
-        result["@property"] = "ot:focalClade"
-        result["$"] = focal_clade
-        return result
+        return createLiteralMeta("ot:focalClade", focal_clade)
     else:
         return
         
 def get_study_tags(study_row,db):
-    result = []
+    '''
+    returns list of tags associated with the study; 
+    '''
     ta = db.study_tag
     q = (ta.study == study_row.id)
     rows = db(q).select()
-    for row in rows:
-        ##Note: name and value in study_tag table are never used 
-        result.append(row.tag)
-    return result
+    # although name and value fields were defined for study tags, they were never used
+    return [row.tag for row in rows]
 
-                
-def otusEltForStudy(studyRow,db):
-    'Generates an otus block'
-    otuRows = getOtuRowsForStudy(studyRow,db)
-    metaElts = metaEltsForOtus(studyRow,otuRows,db)
-    otuElements = [otuElt(otuRow,db) for otuRow in otuRows]
-    otusElement = dict()
-    otusElement["otu"] = otuElements
-    otusElement["@id"] = "otus%d" % studyRow.id
-    return dict(otus = otusElement)
+def otus_elt_for_study(study_row,db):
+    '''
+    Generates an otus block
+    '''
+    otu_rows = get_otu_rows_for_study(study_row,db)
+    meta_elts = meta_elts_for_otus(study_row,otu_rows,db)  #placeholder, no meta elements here
+    otu_elements = [otu_elt(otu_row,db) for otu_row in otu_rows]
+    otus_element = {"otu": otu_elements,
+                    "@id": "otus%d" % study_row.id}
+    return {"otus": otus_element}
     
-def getOtuRowsForStudy(studyRow,db):
-    'returns a list of otu ids for otu records that link to this study'
-    return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.accepted_uid, ottol_name.name FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % studyRow.id)
-#    return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.uid, ottol_name.parent_uid, ottol_name.accepted_uid, ottol_name.ncbi_taxid, ottol_name.gbif_taxid, ottol_name.namebank_taxid, ottol_name.treebase_taxid, ottol_name.name, ottol_name.unique_name, ottol_name.rank, ottol_name.comments FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % studyRow.id,as_dict="true")
-#    return db.executesql('SELECT id,label,ottol_name FROM otu WHERE (study = %d);' % studyRow.id,as_dict="true")
+def get_otu_rows_for_study(study_row,db):
+    '''
+    returns a tuple of list of otu ids for otu records that link to this study
+    '''
+    return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.accepted_uid, ottol_name.name FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % study_row.id)
     
-def metaEltsForOtus(studyRow,otuRows,db):
-    'generates nexml meta elements that are children of an otus element'
-    result = dict()
-    return result
-    
-def getTreeRowsForStudy(studyRow,db):
-    'returns a list of the trees associated with the specified study'
-    studyid = studyRow.id
-    treeStudy = db.stree.study
-    s=db(treeStudy==studyid)
-    rows = s.select()
-    return rows
-    
-def otusEltForTree(treeRow,studyRow,db):
-    'get the otus for this tree (actually its study)'
-    otuRows = getOtuRowsForStudy(studyRow,db)
-    nodeRows = getSNodeRecsForTree(treeRow,db)
-    metaElts = metaEltsForOtus(studyRow,otuRows,db)
-    otuElements = [otuElt(otuRow,db) for otuRow in otuRows] 
-    otusElement = dict()
-    otusElement["otu"] = otuElements
-    otusElement["@id"] = "otus" + str(studyRow.id) + "." + str(treeRow.id)
-    result = dict()
-    result["otus"] = otusElement
-    return result
+def meta_elts_for_otus(study_row,otuRows,db):
+    '''
+    generates nexml meta elements that are children of an otus element (currently none)
+    '''
+    return {}
+
+def get_tree_rows_for_study(study_row,db):
+    '''
+    returns a list of the trees associated with the specified study
+    '''
+    s=db(db.stree.study==study_row.id)
+    return s.select()
+
+def otus_elt_for_tree(tree_row,study_row,db):
+    '''
+    get the otus for this tree (actually its study)
+    '''
+    otu_rows = get_otu_rows_for_study(study_row,db)
+    node_rows = get_snode_recs_for_tree(tree_row,db)
+    meta_elts = meta_elts_for_otus(study_row,otu_rows,db)
+    otu_elements = [otu_elt(otu_row,db) for otu_row in otu_rows] 
+    otus_element = {"otu": otu_elements,
+                    "@id": "otus %s.%s" % (str(study_row.id),str(tree_row.id))}
+    return {"otus",otus_element}
        
-#Generates an otu Element             
-def otuElt(otuRec,db):
-    metaElts = metaEltsForOtuElt(otuRec)
+def otu_elt(otuRec,db):
+    '''
+    generates an otu element
+    '''
+    meta_elts = meta_elts_for_otu_elt(otuRec)
     otu_id,label,ottol_name,accepted_uid,name = otuRec
-    result = dict()
-    result["@id"] = "otu%d" % otu_id
+    result = {"@id": "otu%d" % otu_id}
     if (name):
         result["@label"] = name
     else:
         result["@label"] = label
-    if metaElts:
+    if meta_elts:
         result["@about"] = "#otu%d" % otu_id
-        result.update(metaElts)
+        result.update(meta_elts)
     return result
 
-def createLiteralMeta(key, value):
+def meta_elts_for_otu_elt(otuRec):
     '''
-    Creates a dict for the @property key -> value mapping of nex:LiteralMeta type
+    generates meta elements for an otu element
     '''
-    return { "@xsi:type": "nex:LiteralMeta",
-             "@property": key,
-             "$": value,
-           }
-#Name suggests more than one meta element; expect more than current ot:ottolid
-#will be added in the future.    
-def metaEltsForOtuElt(otuRec):
-    'generates meta elements for an otu element'
     otu_id,label,ottol_name,accepted_uid,name = otuRec
     orig_label_el = createLiteralMeta("ot:originalLabel", label)
     if accepted_uid:
@@ -290,90 +281,78 @@ def metaEltsForOtuElt(otuRec):
         return {"meta" : [a, orig_label_el]}
     return {"meta": orig_label_el}
     
-def treesElt(study,db):
-    'generate trees element'
-    rowList = getTreeRowsForStudy(study,db)
-    if (len(rowList) == 1):
-        treeList = [treeElt(rowList[0],db)]
-        body=dict()
-        body["@otus"] = "otus%d" % study.id
-        body["@id"] = "trees%d" % study.id
-        body["tree"] = treeList
-        result = dict()
-        result["trees"] = body
-    else:
-        treeElements = [treeElt(treeRow,db) for treeRow in rowList]
-        treesElement = dict()
-        treesElement["tree"] = treeElements
-        treesElement["@otus"] = "otus%d" % study.id
-        treesElement["@id"] = "trees%d" % study.id
-        result = dict()
-        result["trees"] = treesElement
-    return result
+def trees_elt(study,db):
+    '''
+    generate trees element
+    '''
+    row_list = get_tree_rows_for_study(study,db)
+    tree_list = [tree_elt(tree_row,db) for tree_row in row_list]
+    body={"@otus": "otus%d" % study.id,
+          "@id": "trees%d" % study.id,
+          "tree": tree_list}
+    return {"trees": body}
     
-def metaEltsForTreesElt(study,db):
+def meta_elts_for_trees_elt(study,db):
+    '''
+    placeholder
+    '''
     return dict()    
 
-def singletonTreesElt(treeRow,studyRow,db):
-    'generate the singleton tree element for a tree request'
-    treeList = [treeElt(treeRow,db)]
-    body=dict()
-    body["@otus"] = "otus%d.%d" % (studyRow.id, treeRow.id)
-    body["tree"] = treeList
-    result = dict()
-    result["trees"] = body
-    return result
+def singleton_trees_elt(tree_row,study_row,db):
+    '''
+    generate the singleton tree element for a tree request
+    '''
+    tree_list = [tree_elt(tree_row,db)]
+    body={"@otus": "otus%d.%d" % (study_row.id, tree_row.id),
+          "tree": tree_list
+         }
+    return {"trees": body}
     
-def getSingleTreeStudyId(tree,db):
+def get_single_tree_study_id(tree,db):
+    '''
+    return the study that contains the specfied tree
+    '''
     return db.stree(tree).study
     
-def treeElt(treeRow,db):
-    'generates a tree element'
-    metaElts = metaEltsForTreeElt(treeRow,db)
-    nodeRows = getSNodeRecsForTree(treeRow,db)
-    result = dict()
-    result["@id"]='tree%d' % treeRow.id
-    result["node"]=treeNodes(nodeRows)
-    result["edge"]=treeEdges(nodeRows)
-    if metaElts:
-        result["@about"] = "#tree%d" % treeRow.id
-        result.update(metaElts)
+def tree_elt(tree_row,db):
+    '''
+    generates a tree element
+    '''
+    meta_elts = meta_elts_for_tree_elt(tree_row,db)
+    node_rows = get_snode_recs_for_tree(tree_row,db)
+    result = {"@id": 'tree%d' % tree_row.id,
+              "node": tree_nodes(node_rows),
+              "edge": tree_edges(node_rows)
+             }
+    if meta_elts:
+        result["@about"] = "#tree%d" % tree_row.id
+        result.update(meta_elts)
     return result
     
+bltypes = {"substitutions per site": "ot:substitutionCount",
+           "character changes": "ot:changesCount",
+           "time (Myr)": "ot:years",
+           "bootstrap values": "ot:bootstrapValues",                            
+           "posterior support": "ot:posteriorSupport"
+           }
 
-def metaEltsForTreeElt(treeRow,db):
-    'returns meta elements for a tree element'
+def meta_elts_for_tree_elt(tree_row,db):
+    '''
+    returns meta elements for a tree element
+    '''
     result = []
-    ingroup_node = tree_ingroup_node(treeRow,db)
-    blRep = treeRow.branch_lengths_represent
-    tree_tags = get_tree_tags(treeRow,db)
-    if blRep:
-        lengthsElt = dict()
-        lengthsElt["@xsi:type"] = "nex:LiteralMeta"
-        lengthsElt["@property"] = "ot:branchLengthMode"
-        if (blRep == "substitutions per site"):
-            lengthsElt["$"] = "ot:substitutionCount"
-        elif (blRep == "character changes"):
-            lengthsElt["$"] = "ot:changesCount"
-        elif (blRep == "time (Myr)"):
-            lengthsElt["$"] = "ot:years"
-        elif (blRep == "bootstrap values"):
-            lengthsElt["$"] = "ot:bootstrapValues"                            
-        elif (blRep == "posterior support"):
-            lengthsElt["$"] = "ot:posteriorSupport"
+    ingroup_node = tree_ingroup_node(tree_row,db)
+    blRep = tree_row.branch_lengths_represent
+    tree_tags = get_tree_tags(tree_row,db)
+    if blRep in bltypes:
+        lengthsElt = createLiteralMeta("ot:branchLengthMode",bltypes[blRep])
         result.append(lengthsElt)
     if ingroup_node:
-        ingroup_elt = dict()
-        ingroup_elt["@xsi:type"] = "nex:LiteralMeta"
-        ingroup_elt["@property"] = "ot:inGroupClade"
-        ingroup_elt["$"] = 'node%d' % ingroup_node.id
+        ingroup_elt = createLiteralMeta("ot:inGroupClade",'node%d' % ingroup_node.id)
         result.append(ingroup_elt)
     if tree_tags:
        for tag in tree_tags:
-           tag_elt = dict()
-           tag_elt["@xsi:type"] = "nex:LiteralMeta"
-           tag_elt["@property"] = "ot:tag"
-           tag_elt["$"] = tag
+           tag_elt = createLiteralMeta("ot:tag",tag)
            result.append(tag_elt)
     if result:
         return dict(meta=result)
@@ -381,7 +360,9 @@ def metaEltsForTreeElt(treeRow,db):
         return       #this is a silent fail, maybe better to return 'unknown'?
 
 def tree_ingroup_node(tree_row,db):
-    'returns the id of a (the best) node that is tagged as the ingroup'
+    '''
+    returns the id of a (the best) node that is tagged as the ingroup
+    '''
     treeid = tree_row.id
     nodes = db((db.snode.tree==treeid) & (db.snode.ingroup=="T")).select()
     if len(nodes) == 0:
@@ -392,7 +373,9 @@ def tree_ingroup_node(tree_row,db):
         return deepest_ingroup(nodes)
         
 def deepest_ingroup(nodes):
-    'chooses the deepest (closer to root) node when more than one is tagged'
+    '''
+    chooses the deepest (closer to root) node when more than one is tagged
+    '''
     best = nodes.first()
     for node in nodes:
         if (node.next < best.next) and (node.back > best.back):
@@ -400,48 +383,56 @@ def deepest_ingroup(nodes):
     return best
                         
 def get_tree_tags(tree_row,db):
-    'returns a list of tag strings associated with the stree'
-    result = []
+    '''
+    returns a list of tag strings associated with the stree
+    '''
     ta = db.stree_tag
     q = (ta.stree == tree_row.id)
     rows = db(q).select()
-    for row in rows:
-        ##Note: name and value in stree_tag table are never used 
-        result.append(row.tag)
+    result = [row.tag for row in rows]
     return result
                         
-def treeNodes(nodeRows):
-    body = [nodeElt(nodeRow) for nodeRow in nodeRows]
-    return body
+def tree_nodes(node_rows):
+    '''
+    formats the nodes corresponding to the rows in node_rows
+    '''
+    return [node_elt(node_row) for node_row in node_rows]
     
-def treeEdges(node_rows):
-    edges = [edgeElt(node_row) for node_row in node_rows if node_row[1]]
-    return edges
+def tree_edges(node_rows):
+    '''
+    formats the edges leading to each node in the rows in node_rows
+    '''
+    #node_row[1] is parent - test excludes root node
+    return [edge_elt(node_row) for node_row in node_rows if node_row[1]]
     
-def edgeElt(child_row):
-    'returns an element for a node - note that the information for this comes from the child node'
-    result = dict()
+def edge_elt(child_row):
+    '''
+    returns an element for a node - note that the information for this comes from the child node
+    '''
     child_id,parent,otu_id,length = child_row
-    result["@id"]='edge%d' % child_id
+    result ={"@id": "edge%d" % child_id}
     result["@source"]='node%d' % parent
     result["@target"]='node%d' % child_id
     if (length):
         result["@length"]=length
     return result
 
-def getSNodeRecsForTree(tree_row,db):
-    'returns a list of the nodes associated with the specified study - now represented as tuples'
+def get_snode_recs_for_tree(tree_row,db):
+    '''
+    returns a list of the nodes associated with the specified study - now represented as tuples
+    '''
     return db.executesql('SELECT id,parent,otu,length FROM snode WHERE (tree = %d);' % tree_row.id)
     
-def nodeElt(node_row):
-    'returns an element for a node'
-    result = dict()
+def node_elt(node_row):
+    '''
+    returns an element for a node
+    '''
     node_id,parent,otu_id,length = node_row
+    result = {"@id": "node%d" % node_id}
     if (otu_id):
         result["@otu"] = 'otu%d' % otu_id
     if parent:
         pass
     else:
         result["@root"] = 'true'
-    result["@id"] = 'node%d' % node_id
     return result
