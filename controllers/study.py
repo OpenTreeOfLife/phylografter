@@ -974,3 +974,9 @@ def export_gzipNexSON():
         response.headers['Content-Disposition'] = "attachment;filename=%s"%zipfilename
         return stream.getvalue()              
     return
+    
+def nexsonimport():
+    from nexson_parse import parse_nexson
+    tempname = '/Users/pmidford/Projects/nexson-sandbox/study15.json'
+    study_id = parse_nexson(open(tempname),db)
+    return len(study_id)

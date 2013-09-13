@@ -26,7 +26,8 @@ response.menu = [
     ## (T('Taxa'), False, URL('taxon','index'), []),
     (T('Studies'), False, URL('study','index'), [
         ("New study", False, URL('study','create', [])),
-        ("Import from TreeBASE", False, URL('study','tbimport', []))
+        ("Import from TreeBASE", False, URL('study','tbimport', [])),
+        ("Load from Nexson", False, URL('study','nexsonimport', [])),
         ]),
     ## (T('OTUs'), False, URL('otu','index'), []),
     (T('Source Trees'), False, URL('stree','index'), [
