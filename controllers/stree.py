@@ -14,6 +14,8 @@ import urllib
 
 from gluon.storage import Storage
 
+ivy.newick.add_label_chars('?')
+
 response.subtitle = "Source trees"
 
 ## def index():
