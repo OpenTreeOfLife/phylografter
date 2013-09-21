@@ -15,7 +15,36 @@ def encode(str):
     
 def process_meta_element_sql(contents, results, db):
     metaEle = contents[u'meta']
+    studyid,studydoi,studyref,studyyear,studycurator,studydeposit,studyfocalclade,studytags = \
+        parse_study_meta(metaEle)
+    if studyid:
+        results = [('study','id',studyid)]
+    else:
+        return results  #no id, nothing to do
+    if studydoi:
+        results.append(('study','doi',studydoi))
+    if studyref:
+        results.append(('study','citation',studyref))
+    if studyyear:
+        results.append(('study','year_published',studyyear))
+    if studycurator:
+        results.append(('study','contributor',studycurator))
+    if studyfocalclade:
+        results.append(('study','focal_clade',studyfocalclade))
+    if studytags:
+        for tag in studytags:
+            results.append(('study_tag','tag',tag))    
+    return results
+    
+def parse_study_meta(metaEle):
     studyid = None
+    studydoi = None
+    studyref = None
+    studyyear = None
+    studycurator = None
+    studydeposit = None
+    studyfocalclade = None
+    studytags = []
     for p in metaEle:
         prop = p[u'@property']
         if prop == u'ot:studyId':
@@ -29,23 +58,17 @@ def process_meta_element_sql(contents, results, db):
         elif prop == u'ot:curatorName':
             studycurator = encode(p[u'$'])
         elif prop == u'ot:dataDeposit':
-            studydeposit = encode(p[u'$'])
+            studydeposit = encode(p[u'@href'])
         elif prop == u'ot:contributor':
             studycurator = encode(p[u'$'])
-    existingRows = db.study[studyid]
-    if existingRows:
-        results['update'] = []
-        actionList = results['update']
-        print 'Study %d already in database, will update' % studyid
-    else:
-        results['add'] = []
-        actionList = results['add']
-    actionList.append(('study','id',studyid))
-    actionList.append(('study','doi',studydoi))
-    actionList.append(('study','citation',studyref))
-    actionList.append(('study','year_published',studyyear))
-    actionList.append(('study','contributor',studycurator))
-    return results
+        elif prop == u'ot:dataDeposit':
+            studydeposit = encode(p[u'@href'])
+        elif prop == u'ot:tag':
+            studytags.append(encode(p[u'$']))
+        elif prop == u'ot:focalClade':
+            studyfocalclade= int(p[u'$'])
+    return (studyid,studydoi,studyref,studyyear,studycurator,studydeposit,studyfocalclade,studytags)
+
 
 def process_otus_element_sql(contents, results, db):
     otus_ele = contents[u'otus']  #needed?
@@ -56,33 +79,40 @@ def process_otus_element_sql(contents, results, db):
     return results
     
 def process_otu_element_sql(otu, results, db):
-    if 'update' in results:
-        actionList = results['update']
-    else:
-        actionList = results['add']
     id = otu[u'@id']
     if id.startswith('otu'):
         id = id[3:]
-    actionList.append(('otu','id',int(id)))
+    results.append(('otu','id',int(id)))
     meta_ele = otu[u'meta']
     ottid = None
     olabel = None
-    for p in meta_ele:
-        prop = p[u'@property']
-        if prop == u'ot:ottolid':
-            ottid = int(p[u'$'])
-        if prop == u'ot:ottid':
-            ottid = int(p[u'$'])
-        elif prop == u'ot:originalLabel':
-            olabel = encode(p[u'$'])
+    if isinstance(meta_ele,dict):
+        ottid,olabel = process_otu_meta([meta_ele])
+    else:
+        ottid,olabel = process_otu_meta(meta_ele)
     if ottid:
         ottid_internal_row = db.ottol_name(uid = ottid)
         if ottid_internal_row:
            internal_id = ottid_internal_row.id
-           actionList.append(('otu','ottolid',internal_id))  #need to do something special here
+           results.append(('otu','ottolid',internal_id))  #need to do something special here
         else:
             print "bad ott id: %d" % ottid
+    if olabel:
+        results.append(('otu','label',olabel))
     return results
+    
+def process_otu_meta(meta_elements):
+    ottid = None
+    olabel = None
+    for p in meta_elements:
+        prop = p[u'@property']
+        if prop == u'ot:ottolid':
+            ottid = int(p[u'$'])
+        elif prop == u'ot:ottid':
+            ottid = int(p[u'$'])
+        elif prop == u'ot:originalLabel':
+            olabel = encode(p[u'$'])
+    return (ottid,olabel)    
 
 def process_trees_element_sql(contents, results, db):
     trees_ele = contents[u'trees']
@@ -94,42 +124,34 @@ def process_trees_element_sql(contents, results, db):
     return results
 
 def process_tree_element_sql(tree, results, db):
-    if 'update' in results:
-        actionList = results['update']
-    else:
-        actionList = results['add']
     id = tree[u'@id']
     if id.startswith('tree'):
         id = id[4:]
     nodes = tree[u'node']
     edges = tree[u'edge'] 
-    actionList.append(('tree','id',int(id)))
+    results.append(('tree','id',int(id)))
     edge_table = make_edge_table(edges)
     for node in nodes:
         results = process_node_element_sql(node, edge_table, results, db)
     return results
     
 def process_node_element_sql(node, edge_table, results, db):
-    if 'update' in results:
-        actionList = results['update']
-    else:
-        actionList = results['add']
     raw_id = node[u'@id']
     if raw_id.startswith('node'):
         id = raw_id[4:]
     else:
         id = raw_id
-    actionList.append(('node','id',int(id)))
+    results.append(('node','id',int(id)))
     if u'@otu' in node:
         otu = node[u'@otu']
         if otu.startswith('otu'):
             otu = otu[3:]
-        actionList.append(('node','otu',int(otu)))
+        results.append(('node','otu',int(otu)))
     if raw_id in edge_table:
        parent_link = edge_table[raw_id]
        if u'@length' in parent_link:
            raw_length = parent_link[u'@length']
-           actionList.append(('node','length',float(raw_length)))
+           results.append(('node','length',float(raw_length)))
     return results
         
 def make_edge_table(edges):
@@ -191,6 +213,7 @@ bson_parse_methods = [process_nexml_element_bson,
 target_parsers= {'sql': sql_parse_methods, 'bson': bson_parse_methods} 
    
 def parse_nexml(tree,db):
+    from nexson_sql_update import sql_process
     if not u'nexml' in tree:
         raise SyntaxError
     target = determine_target(db)
@@ -199,7 +222,7 @@ def parse_nexml(tree,db):
     contents = tree[u'nexml']
     for parser in target_parser_set:
         results = parser(contents,results,db)
-        print "After %s, results is %s" % (str(parser),str(results))
+    sql_process(results,db)
     return contents
 
 def determine_target(db):
