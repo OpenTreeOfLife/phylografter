@@ -979,7 +979,7 @@ def nexsonimport():
     import datetime
     print datetime.datetime.now()
     from nexson_parse import parse_nexson
-    tempname = '/Users/pmidford/Projects/nexson-sandbox/study15.json'
+    tempname = '/Users/pmidford/Projects/nexson-sandbox/study1504.json'
     study_id = parse_nexson(open(tempname),db)
     print datetime.datetime.now()
     return len(study_id)
