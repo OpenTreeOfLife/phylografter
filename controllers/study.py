@@ -976,10 +976,16 @@ def export_gzipNexSON():
     return
     
 def nexsonimport():
+    """
+    Imports a Nexson (JSON Nexml) file, updating an existing study record or creating a new one as needed
+    """
     import datetime
-    print datetime.datetime.now()
+    import cStringIO
     from nexson_parse import parse_nexson
-    tempname = '/Users/pmidford/Projects/nexson-sandbox/study1504.json'
-    study_id = parse_nexson(open(tempname),db)
+    if not(request.post_vars):
+        raise HTTP(400)  #if no post, then it's a bad request
+    last_item = request.post_vars.keys()[0]
+    print datetime.datetime.now()
+    study_id = parse_nexson(cStringIO.StringIO(last_item),db)
     print datetime.datetime.now()
     return len(study_id)
