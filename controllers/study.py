@@ -2,6 +2,7 @@ import os, uuid
 from cStringIO import StringIO
 from gluon.custom_import import track_changes
 from gluon.storage import Storage
+from gluon.tools import Crud
 
 from StringIO import StringIO
 import requests
@@ -974,3 +975,50 @@ def export_gzipNexSON():
         response.headers['Content-Disposition'] = "attachment;filename=%s"%zipfilename
         return stream.getvalue()              
     return
+ 
+### Function to allow the deletion of a study and all of its corresponding nodes, trees and otus
+    
+def delete_study():
+    'Displays a page to ask for validation before deleting a study that is actively being viewed'
+    t = db.study
+    rec = t(request.args(0)) or redirect(URL("create"))
+    readonly = not auth.has_membership(role="contributor")
+    ## t.focal_clade.readable = t.focal_clade.writable = False
+    t.focal_clade_ottol.label = 'Focal clade'
+    t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
+        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
+        limitby=(0,20), orderby=db.ottol_name.unique_name)
+    form = SQLFORM(t, rec, deletable=False, readonly=False,
+                   fields = ["citation", "year_published", "doi", "label",
+                             "focal_clade_ottol", "treebase_id",
+                             "contributor", "comment", "uploaded"],
+                   showid=False, submit_button="Delete Study")
+    form.add_button('Cancel', URL('study', 'view', args=rec.id))
+                       
+    
+    
+    ### Generate the form to display on the Delete View
+    
+
+    
+    otus = db(db.otu.study==rec.id).select()
+    trees = db(db.stree.study==rec.id).select()
+    study = db(db.study.id==rec.id).select()
+    
+    for t in trees: # Use the ids from all trees in the study to find all of the nodes linked to the study
+    	nodes = db(db.snode.tree==t).select()
+    
+    if form.accepts(request.vars, session):
+	## Iterates through all of the lists deleting each ID as it goes
+		for n in nodes:
+			del db.snode[n.id]
+		for o in otus:
+			del db.otu[o.id]
+		for t in trees:
+			del db.stree[t.id]
+		for s in study:
+			del db.study[s.id]
+
+		session.flash = "The Study Has Been Deleted"	
+		redirect(URL('study', 'index'))
+    return dict(form=form, otus = otus, nodes = nodes, trees = trees, study = study, rec = rec)
