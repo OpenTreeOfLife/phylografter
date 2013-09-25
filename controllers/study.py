@@ -989,3 +989,15 @@ def import_NexSON():
     study_id = parse_nexson(cStringIO.StringIO(last_item),db)
     print datetime.datetime.now()
     return len(study_id)
+    
+TESTFILE = "/Users/pmidford/Projects/nexson-sandbox/study433.json"    
+def importTest():
+    """
+    just for testing
+    """
+    import datetime
+    from nexson_parse import parse_nexson
+    print datetime.datetime.now()
+    study_id = parse_nexson(open(TESTFILE),db)
+    print datetime.datetime.now()
+    return len(study_id)
