@@ -975,7 +975,7 @@ def export_gzipNexSON():
         return stream.getvalue()              
     return
     
-def nexsonimport():
+def import_NexSON():
     """
     Imports a Nexson (JSON Nexml) file, updating an existing study record or creating a new one as needed
     """
