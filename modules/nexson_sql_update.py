@@ -32,6 +32,8 @@ def sql_process(actions, db):
                 current_row = find_row(db,current_table,new_id,ele_table_map)
                 if current_tags:
                     update_tags(db,current_table,current_tags,new_id)
+        elif (field == 'tags'):
+            print "found tags"
         else:
             if current_row:
                 current_row[field] = value 

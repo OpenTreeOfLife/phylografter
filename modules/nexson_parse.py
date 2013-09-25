@@ -4,7 +4,11 @@ from gluon import *
 
 
 def parse_nexson(f,db):
-    ''' f is a file-like object'''
+    """
+    Entry point - nexson is parsed and dispatched to the appropriate updater
+    f - file like object (generally a CStringIO, retrieved from a post)
+    db - web2py database object
+    """
     from json import load
     tree = load(f)
     return parse_nexml(tree,db)
@@ -33,7 +37,7 @@ def process_meta_element_sql(contents, results, db):
         results.append(('study','focal_clade',studyfocalclade))
     if studytags:
         for tag in studytags:
-            results.append(('study_tag','tag',tag))    
+            results.append(('study','tag',tag))    
     return results
     
 def parse_study_meta(metaEle):
@@ -71,7 +75,11 @@ def parse_study_meta(metaEle):
 
 
 def process_otus_element_sql(contents, results, db):
-    otus_ele = contents[u'otus']  #needed?
+    """
+    returns actions for otus element - currently just the list
+    of actions for the contained otu elements
+    """
+    otus_ele = contents[u'otus'] 
     otus_id = otus_ele[u'@id']
     otu_set = otus_ele[u'otu']
     for otu in otu_set:
@@ -129,12 +137,30 @@ def process_tree_element_sql(tree, results, db):
         id = id[4:]
     nodes = tree[u'node']
     edges = tree[u'edge'] 
+    meta_ele = tree[u'meta']
+    blmode = None
+    tags = None
+    if isinstance(meta_ele,dict):
+        blmode,tags = process_tree_meta([meta_ele])
+    else:
+        blmode,tags = process_tree_meta(meta_ele)
     results.append(('tree','id',int(id)))
     edge_table = make_edge_table(edges)
     for node in nodes:
         results = process_node_element_sql(node, edge_table, results, db)
     return results
-    
+
+def process_tree_meta(meta_elements):
+    blmode = None
+    tags = []
+    for p in meta_elements:
+        prop = p[u'@property']
+        if prop == u'ot:branchLengthMode':
+            blmode = encode(p[u'$'])
+        elif prop == u'ot:tag':
+            tags.append(encode(p[u'$']))
+    return (blmode,tags)    
+
 def process_node_element_sql(node, edge_table, results, db):
     raw_id = node[u'@id']
     if raw_id.startswith('node'):
@@ -160,36 +186,6 @@ def make_edge_table(edges):
         edge_table[edge[u'@target']] = edge
     return edge_table
     
-def process_nexml_element_bson(contents, results, db):
-    return None
-
-def process_xmlns_element_bson(contents, results, db):
-    return None
-            
-def process_nexmljson_element_bson(contents, results, db):
-    return None
-
-def process_about_element_bson(contents, results, db):
-    return None
-                
-def process_generator_element_bson(contents, results, db):
-    return None
-
-def process_id_element_bson(contents, results, db):
-    return None
-
-def process_version_element_bson(contents, results, db):
-    return None
-
-def process_meta_element_bson(contents, results, db):
-    return None
-
-def process_otus_element_bson(contents, results, db):
-    return None
-
-def process_trees_element_bson(contents, results, db):
-    return None
-    
 nexson_elements = [u'@xmlns', u'@nexmljson',u'@about',
                    u'@generator',u'@id', u'@version',
                    u'meta',u'otus',u'trees']
@@ -199,16 +195,6 @@ sql_parse_methods = [process_meta_element_sql,
                      process_otus_element_sql,
                      process_trees_element_sql]
 
-bson_parse_methods = [process_nexml_element_bson,
-                      process_xmlns_element_bson,
-                      process_about_element_bson,
-                      process_nexmljson_element_bson,
-                      process_generator_element_bson,
-                      process_id_element_bson,
-                      process_version_element_bson,
-                      process_meta_element_bson,
-                      process_otus_element_bson,
-                      process_trees_element_bson]
 
 target_parsers= {'sql': sql_parse_methods, 'bson': bson_parse_methods} 
    
