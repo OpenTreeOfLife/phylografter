@@ -58,4 +58,8 @@ Trees derived from this data set:
 
 {{=LOAD('study', 'tag.load', args=[rec.id], ajax=True)}}
 
-{{end}} 
+<!-- Place Holder button for deleting a study -->
+{{=A('Delete this Study', _class='button', _href=URL('study','delete_study',args=rec.id), _style="margin-top:0.5em")}}
+{{pass}}
+
+{{end}}
