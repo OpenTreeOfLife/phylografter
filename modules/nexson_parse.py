@@ -137,29 +137,52 @@ def process_tree_element_sql(tree, results, db):
         id = id[4:]
     nodes = tree[u'node']
     edges = tree[u'edge'] 
-    meta_ele = tree[u'meta']
+    if u'meta' in tree:
+        meta_ele = tree[u'meta']
+    else:
+        meta_ele = None
     blmode = None
-    tags = None
+    tags = []
     if isinstance(meta_ele,dict):
         blmode,tags = process_tree_meta([meta_ele])
-    else:
+    elif meta_ele:
         blmode,tags = process_tree_meta(meta_ele)
     results.append(('tree','id',int(id)))
+    if blmode:
+        results.append(('tree','branch_lengths_represent',blmode))
+    for tag in tags:
+        results.append(('tree','tag',tag))
     edge_table = make_edge_table(edges)
     for node in nodes:
         results = process_node_element_sql(node, edge_table, results, db)
     return results
 
+#need to fill this in
+blmode_map = {"ot:substitutionCount": "substitutions per site",
+              "ot:changeCount": "character changes",
+              "ot:time": "time (Myr)", #these
+              "ot:years": "time (Myr)", #need attention
+              "ot:bootstrapValues": "bootstrap values",
+              "ot:posteriorSupport": "posterior support",
+              "ot:other": None,
+              "ot:undefined": None}
+
+
 def process_tree_meta(meta_elements):
+    print "processing tree metadata: %s" % str(meta_elements)
     blmode = None
     tags = []
     for p in meta_elements:
         prop = p[u'@property']
         if prop == u'ot:branchLengthMode':
-            blmode = encode(p[u'$'])
+            raw_mode = encode(p[u'$'])
+            if raw_mode in blmode_map:
+                blmode = blmode_map[raw_mode]
         elif prop == u'ot:tag':
             tags.append(encode(p[u'$']))
     return (blmode,tags)    
+
+
 
 def process_node_element_sql(node, edge_table, results, db):
     raw_id = node[u'@id']
