@@ -348,3 +348,8 @@ color: #222;
 }
 .ie9 #query_panel {padding-bottom:2px;}
 
+
+/* OTU mapping autocomplete should show full text */
+#_autocomplete_ottol_name_unique_name {
+    width: auto !important;
+}
