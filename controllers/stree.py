@@ -123,7 +123,6 @@ def index():
     
     return dict(tid=tid, table=table)
     
-# here is a comment
 def dtrecords():
     ## for k, v in sorted(request.vars.items()):
     ##     print k, ":", v
