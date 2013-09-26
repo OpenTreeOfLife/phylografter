@@ -10,7 +10,7 @@ import time
 import nexson
 import tempfile
 import gzip
-from link import doi2url
+from link import doi2url, normalize_doi_for_url
 
 from externalproc import get_external_proc_dir_for_upload, invoc_status, \
     ExternalProcStatus, get_logger, get_conf, do_ext_proc_launch
@@ -851,7 +851,7 @@ def ref_from_doi():
         return
     raw = '/'.join(list(request.args))
     DOMAIN = 'http://dx.doi.org'
-    doi = links.normalize_doi_for_url(raw)
+    doi = normalize_doi_for_url(raw)
     #sys.stderr.write('About look up reference for the doi "%s"\n' % doi)
     RETURNS_OBJECT = True
     SUBMIT_URI = DOMAIN + '/' + doi
@@ -887,7 +887,7 @@ def ref_from_doi():
         return
     resp.raise_for_status()
     if RETURNS_OBJECT:
-        results = resp.json
+        results = resp.json()
         #sys.stderr.write('%s\n' % json.dumps(results, sort_keys=True, indent=4))
         #sys.stderr.write('%s\n' % str(dict(results)))
         if results is None:
