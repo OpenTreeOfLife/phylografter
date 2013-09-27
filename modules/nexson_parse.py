@@ -141,12 +141,12 @@ def process_tree_element_sql(tree, results, db):
         meta_ele = tree[u'meta']
     else:
         meta_ele = None
-    blmode = None
-    tags = []
     if isinstance(meta_ele,dict):
-        blmode,tags = process_tree_meta([meta_ele])
+        blmode,tags,ingroup = process_tree_meta([meta_ele])
     elif meta_ele:
-        blmode,tags = process_tree_meta(meta_ele)
+        blmode,tags,ingroup = process_tree_meta(meta_ele)
+    else:
+        blmode,tags,ingroup = (None,[],None)
     results.append(('tree','id',int(id)))
     if blmode:
         results.append(('tree','branch_lengths_represent',blmode))
@@ -157,21 +157,22 @@ def process_tree_element_sql(tree, results, db):
         results = process_node_element_sql(node, edge_table, results, db)
     return results
 
-#need to fill this in
+
 blmode_map = {"ot:substitutionCount": "substitutions per site",
               "ot:changeCount": "character changes",
               "ot:time": "time (Myr)", #these
               "ot:years": "time (Myr)", #need attention
               "ot:bootstrapValues": "bootstrap values",
               "ot:posteriorSupport": "posterior support",
-              "ot:other": None,
-              "ot:undefined": None}
+              "ot:other": None,       # needs attention
+              "ot:undefined": None}   # needs attention
 
 
 def process_tree_meta(meta_elements):
     print "processing tree metadata: %s" % str(meta_elements)
     blmode = None
     tags = []
+    ingroup = None
     for p in meta_elements:
         prop = p[u'@property']
         if prop == u'ot:branchLengthMode':
@@ -180,7 +181,9 @@ def process_tree_meta(meta_elements):
                 blmode = blmode_map[raw_mode]
         elif prop == u'ot:tag':
             tags.append(encode(p[u'$']))
-    return (blmode,tags)    
+        elif prop == u'ot:inGroupClade':
+            ingroup = encode(p[u'$'])
+    return (blmode,tags,ingroup)    
 
 
 
@@ -219,7 +222,7 @@ sql_parse_methods = [process_meta_element_sql,
                      process_trees_element_sql]
 
 
-target_parsers= {'sql': sql_parse_methods, 'bson': bson_parse_methods} 
+target_parsers= {'sql': sql_parse_methods} #, 'bson': bson_parse_methods} 
    
 def parse_nexml(tree,db):
     from nexson_sql_update import sql_process

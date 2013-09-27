@@ -13,26 +13,29 @@ def sql_process(actions, db):
     current_row = None
     for action in actions:
         #print "action is %s, %s, %s" % action
-        current_table,field,value = action        
+        table,field,value = action        
         if (field == 'id'):
-            current_id = value
-            new_tags = set()  
             if current_row:
                 #print "updating: %d to %s" %(current_row.id,str(current_row))
                 current_row.update_record()
                 #print "updating id and record: %s" % str(current_row.id)
+                if new_tags:
+                    print "updating tags: %s for table %s, id %d" % (str(new_tags),current_table,current_row.id)
+                    update_tags(db,current_table,new_tags,current_row.id)
+            current_table = table
+            current_id = value
+            new_tags = set()  
             current_row = find_row(db,current_table,current_id,ele_table_map)
-            current_tags = find_tags(db,current_table,current_id)
-            if current_tags:
-                print "%s tag count = %d" % (current_table,len(current_tags))
-            else:
-                pass
-                #print "%s no tags found id = %id" % (current_table,current_id)
             if current_row is None:
                 new_id = fixup_table[(current_table,current_id)]
                 current_row = find_row(db,current_table,new_id,ele_table_map)
-                if current_tags:
-                    update_tags(db,current_table,current_tags,new_id)
+                old_tags = find_tags(db,current_table,current_id)
+                if old_tags:
+                    print "%s old tag count = %d" % (current_table,len(old_tags))
+                    remove_old_tags(db,current_table,old_tags,current_id)
+                else:
+                    #pass
+                    print "%s no tags found id = %d" % (current_table,current_id)
         elif (field == 'tag'):
             print "found tag %s" % value
             new_tags.add(value)
@@ -115,13 +118,35 @@ def find_tags(db,table,id):
     returns set of rows of id records (from study_tag, or stree_tag as appropriate)
     """
     if (table == 'study'):
-        return db(db.study_tag.study == id).select()
-    elif (table == 'stree'):
-        return db(db.stree_tag.stree == id).select()
+        rows = db(db.study_tag.study == id).select()
+        tags = [row.tag for row in rows]
+        return set(tags)
+    elif (table == 'tree'):
+        rows = db(db.stree_tag.stree == id).select()
+        tags = [row.tag for row in rows]
+        return set(tags)
     else:
         return None
+    treeQuery = (db.stree.last_modified > fromTime) & (db.stree.last_modified <= toTime)
 
-def update_tags(db,table,rows,new_id):
-    for row in rows:
-        print "updating tag %s study field %d to %d" % (row[tag],row[study],new_id)
-        row[study]=new_id
+def update_tags(db,table,tags,id):
+    if table == 'study':
+        for tag in tags:
+            rows = db((db.study_tag.study == id) & (db.study_tag.tag == tag)).select()
+            if not rows:  #only need to add new tags
+                print 'inserting study tag %s to study %d' % (tag,id)
+                db.study_tag.insert(study=id,tag=tag)
+    elif table == 'tree':
+        for tag in tags:
+            rows = db((db.stree_tag.stree == id) & (db.stree_tag.tag == tag)).select()
+            if not rows:  #only need to add new tags
+                print 'inserting tree tag %s to tree %d' % (tag,id)
+                db.stree_tag.insert(stree=id,tag=tag)
+
+def remove_old_tags(db,table,tags,id):
+    if table == 'study':
+        for tag in tags:        
+            rows = db((db.study_tag.study == id) & (db.study_tag.tag == tag)).delete()
+    if table == 'tree':
+        for tag in tags:        
+            rows = db((db.stree_tag.stree == id) & (db.stree_tag.tag == tag)).delete()
