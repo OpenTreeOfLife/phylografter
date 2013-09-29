@@ -1,4 +1,4 @@
-Files in this directory are the *source* for client-side CSS in the opentree
+Files in this directory are the *source* for client-side CSS in the phylografter
 app. I'm using a setup suggested by BootSwatch creator Thomas Park, as
 described here:
     http://coding.smashingmagazine.com/2013/03/12/customizing-bootstrap/
@@ -32,7 +32,7 @@ The initial version is v2.3.2, with this zipfile:
 
 This was unzipped, and its contents moved into place as follows:
 
-    $ cd opentree/less
+    $ cd phylografter/less
     $ unzip twitter-bootstrap-v2.3.2-0-gd9b502d.zip
 
 This creates a subdir less/twitter-bootstrap-d9b502d, or similar. Move its
@@ -46,11 +46,11 @@ overwriting old stuff as needed:
 
 Move pre-digested files (incl. initial CSS) to the final static directories:
 
-    $ mv twitter-bootstrap-d9b502d/docs/assets/css/bootstrap*.css ../webapp/static/css
-    $ mv twitter-bootstrap-d9b502d/docs/assets/js/bootstrap*.js ../webapp/static/js
-    $ mv twitter-bootstrap-d9b502d/docs/assets/js/html5shiv.js ../webapp/static/js
-    $ mkdir -pv ../webapp/static/img
-    $ mv twitter-bootstrap-d9b502d/docs/assets/img/glyphicons-*.png ../webapp/static/img
+    $ mv twitter-bootstrap-d9b502d/docs/assets/css/bootstrap*.css ../static/css
+    $ mv twitter-bootstrap-d9b502d/docs/assets/js/bootstrap*.js ../static/js
+    $ mv twitter-bootstrap-d9b502d/docs/assets/js/html5shiv.js ../static/js
+    $ mkdir -pv ../static/img
+    $ mv twitter-bootstrap-d9b502d/docs/assets/img/glyphicons-*.png ../static/img
 
 We can delete what's left of the zip output (we don't need it):
 
@@ -66,14 +66,14 @@ node.js, or installed via npm.
 
 Make all customizations in custom-*.less, then build the new stuff and test locally:
     
-    $ cd opentree/less
-    $ lessc custom-bootstrap.less > ../webapp/static/css/bootstrap.css 
-    $ lessc custom-responsive.less > ../webapp/static/css/bootstrap-responsive.css 
+    $ cd phylografter/less
+    $ lessc custom-bootstrap.less > ../static/css/bootstrap.css 
+    $ lessc custom-responsive.less > ../static/css/bootstrap-responsive.css 
 
 Or, to generate compressed/minified CSS:
 
-    $ cd opentree/less
-    $ lessc --compress custom-bootstrap.less > ../webapp/static/css/bootstrap.min.css 
-    $ lessc --compress custom-responsive.less > ../webapp/static/css/bootstrap-responsive.min.css 
+    $ cd phylografter/less
+    $ lessc --compress custom-bootstrap.less > ../static/css/bootstrap.min.css 
+    $ lessc --compress custom-responsive.less > ../static/css/bootstrap-responsive.min.css 
 
 --
