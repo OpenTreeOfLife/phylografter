@@ -996,29 +996,11 @@ def delete_study():
     form.add_button('Cancel', URL('study', 'view', args=rec.id))
                        
     
-    
-    ### Generate the form to display on the Delete View
-    
 
-    
-    otus = db(db.otu.study==rec.id).select()
-    trees = db(db.stree.study==rec.id).select()
-    study = db(db.study.id==rec.id).select()
-    
-    for t in trees: # Use the ids from all trees in the study to find all of the nodes linked to the study
-    	nodes = db(db.snode.tree==t).select()
-    
     if form.accepts(request.vars, session):
-	## Iterates through all of the lists deleting each ID as it goes
-		for n in nodes:
-			del db.snode[n.id]
-		for o in otus:
-			del db.otu[o.id]
-		for t in trees:
-			del db.stree[t.id]
-		for s in study:
-			del db.study[s.id]
+	## Deletes the study from the database using the DAL. 
+        del db.study[rec.id]
 
-		session.flash = "The Study Has Been Deleted"	
-		redirect(URL('study', 'index'))
-    return dict(form=form, otus = otus, nodes = nodes, trees = trees, study = study, rec = rec)
+        session.flash = "The Study Has Been Deleted" #Alerts the user the study has been deleted.	
+        redirect(URL('study', 'index'))
+    return dict(form=form, rec = rec)
