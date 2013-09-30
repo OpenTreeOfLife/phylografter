@@ -417,3 +417,17 @@ div#r0 {
     background: red; 
     color: white;
 }
+
+.stepwise-list li {
+    margin: 0.8em 0;
+}
+.stepwise-list li li {
+    margin: 0.5em 0;
+}
+
+/* restoring (for now) some form styles from web2py.css */
+td.w2p_fw {padding-bottom: 0.2em;}
+td.w2p_fl, td.w2p_fw, td.w2p_fc { vertical-align:top; }
+td.w2p_fl { text-align:right; }
+td.w2p_fl,  td.w2p_fw {padding-right: 7px;}
+td.w2p_fl, td.w2p_fc { padding-top: 4px; }
