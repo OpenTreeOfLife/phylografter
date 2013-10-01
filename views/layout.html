@@ -82,15 +82,23 @@
     {{include 'web2py_ajax.html'}}
 
   <script type="text/javascript">
-  jQuery(function(){ 
+  jQuery(document).ready(function(){ 
       //jQuery('ul.sf-menu').supersubs({minWidth:12,maxWidth:30,extraWidth:3}).superfish(); 
 
     {{ if 'auth' in globals(): }}
       // add marker classes to final nav link (for logged-in user)
-      jQuery('ul#auth-navbar > li:last-child > a').attr({
-          'class':'dropdown-toggle',
-          'data-toggle': 'dropdown'
-      });
+      var $authNavbar = jQuery('ul#auth-navbar');
+      var $authMenuLink = $authNavbar.find('ul.dropdown-menu li:has(a)');
+      if ($authMenuLink.length === 1) {
+        // there's just one menu item (probably a Login link); make this a clickable top-level nav item
+        $authNavbar.empty().append( $authMenuLink );
+      } else {
+        // it has multiple menu items; make it a proper (Bootstrap) dropdown menu
+        jQuery('ul#auth-navbar > li:last-child > a').attr({
+            'class':'dropdown-toggle',
+            'data-toggle': 'dropdown'
+        });
+      }
       // TODO: move Login link from submenu to main (top) nav item
     {{ pass }}
 
