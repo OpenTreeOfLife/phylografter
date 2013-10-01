@@ -99,7 +99,10 @@
             'data-toggle': 'dropdown'
         });
       }
-      // TODO: move Login link from submenu to main (top) nav item
+      
+      // tweak validation errors to show proper Bootstrap classes
+      jQuery('div.error').addClass('alert').addClass('alert-error');
+
     {{ pass }}
 
   });
@@ -199,7 +202,12 @@
     </div>
 --><!-- topbar -->
 
-    <div class="flash">{{=response.flash or ''}}</div> <!-- notification div -->
+    {{ if response.flash: }}
+    <div class="flash alert">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        {{=response.flash or ''}}
+    </div> <!-- notification div (adapted for Bootstrap) -->
+    {{ pass }}
     
     <!--
     <div class="header">
