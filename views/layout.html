@@ -11,6 +11,17 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     
     <title>{{=response.title or request.application}}</title>
+    {{response.files.append(URL('static','css/bootstrap.css'))}}
+    <style type="text/css">
+        /* TODO: add page-specific styles here */
+    </style>
+    {{response.files.append(URL('static','css/bootstrap-responsive.css'))}}
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      {{response.files.append(URL('static','js/html5shiv.js'))}}
+    <![endif]-->
+
     
     <!-- http://dev.w3.org/html5/markup/meta.name.html -->
     <meta name="application-name" content="{{=request.application}}" />	
@@ -25,7 +36,7 @@
 	  initial-scale = 1.0 retains dimensions instead of zooming out if page height > device height
 	  maximum-scale = 1.0 retains dimensions instead of zooming in if page width < device width
       -->
-    <meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     
     <!-- Place favicon.ico and apple-touch-icon.png in the root of your domain and delete these references -->
     <link rel="shortcut icon" href="{{=URL('static','favicon.ico')}}" type="image/x-icon">
@@ -40,23 +51,61 @@
     <script type='text/javascript'>var applicationName = '{{=request.application}}';</script>
     
     {{#------  require CSS and JS files for this page (read info in base.css) ------}}
-    {{response.files.append(URL('static','css/skeleton.css'))}}
-    {{response.files.append(URL('static','css/web2py.css'))}}
+    {{#response.files.append(URL('static','css/skeleton.css'))}}
+    {{#response.files.append(URL('static','css/web2py.css'))}}
     {{#response.files.append(URL('static','css/base.css'))}}
-    {{response.files.append(URL('static','css/superfish.css'))}}
+    {{#response.files.append(URL('static','css/superfish.css'))}}
+    {{response.files.append(URL('static','css/default.css'))}}
     {{response.files.append(URL('static','js/superfish.js'))}}
     {{response.files.append(URL('static','js/uploader/fileuploader.css'))}}
     {{response.files.append(URL('static','plugin_common.js'))}}
-    {{response.files.append(URL('static','plugin_common.css'))}}
+    {{#response.files.append(URL('static','plugin_common.css'))}}
     {{response.files.append(URL('static','jquery-ui.min.js'))}}
     {{response.files.append(URL('static','jquery.hoverIntent.js'))}}
     {{#response.files.append(URL('static','jquery-ui-1.8.5.custom.css'))}}
+
+    <!-- js for Bootstrap components -->
+    {{response.files.append(URL('static','js/bootstrap-transition.js'))}}
+    {{response.files.append(URL('static','js/bootstrap-alert.js'))}}
+    {{response.files.append(URL('static','js/bootstrap-modal.js'))}}
+    {{response.files.append(URL('static','js/bootstrap-dropdown.js'))}}
+    {{response.files.append(URL('static','js/bootstrap-scrollspy.js'))}}
+    {{response.files.append(URL('static','js/bootstrap-tab.js'))}}
+    {{response.files.append(URL('static','js/bootstrap-tooltip.js'))}}
+    {{response.files.append(URL('static','js/bootstrap-popover.js'))}}
+    {{response.files.append(URL('static','js/bootstrap-button.js'))}}
+    {{response.files.append(URL('static','js/bootstrap-collapse.js'))}}
+    {{response.files.append(URL('static','js/bootstrap-carousel.js'))}}
+    {{response.files.append(URL('static','js/bootstrap-typeahead.js'))}}
 
     {{#------ include web2py specific js code (jquery, calendar, form stuff) ------}}
     {{include 'web2py_ajax.html'}}
 
   <script type="text/javascript">
-    jQuery(function(){ jQuery('ul.sf-menu').supersubs({minWidth:12,maxWidth:30,extraWidth:3}).superfish(); });
+  jQuery(document).ready(function(){ 
+      //jQuery('ul.sf-menu').supersubs({minWidth:12,maxWidth:30,extraWidth:3}).superfish(); 
+
+    {{ if 'auth' in globals(): }}
+      // add marker classes to final nav link (for logged-in user)
+      var $authNavbar = jQuery('ul#auth-navbar');
+      var $authMenuLink = $authNavbar.find('ul.dropdown-menu li:has(a)');
+      if ($authMenuLink.length === 1) {
+        // there's just one menu item (probably a Login link); make this a clickable top-level nav item
+        $authNavbar.empty().append( $authMenuLink );
+      } else {
+        // it has multiple menu items; make it a proper (Bootstrap) dropdown menu
+        jQuery('ul#auth-navbar > li:last-child > a').attr({
+            'class':'dropdown-toggle',
+            'data-toggle': 'dropdown'
+        });
+      }
+      
+      // tweak validation errors to show proper Bootstrap classes
+      jQuery('div.error').addClass('alert').addClass('alert-error');
+
+    {{ pass }}
+
+  });
   </script>
 
     {{
@@ -73,7 +122,7 @@
     if right_sidebar_enabled: right_sidebar_style = 'style="display: block;"'
     else: right_sidebar_style = 'style="display: none;"'
     style_content = 'style="width: %s"' % width_content
-    middle_columns = {0:'sixteen',1:'twelve',2:'eight'}[
+    middle_columns = {0:'span12',1:'span9',2:'span6'}[
      (left_sidebar_enabled and 1 or 0)+(right_sidebar_enabled and 1 or 0)]
     }}
   </head>
@@ -85,8 +134,63 @@
   <!--[if IE 9 ]>    <body class="ie9"> <![endif]-->
   <!--[if (gt IE 9)|!(IE)]><!--> <body> <!--<![endif]-->
     
-    <div id="wrapper">		
+  <div class="navbar navbar-inverse navbar-static-top">
+    <div class="navbar-inner">
+      <div class="container">
 
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+        </a>
+
+        <a class="brand" href="/phylografter" style="font-weight: 400; color: #bbb; padding-right: 10px;">
+            <!--
+                <img style="margin: -12px 4px -8px -2px;" src="/opentree/static/images/mini-otol-logo.png">
+            -->
+            Phylografter
+        </a>
+
+        <div class="nav-collapse collapse">
+{{#----- THIS DOESN'T QUITE WORK with Bootstrap menus:   =MENU(response.menu, _class='nav', mobile=request.user_agent().is_mobile) ----}}
+            <!-- TODO: replace this STATIC HTML with proper dynamic menus! -->
+            <ul class="nav">
+                <li class="Xweb2py-menu-first"><a href="/phylografter">Home</a></li>
+                <li><a href="/phylografter/quickstart">Instructions</a></li>
+                <li class="dropdown">
+                    <a href="/phylografter/study" class="dropdown-toggle" data-toggle="dropdown">Studies  <b class="caret"></b></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="/phylografter/study">Browse all studies</a></li><!-- because link above is not clickable -->
+                        <li><a href="/phylografter/study/create">New study</a></li>
+                        <li><a href="/phylografter/study/tbimport">Import from TreeBASE</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a href="/phylografter/stree" class="dropdown-toggle" data-toggle="dropdown">Source Trees  <b class="caret"></b></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="/phylografter/stree">Browse all source trees</a></li><!-- because link above is not clickable -->
+                        <li><a href="/phylografter/stree/otus_within">Taxon search</a></li>
+                    </ul>
+                </li>
+                <li><a href="/phylografter/gtree">Grafted Trees</a></li>
+                <li><a href="http://dev.opentreeoflife.org/opentree">OpenTree Viewer</a></li>
+            </ul>
+              {{ if 'auth' in globals(): }}
+            <ul id="auth-navbar" class="nav pull-right">
+                {{#-- this creates an LI.dropdown > A structure --}}
+                {{= auth.navbar(separators=(' ',' | ',''), mode="dropdown", )}}
+            </ul>
+              {{ pass }}
+        </div><!-- /.nav-collapse.collapse -->
+
+      </div>
+    </div>
+  </div><!-- /.navbar -->
+
+  <!--<div id="wrapper">-->
+
+<!--
     <div class="topbar">
       <div class="container">    
         <div class="sixteen columns">
@@ -96,10 +200,17 @@
           </div>
         </div>
       </div>
-    </div><!-- topbar -->
+    </div>
+--><!-- topbar -->
 
-    <div class="flash">{{=response.flash or ''}}</div> <!-- notification div -->
+    {{ if response.flash: }}
+    <div class="flash alert">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        {{=response.flash or ''}}
+    </div> <!-- notification div (adapted for Bootstrap) -->
+    {{ pass }}
     
+    <!--
     <div class="header">
       <div class="container">         
         <div class="sixteen columns">
@@ -109,12 +220,13 @@
           </h2>
         </div>
       </div>
-    </div><!-- header -->
+    </div>--><!-- /.header -->
 	
-    <div class="main">
-      <div class="container">                 
+    <!--<div class="main">-->
+    <div class="container">                 
+    <section id="main" class="main row">
         {{if left_sidebar_enabled:}}
-        <div class="four columns left-sidebar">
+        <div class="Xfour Xcolumns span3 left-sidebar">
           {{block left_sidebar}}
           <h3>Left Sidebar</h3>
           <p></p>
@@ -122,16 +234,19 @@
         </div>
         {{pass}}
         
-        <div class="{{=middle_columns}} columns center">
-          <div style="margin:0 1em 0 1em;">
+        <div class="{{=middle_columns}} Xcolumns Xcenter">
+          <!--<div style="margin:0 1em 0 1em;">-->
+          <h1 id="main-title">
+          {{=A(response.title or request.application, _href=URL('default','index'))}}{{if response.subtitle:}}::{{=response.subtitle}}{{pass}}
+          </h1>
           {{block center}}
           {{include}}
           {{end}}
-          </div>
+          <!--</div>-->
         </div>
         
         {{if right_sidebar_enabled:}}
-        <div class="four columns">
+        <div class="Xfour Xcolumns span3">
           {{block right_sidebar}}
           <h3>Right Sidebar</h3>
           <p></p>
@@ -139,8 +254,9 @@
         </div>    
         {{pass}}
         
-      </div><!-- container -->
-    </div><!-- main -->
+    </section><!-- #main.main row -->
+    </div><!-- .container -->
+      <!--</div>--><!-- main -->
 	
 	<div id="footer">
 	  {{block footer}} <!-- this is default footer -->
@@ -152,7 +268,7 @@
 	  {{end}}
 
 	</div><!-- footer -->			
-      </div><!-- wrapper -->
+    <!--</div>--><!-- wrapper -->
     
     <!--[if lt IE 7 ]>
 	<script src="{{=URL('static','js/dd_belatedpng.js')}}"></script>

@@ -9,7 +9,7 @@ def index():
     for x in (
         'DataTables-1.8.1/media/js/jquery.js',
         'DataTables-1.8.1/media/js/jquery.dataTables.min.js',
-        'DataTables-1.8.1/media/css/demo_table.css',
+        'DataTables-1.8.1/media/css/bootstrap_table.css',
         'DataTables-1.8.1/media/ui/css/%s/jquery-ui-1.8.5.custom.css' % theme):
         response.files.append(URL('static',x))
 
