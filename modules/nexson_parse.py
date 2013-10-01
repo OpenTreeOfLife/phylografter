@@ -15,63 +15,58 @@ def parse_nexson(f,db):
     
 #put this in one place so it can be turned off easily when the time comes    
 def encode(str):
-    return str.encode('ascii')
+    return str  #.encode('ascii')
     
 def process_meta_element_sql(contents, results, db):
     metaEle = contents[u'meta']
-    studyid,studydoi,studyref,studyyear,studycurator,studydeposit,studyfocalclade,studytags = \
-        parse_study_meta(metaEle)
-    if studyid:
-        results = [('study','id',studyid)]
+    metafields = parse_study_meta(metaEle)
+    if 'studyid' in metafields:
+        results = [('study','id',metafields['studyid'])]
     else:
         return results  #no id, nothing to do
-    if studydoi:
-        results.append(('study','doi',studydoi))
-    if studyref:
-        results.append(('study','citation',studyref))
-    if studyyear:
-        results.append(('study','year_published',studyyear))
-    if studycurator:
-        results.append(('study','contributor',studycurator))
-    if studyfocalclade:
-        results.append(('study','focal_clade',studyfocalclade))
-    if studytags:
-        for tag in studytags:
+    if 'studydoi' in metafields:
+        results.append(('study','doi',metafields['studydoi']))
+    if 'studyref' in metafields:
+        results.append(('study','citation',metafields['studyref']))
+    if 'studyyear' in metafields:
+        results.append(('study','year_published',metafields['studyyear']))
+    if 'studycurator' in metafields:
+        results.append(('study','contributor',metafields['studycurator']))
+    if 'studyfocalclade' in metafields:
+        results.append(('study','focal_clade',metafields['studyfocalclade']))
+    if 'studytags' in metafields:
+        for tag in metafields['studytags']:
             results.append(('study','tag',tag))    
     return results
     
 def parse_study_meta(metaEle):
-    studyid = None
-    studydoi = None
-    studyref = None
-    studyyear = None
-    studycurator = None
-    studydeposit = None
-    studyfocalclade = None
     studytags = []
+    result = {}
     for p in metaEle:
         prop = p[u'@property']
         if prop == u'ot:studyId':
-            studyid = int(p[u'$'])
+            result['studyid'] = int(p[u'$'])
         elif prop == u'ot:studyPublication':
-            studydoi = encode(p[u'@href'])
+            result['studydoi'] = encode(p[u'@href'])
         elif prop == u'ot:studyYear':
-            studyyear = int(p[u'$'])
+            result['studyyear'] = int(p[u'$'])
         elif prop == u'ot:studyPublicationReference':
-            studyref = encode(p[u'$'])
+            result['studyref'] = encode(p[u'$'])
         elif prop == u'ot:curatorName':
-            studycurator = encode(p[u'$'])
+            result['studycurator'] = encode(p[u'$'])
         elif prop == u'ot:dataDeposit':
-            studydeposit = encode(p[u'@href'])
+            result['studydeposit'] = encode(p[u'@href'])
         elif prop == u'ot:contributor':
-            studycurator = encode(p[u'$'])
+            result['studycurator'] = encode(p[u'$'])
         elif prop == u'ot:dataDeposit':
-            studydeposit = encode(p[u'@href'])
+            result['studydeposit'] = encode(p[u'@href'])
         elif prop == u'ot:tag':
             studytags.append(encode(p[u'$']))
         elif prop == u'ot:focalClade':
-            studyfocalclade= int(p[u'$'])
-    return (studyid,studydoi,studyref,studyyear,studycurator,studydeposit,studyfocalclade,studytags)
+            result['studyfocalclade']= int(p[u'$'])
+    if len(studytags)>0:
+        result['studytags']=studytags
+    return (result)
 
 
 def process_otus_element_sql(contents, results, db):
@@ -98,11 +93,10 @@ def process_otu_element_sql(otu, results, db):
         ottid,olabel = process_otu_meta([meta_ele])
     else:
         ottid,olabel = process_otu_meta(meta_ele)
-    if ottid:
-        ottid_internal_row = db.ottol_name(uid = ottid)
-        if ottid_internal_row:
-           internal_id = ottid_internal_row.id
-           results.append(('otu','ottolid',internal_id))  #need to do something special here
+    if ottid:  #redesign here?
+        internal_id = db.executesql('SELECT id FROM ottol_name WHERE uid = %d' % ottid)
+        if internal_id:
+           results.append(('otu','ottolid',internal_id[0][0]))  #need to do something special here
         else:
             print "bad ott id: %d" % ottid
     if olabel:
@@ -152,6 +146,8 @@ def process_tree_element_sql(tree, results, db):
         results.append(('tree','branch_lengths_represent',blmode))
     for tag in tags:
         results.append(('tree','tag',tag))
+    if ingroup:
+        results.append(('tree','in_group_clade',ingroup))
     edge_table = make_edge_table(edges)
     for node in nodes:
         results = process_node_element_sql(node, edge_table, results, db)
@@ -230,11 +226,12 @@ def parse_nexml(tree,db):
         raise SyntaxError
     target = determine_target(db)
     target_parser_set = target_parsers[target]
-    results = {}
     contents = tree[u'nexml']
+    results = []
     for parser in target_parser_set:
         results = parser(contents,results,db)
-    sql_process(results,db)
+    if results:
+        sql_process(results,db)
     return contents
 
 def determine_target(db):

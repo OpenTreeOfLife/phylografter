@@ -10,6 +10,8 @@ def sql_process(actions, db):
         print "First action is not a study identifier - exiting"
         return
     fixup_table = insert_new_rows(actions,db)
+    special_clades = collect_special_clades(actions)
+    print 'special clades = %s' % str(special_clades)
     current_row = None
     for action in actions:
         #print "action is %s, %s, %s" % action
@@ -20,8 +22,10 @@ def sql_process(actions, db):
                 current_row.update_record()
                 #print "updating id and record: %s" % str(current_row.id)
                 if new_tags:
-                    print "updating tags: %s for table %s, id %d" % (str(new_tags),current_table,current_row.id)
+                    #print "updating tags: %s for table %s, id %d" % (str(new_tags),current_table,current_row.id)
                     update_tags(db,current_table,new_tags,current_row.id)
+                if (current_table == 'node' and current_row.id in special_clades):
+                    current_row['ingroup'] = True
             current_table = table
             current_id = value
             new_tags = set()  
@@ -31,18 +35,20 @@ def sql_process(actions, db):
                 current_row = find_row(db,current_table,new_id,ele_table_map)
                 old_tags = find_tags(db,current_table,current_id)
                 if old_tags:
-                    print "%s old tag count = %d" % (current_table,len(old_tags))
+                    #print "%s old tag count = %d" % (current_table,len(old_tags))
                     remove_old_tags(db,current_table,old_tags,current_id)
                 else:
-                    #pass
-                    print "%s no tags found id = %d" % (current_table,current_id)
+                    pass
+                    #print "%s no tags found id = %d" % (current_table,current_id)
         elif (field == 'tag'):
             print "found tag %s" % value
             new_tags.add(value)
+        elif (field == 'in_group_clade'):
+            pass
         else:
             if current_row:
                 current_row[field] = value 
-                print "modifying field %s to %s" % (field,value)  
+                #print "modifying field %s to %s" % (field,value)  
 
 def init_map(db):
     return {'study': db.study.id,
@@ -51,13 +57,21 @@ def init_map(db):
             'tree': db.stree.id,
             'node': db.snode.id}
             
-
+         
 def find_row(db, table,id,ele_table):
     rows = db(ele_table[table] == id)
     if rows:
         return rows.select().first()
     else:
         return None
+        
+def collect_special_clades(actions):
+    results = []
+    for action in actions:
+        table,field,value = action
+        if table == 'tree' and field == 'in_group_clade':
+           results.append(value)         
+    return results  ##todo scan and fill this list
 
 
 def insert_new_rows(actions, db):
@@ -79,9 +93,8 @@ def insert_new_rows(actions, db):
                     action = action_gen.next()
                     field = action[1]
                     while not(field == 'id'):
-                        if not(field == 'id'):
-                            table,field,value = action
-                            update_obj[field] = value
+                        table,field,value = action
+                        update_obj[field] = value
                         action = action_gen.next()
                         field = action[1]    
                     table,field,value = action  # update for next record
@@ -118,35 +131,40 @@ def find_tags(db,table,id):
     returns set of rows of id records (from study_tag, or stree_tag as appropriate)
     """
     if (table == 'study'):
-        rows = db(db.study_tag.study == id).select()
-        tags = [row.tag for row in rows]
+        rows = db.executesql('SELECT tag from study_tag WHERE study = %d' % id)
+        tags = [row[0][0] for row in rows]
         return set(tags)
     elif (table == 'tree'):
-        rows = db(db.stree_tag.stree == id).select()
-        tags = [row.tag for row in rows]
+        rows = db.executesql('SELECT tag from stree_tag WHERE stree = %d' % id)
+        tags = [row[0][0] for row in rows]
         return set(tags)
     else:
         return None
-    treeQuery = (db.stree.last_modified > fromTime) & (db.stree.last_modified <= toTime)
 
 def update_tags(db,table,tags,id):
     if table == 'study':
         for tag in tags:
-            rows = db((db.study_tag.study == id) & (db.study_tag.tag == tag)).select()
+            rows = db.executesql(
+                 "SELECT id FROM study_tag WHERE study = %d AND tag = '%s'" % (id,tag))
+            #rows = db((db.study_tag.study == id) & (db.study_tag.tag == tag)).select()
             if not rows:  #only need to add new tags
                 print 'inserting study tag %s to study %d' % (tag,id)
                 db.study_tag.insert(study=id,tag=tag)
     elif table == 'tree':
         for tag in tags:
-            rows = db((db.stree_tag.stree == id) & (db.stree_tag.tag == tag)).select()
+            rows = db.executesql(
+                 "SELECT id FROM stree_tag WHERE stree = %d AND tag = '%s'" % (id,tag))
+            #rows = db((db.stree_tag.stree == id) & (db.stree_tag.tag == tag)).select()
             if not rows:  #only need to add new tags
                 print 'inserting tree tag %s to tree %d' % (tag,id)
                 db.stree_tag.insert(stree=id,tag=tag)
 
 def remove_old_tags(db,table,tags,id):
     if table == 'study':
-        for tag in tags:        
-            rows = db((db.study_tag.study == id) & (db.study_tag.tag == tag)).delete()
+        for tag in tags:
+            db.executesql("DELETE FROM study_tag WHERE (study = %d AND tag = '%s')" % (id,tag))       
+            #db((db.study_tag.study == id) & (db.study_tag.tag == tag)).delete()
     if table == 'tree':
-        for tag in tags:        
-            rows = db((db.stree_tag.stree == id) & (db.stree_tag.tag == tag)).delete()
+        for tag in tags:
+            db.executesql("DELETE FROM stree_tag WHERE (stree = %d AND tag = '%s')" % (id,tag))           
+            #db((db.stree_tag.stree == id) & (db.stree_tag.tag == tag)).delete()
