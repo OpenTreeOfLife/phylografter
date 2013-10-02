@@ -11,10 +11,8 @@ def sql_process(actions, db):
         return
     fixup_table = insert_new_rows(actions,db)
     special_clades = collect_special_clades(actions)
-    print 'special clades = %s' % str(special_clades)
     current_row = None
     for action in actions:
-        #print "action is %s, %s, %s" % action
         table,field,value = action        
         if (field == 'id'):
             if current_row:

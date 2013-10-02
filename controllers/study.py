@@ -984,13 +984,13 @@ def import_NexSON():
     from nexson_parse import parse_nexson
     if not(request.post_vars):
         raise HTTP(400)  #if no post, then it's a bad request
-    last_item = request.post_vars.keys()[0]
+    post_text= '&'.join(request.post_vars.keys())
     print datetime.datetime.now()
-    study_id = parse_nexson(cStringIO.StringIO(last_item),db)
+    study_id = parse_nexson(cStringIO.StringIO(post_text),db)
     print datetime.datetime.now()
     return len(study_id)
     
-TESTFILE = "/Users/pmidford/Projects/nexson-sandbox/study438.json"    
+TESTFILE = "/Users/pmidford/Projects/nexson-sandbox/study60.json"    
 def importTest():
     """
     just for testing
