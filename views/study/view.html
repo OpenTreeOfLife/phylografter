@@ -1,4 +1,5 @@
-{{extend 'layout_right_sidebar.html'}}
+{{ globals()['right_sidebar_enabled']=True }}
+{{extend 'layout.html'}}
 
 <div style="padding:0.5em;font-weight:bold;font-family:sans-serif;color:dimgray;font-size:110%">
 Study {{=rec.id}}: {{=label}}
@@ -33,9 +34,9 @@ Trees derived from this data set:
 <td><a href="{{=URL(c='stree',f='edit',args=[t.id])}}">[Edit record]</a></td>
 <td><a href="{{=URL(c='stree',f='svgView',args=[t.id])}}">[View]</a></td>
 <!-- <td><a href="{{=URL(c='stree',f='modalTreeObj',args=[t.id])}}">load pyTree</a></td> -->
-    {{if auth.is_logged_in():}}
-        <td><a href="{{=URL(c='gtree',f='backbone',args=[t.id])}}">[Use as grafted tree backbone]</a></td>
-    {{pass}}
+    <!-- {{if auth.is_logged_in():}} -->
+    <!--     <td><a href="{{=URL(c='gtree',f='backbone',args=[t.id])}}">[Use as grafted tree backbone]</a></td> -->
+    <!-- {{pass}} -->
     <!-- {{if auth.is_logged_in() and ' '.join( [ auth.user.first_name, auth.user.last_name ] ) == t.contributor:}} -->
     <!--     <td><a href="{{=URL(c='stree',f='editOTUs',args=[t.id])}}">update OTUs</a></td> -->
     <!-- {{pass}} -->
