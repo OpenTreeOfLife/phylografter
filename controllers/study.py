@@ -887,7 +887,11 @@ def ref_from_doi():
         return
     resp.raise_for_status()
     if RETURNS_OBJECT:
-        results = resp.json()
+        # Hm, sometimes resp.json is an instance method, and sometimes it's a dict. Be careful!
+        try:
+            results = resp.json()
+        except: 
+            results = resp.json
         #sys.stderr.write('%s\n' % json.dumps(results, sort_keys=True, indent=4))
         #sys.stderr.write('%s\n' % str(dict(results)))
         if results is None:
