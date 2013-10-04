@@ -990,7 +990,7 @@ def import_NexSON():
     print datetime.datetime.now()
     return len(study_id)
     
-TESTFILE = "/Users/pmidford/Projects/nexson-sandbox/study60.json"    
+TESTFILE = "/Users/pmidford/Projects/nexson-sandbox/study9.json"    
 def importTest():
     """
     just for testing

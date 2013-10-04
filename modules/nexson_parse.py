@@ -129,6 +129,7 @@ def process_tree_element_sql(tree, results, db):
     id = tree[u'@id']
     if id.startswith('tree'):
         id = id[4:]
+    print "tree id is %s" % id
     nodes = tree[u'node']
     edges = tree[u'edge'] 
     if u'meta' in tree:
