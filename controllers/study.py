@@ -1000,4 +1000,5 @@ def importTest():
     print datetime.datetime.now()
     study_id = parse_nexson(open(TESTFILE),db)
     print datetime.datetime.now()
-    return len(study_id)
+    #redirect(URL(c="study",f="view",args=[study_id]))
+    return study_id

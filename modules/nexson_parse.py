@@ -94,9 +94,11 @@ def process_otu_element_sql(otu, results, db):
     else:
         ottid,olabel = process_otu_meta(meta_ele)
     if ottid:  #redesign here?
-        internal_id = db.executesql('SELECT id FROM ottol_name WHERE uid = %d' % ottid)
+        query_str = 'SELECT id FROM ottol_name WHERE uid = %d' % ottid
+        internal_id = db.executesql(query_str)
+        #print "querystr is '%s', result is %s" % (query_str,internal_id)
         if internal_id:
-           results.append(('otu','ottolid',internal_id[0][0]))  #need to do something special here
+           results.append(('otu','ottol_name',internal_id[0][0]))  #need to do something special here
         else:
             print "bad ott id: %d" % ottid
     if olabel:
@@ -129,7 +131,6 @@ def process_tree_element_sql(tree, results, db):
     id = tree[u'@id']
     if id.startswith('tree'):
         id = id[4:]
-    print "tree id is %s" % id
     nodes = tree[u'node']
     edges = tree[u'edge'] 
     if u'meta' in tree:
@@ -166,7 +167,6 @@ blmode_map = {"ot:substitutionCount": "substitutions per site",
 
 
 def process_tree_meta(meta_elements):
-    print "processing tree metadata: %s" % str(meta_elements)
     blmode = None
     tags = []
     ingroup = None
@@ -201,6 +201,9 @@ def process_node_element_sql(node, edge_table, results, db):
        if u'@length' in parent_link:
            raw_length = parent_link[u'@length']
            results.append(('node','length',float(raw_length)))
+       if u'@source' in parent_link:
+           parent = parent_link[u'@length']
+           results.append(('node','parent',int(parent)))    
     return results
         
 def make_edge_table(edges):
@@ -232,8 +235,10 @@ def parse_nexml(tree,db):
     for parser in target_parser_set:
         results = parser(contents,results,db)
     if results:
-        sql_process(results,db)
-    return contents
+        new_study = sql_process(results,db)
+        return new_study
+    else:
+        raise(500,"NexSON study ingest failed")
 
 def determine_target(db):
     #TODO infer whether sql or document store based on properties of db
