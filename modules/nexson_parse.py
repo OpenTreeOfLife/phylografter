@@ -202,7 +202,10 @@ def process_node_element_sql(node, edge_table, results, db):
            raw_length = parent_link[u'@length']
            results.append(('node','length',float(raw_length)))
        if u'@source' in parent_link:
-           parent = parent_link[u'@length']
+           parent = parent_link[u'@source']
+           if parent.startswith('node'):
+               parent = parent[4:]
+           print "appending parent %s to node %s" %(parent,raw_id) 
            results.append(('node','parent',int(parent)))    
     return results
         

@@ -175,7 +175,10 @@ def insert_new(db,table,values,old_id=None):
                 new_id = db.stree.insert(contributor='',newick='',type='')
             return new_id  
     if table=='node':
-        return db.snode.insert()
+        if old_id:
+            return db.snode.insert(id=old_id,tree=None) #required, not available
+        else:
+            return db.snode.insert(tree=None)
 
 
 immediately_updateable_table = {"study": ("citation","contributor"),
@@ -242,4 +245,10 @@ def finish_trees(db,study_id):
    return study_id
 
 def index_nodes(db,tree_id):
-    root_nodes = db.executesql("SELECT id FROM snode WHERE tree = %d AND parent IS NULL")
+    root_nodes = db.executesql("SELECT id FROM snode WHERE (tree = %d) AND (parent IS NULL)"% tree_id)
+    for root in root_nodes:  # should be singleton
+        node_id = root[0]
+        index_children(node_id,0)
+        
+def index_children(id,n):
+    return
