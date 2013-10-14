@@ -238,17 +238,70 @@ def remove_old_tags(db,table,tags,id):
 
 
 def finish_trees(db,study_id):
-   from ivy.tree import index
    trees = db.executesql("SELECT id FROM stree WHERE study = %d" % study_id)
    for tree_result in trees:
-       index_nodes(db,tree_result[0])
+       tree = tree_result[0]
+       index_nodes(db,tree)
+       restore_labels(db,tree)
+       restore_newick(db,tree)
    return study_id
 
 def index_nodes(db,tree_id):
     root_nodes = db.executesql("SELECT id FROM snode WHERE (tree = %d) AND (parent IS NULL)"% tree_id)
     for root in root_nodes:  # should be singleton
         node_id = root[0]
-        index_children(node_id,0)
+        index_children(db,node_id,0)
         
-def index_children(id,n):
-    return
+def index_children(db, id,n):
+    n = n+1
+    primary_next = n
+    cl = db.executesql("SELECT id FROM snode WHERE parent = %d" % id, as_dict="true")
+    if cl:
+        last_back = n
+        for i,child in enumerate(cl):
+            if (i>0):
+                n = last_back
+            last_back = index_children(db,child.get('id'),n)
+        next_back = last_back + 1
+    else:
+        next_back = n+1
+    primary_back = next_back
+    if (primary_back == primary_next + 1):
+        is_leaf = 'T'
+    else:
+        is_leaf = 'F'   
+    print "UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
+                   primary_back,is_leaf,id)
+    db.executesql("UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
+                   primary_back,is_leaf,id))
+    return next_back
+
+def restore_labels(db,tree):
+    nodes = db.executesql("SELECT id,otu FROM snode WHERE tree = %s AND otu IS NOT NULL" % tree)
+    for (id,otu) in nodes:
+        ((olabel,),) = db.executesql("SELECT label FROM otu WHERE otu.id = %d" % otu)
+        db.executesql("UPDATE snode SET label = '%s' WHERE id = %d" % (olabel,id))
+        
+def restore_newick(db,tree):
+    import build
+    """
+    return newick string for specified tree.  Simplified version of
+    code in stree controller, which assumes context (e.g., request.vars
+    and global definition of db) not available in a module.   Simplified the
+    leaf and internal node format code.
+    """
+    treeid = tree
+    root = build.stree(db, treeid)
+    lfmt = [ x.split('.') for x in 'snode.id,otu.label'.split(',') ]
+    def proc(node, table, field):
+        try: s = str(getattr(getattr(node.rec, table), field))
+        except AttributeError: s = ''
+        return '_'.join(s.split())
+    for n in root:
+        n.label = ''
+        if n.isleaf: n.label = '_'.join([ proc(n, t, f) for t, f in lfmt ])
+        else:
+            pass
+        n.label = n.label.replace('(','--').replace(')','--')
+    newick_str = root.write()
+    db.executesql("UPDATE stree SET newick = '%s' WHERE id = %d" % (newick_str,tree))
