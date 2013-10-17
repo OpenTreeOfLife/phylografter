@@ -295,8 +295,6 @@ def meta_elts_for_otu_elt(otuRec):
     meta_list = []
     if accepted_uid:
         meta_list.append(createLiteralMeta("ot:ottId", accepted_uid))
-    if name:
-        meta_list.append(createLiteralMeta("ot:ottTaxonName", name))
     if tb_name:
         meta_list.append(createLiteralMeta("ot:treebaseOTUId", tb_name))
     if len(meta_list)>0:
