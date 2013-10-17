@@ -74,15 +74,15 @@ def xmlNameSpace():
             "xsd":"http://www.w3.org/2001/XMLSchema#"}
 
 def createLiteralMeta(key, value, datatype=None):
-    '''
+    """
     Creates a dict for the @property key -> value mapping of nex:LiteralMeta type
-    '''
+    """
     meta= { "@xsi:type": "nex:LiteralMeta",
              "@property": key,
              "$": value,
            }
     if datatype:
-        meta["datatype"] =  datatype
+        meta["@datatype"] =  datatype
     return meta
 
 def createResourceMeta(key, value):
@@ -360,9 +360,9 @@ bltypes = {"substitutions per site": "ot:substitutionCount",
            }
 
 def meta_elts_for_tree_elt(tree_row,db):
-    '''
+    """
     returns meta elements for a tree element
-    '''
+    """
     result = []
     ingroup_node = tree_ingroup_node(tree_row,db)
     blRep = tree_row.branch_lengths_represent
@@ -373,7 +373,7 @@ def meta_elts_for_tree_elt(tree_row,db):
         result.append(lengthsElt)
         if blRep == "time (Myr)":
             timeUnitElt = createLiteralMeta("ot:branchLengthTimeUnit", "Myr")
-            result.apend(timeUnitElt)
+            result.append(timeUnitElt)
     if ingroup_node:
         ingroup_elt = createLiteralMeta("ot:inGroupClade",'node%d' % ingroup_node.id)
         result.append(ingroup_elt)
@@ -382,8 +382,8 @@ def meta_elts_for_tree_elt(tree_row,db):
            tag_elt = createLiteralMeta("ot:tag",tag)
            result.append(tag_elt)
     if (tree_type != ""):  # this is supposed to be not null, but might still be blank
-        curated_type_elt = createLiteralMeta("ot:curated_type",tree_type)
-        result.append(curated_type_elt)
+        curatedType_elt = createLiteralMeta("ot:curatedType",tree_type)
+        result.append(curatedType_elt)
     if result:
         return dict(meta=result)
     else:
@@ -448,15 +448,15 @@ def edge_elt(child_row):
     return result
 
 def get_snode_recs_for_tree(tree_row,db):
-    '''
+    """
     returns a list of the nodes associated with the specified study - now represented as tuples
-    '''
+    """
     return db.executesql('SELECT id,parent,otu,length,isleaf FROM snode WHERE (tree = %d);' % tree_row.id)
     
 def node_elt(node_row,db):
-    '''
+    """
     returns an element for a node
-    '''
+    """
     node_id,parent,otu_id,length,isleaf = node_row
     meta_elts = meta_elts_for_node_elt(node_row,db)
     result = {"@id": "node%d" % node_id}
@@ -472,9 +472,13 @@ def node_elt(node_row,db):
     return result
 
 def meta_elts_for_node_elt(node_row,db):
+    """
+    returns metadata elements for a node (currently ot:isOTU)
+    """
     result=[]
     node_id,parent,otu_id,length,isleaf = node_row
     if isleaf:
         isOTU_elt = createLiteralMeta("ot:isOTU","true","xsd:boolean")
         result.append(isOTU_elt)
+        return dict(meta=result)
     return
