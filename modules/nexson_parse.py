@@ -18,61 +18,75 @@ def encode(str):
     return str  #.encode('ascii')
     
 def process_meta_element_sql(contents, results, db):
+    """
+    Builds the list of database updates corresponding to the study
+    element's child 'meta' elements.  Each tuple added to results 
+    should contain study (the table), a valid field in the study table,
+    and an appropriate value.  Note that this is mapping Nexson vocabulary
+    to phylografter fields (should happen here and similar functions below)
+    """
     metaEle = contents[u'meta']
     metafields = parse_study_meta(metaEle)
-    if 'studyid' in metafields:
-        results = [('study','id',metafields['studyid'])]
+    if 'ot:studyId' in metafields:
+        results = [('study','id',metafields['ot:studyId'])]
     else:
         return results  #no id, nothing to do
-    if 'studydoi' in metafields:
-        results.append(('study','doi',metafields['studydoi']))
-    if 'studyref' in metafields:
-        results.append(('study','citation',metafields['studyref']))
-    if 'studyyear' in metafields:
-        results.append(('study','year_published',metafields['studyyear']))
-    if 'studycurator' in metafields:
-        results.append(('study','contributor',metafields['studycurator']))
-    if 'studyfocalclade' in metafields:
-        results.append(('study','focal_clade',metafields['studyfocalclade']))
-    if 'studytags' in metafields:
-        for tag in metafields['studytags']:
+    if 'ot:studyPublication' in metafields:
+        results.append(('study','doi',metafields['ot:studyPublication']))
+    if 'ot:studyPublicationReference' in metafields:
+        results.append(('study','citation',metafields['ot:studyPublicationReference']))
+    if 'ot:studyYear' in metafields:
+        results.append(('study','year_published',metafields['ot:studyYear']))
+    if 'ot:curatorName' in metafields:
+        results.append(('study','contributor',metafields['ot:curatorName']))
+    if 'ot:focalClade' in metafields:
+        results.append(('study','focal_clade_ottol',metafields['ot:focalClade']))
+    if 'ot:tag' in metafields:
+        for tag in metafields['ot:tag']:
             results.append(('study','tag',tag))    
     return results
     
 def parse_study_meta(metaEle):
+    """
+    dereferences the collection of meta elements into a dict; keys are NexSON
+    vocabulary, not phylografter fields (hopefully reusable)
+    """
     studytags = []
     result = {}
     for p in metaEle:
         prop = p[u'@property']
         if prop == u'ot:studyId':
-            result['studyid'] = int(p[u'$'])
+            result['ot:studyId'] = int(p[u'$'])
         elif prop == u'ot:studyPublication':
-            result['studydoi'] = encode(p[u'@href'])
+            result['ot:studyPublication'] = encode(p[u'@href'])
         elif prop == u'ot:studyYear':
-            result['studyyear'] = int(p[u'$'])
+            result['ot:studyYear'] = int(p[u'$'])
         elif prop == u'ot:studyPublicationReference':
-            result['studyref'] = encode(p[u'$'])
+            result['ot:studyPublicationReference'] = encode(p[u'$'])
         elif prop == u'ot:curatorName':
-            result['studycurator'] = encode(p[u'$'])
+            result['ot:curatorName'] = encode(p[u'$'])
         elif prop == u'ot:dataDeposit':
-            result['studydeposit'] = encode(p[u'@href'])
+            result['ot:dataDeposit'] = encode(p[u'@href'])
         elif prop == u'ot:contributor':
-            result['studycurator'] = encode(p[u'$'])
+            result['ot:contributor'] = encode(p[u'$'])
         elif prop == u'ot:dataDeposit':
-            result['studydeposit'] = encode(p[u'@href'])
+            result['ot:dataDeposit'] = encode(p[u'@href'])
         elif prop == u'ot:tag':
             studytags.append(encode(p[u'$']))
         elif prop == u'ot:focalClade':
-            result['studyfocalclade']= int(p[u'$'])
+            result['ot:focalclade'] = int(p[u'$'])
+        elif prop == u'ot:specifiedRoot':
+            result['ot:specifiedRoot'] = encode(p[u'$'])
     if len(studytags)>0:
-        result['studytags']=studytags
+        result['ot:tag']=studytags
     return (result)
 
 
 def process_otus_element_sql(contents, results, db):
     """
     returns actions for otus element - currently just the list
-    of actions for the contained otu elements
+    of actions for the contained otu elements.  Only sql specific
+    because it calls an sql translator
     """
     otus_ele = contents[u'otus'] 
     otus_id = otus_ele[u'@id']
@@ -87,38 +101,51 @@ def process_otu_element_sql(otu, results, db):
         id = id[3:]
     results.append(('otu','id',int(id)))
     meta_ele = otu[u'meta']
-    ottid = None
-    olabel = None
     if isinstance(meta_ele,dict):
-        ottid,olabel = process_otu_meta([meta_ele])
+        ottid,olabel,tbid = process_otu_meta([meta_ele])
     else:
-        ottid,olabel = process_otu_meta(meta_ele)
+        ottid,olabel,tbid = process_otu_meta(meta_ele)
     if ottid:  #redesign here?
         query_str = 'SELECT id FROM ottol_name WHERE uid = %d' % ottid
-        internal_id = db.executesql(query_str)
+        query_result = db.executesql(query_str)
         #print "querystr is '%s', result is %s" % (query_str,internal_id)
-        if internal_id:
-           results.append(('otu','ottol_name',internal_id[0][0]))  #need to do something special here
+        if query_result:
+           ((internal_id,),) = query_result
+           results.append(('otu','ottol_name',internal_id))  #need to do something special here
         else:
             print "bad ott id: %d" % ottid
     if olabel:
         results.append(('otu','label',olabel))
+    if tbid:
+        results.append(('otu','tb_nexml_id',tbid))
     return results
     
 def process_otu_meta(meta_elements):
+    """
+    returns a tuple rather than a dict because two elements 
+    are required with an optional third
+    """
     ottid = None
     olabel = None
+    tbid = None
     for p in meta_elements:
         prop = p[u'@property']
-        if prop == u'ot:ottolid':
+        if prop == u'ot:ottid':  
             ottid = int(p[u'$'])
-        elif prop == u'ot:ottid':
+        elif prop == u'ot:ottolid': # 'ot:ottolid' is deprecated (10-2013)
             ottid = int(p[u'$'])
         elif prop == u'ot:originalLabel':
             olabel = encode(p[u'$'])
-    return (ottid,olabel)    
+        elif prop == u'ot:treebaseOTUId':
+            tbid = encode(p[u'$'])
+    return (ottid,olabel,tbid)    
 
 def process_trees_element_sql(contents, results, db):
+    """
+    currently otus and the id for the trees block are thrown away
+    as there is only one set of otus and one set of trees per study
+    in phylografter (so the ids just reference the study id)
+    """
     trees_ele = contents[u'trees']
     trees_id = trees_ele[u'@id']
     otus = trees_ele[u'@otus']
@@ -128,6 +155,13 @@ def process_trees_element_sql(contents, results, db):
     return results
 
 def process_tree_element_sql(tree, results, db):
+    """
+    Processes a tree element, including child 'node' and
+    'edge' elements.  It generates a couple of sql updates
+    followed by the updates generated by the nodes in the tree.
+    Edge elements get parsed and dumped in a table which is referenced
+    during node parsing
+    """
     id = tree[u'@id']
     if id.startswith('tree'):
         id = id[4:]
@@ -155,7 +189,8 @@ def process_tree_element_sql(tree, results, db):
         results = process_node_element_sql(node, edge_table, results, db)
     return results
 
-
+#This maps element vocabulary for ot:branchLengthMode to valid
+#strings in the phylografter database
 blmode_map = {"ot:substitutionCount": "substitutions per site",
               "ot:changeCount": "character changes",
               "ot:time": "time (Myr)", #these
@@ -165,8 +200,11 @@ blmode_map = {"ot:substitutionCount": "substitutions per site",
               "ot:other": None,       # needs attention
               "ot:undefined": None}   # needs attention
 
-
 def process_tree_meta(meta_elements):
+    """
+    extracts 'meta' element children of a tree element
+    returns tuple because only three types parsed
+    """
     blmode = None
     tags = []
     ingroup = None
@@ -182,9 +220,13 @@ def process_tree_meta(meta_elements):
             ingroup = encode(p[u'$'])
     return (blmode,tags,ingroup)    
 
-
-
 def process_node_element_sql(node, edge_table, results, db):
+    """
+    translates a node element into sequence of sql update tuples
+    each tuple is 'node' followed by a field in the phylografter 
+    snode table and a value.  Some mess because phylografter stores
+    parent and branch length with the node and has no edge table
+    """
     raw_id = node[u'@id']
     if raw_id.startswith('node'):
         id = raw_id[4:]
@@ -210,6 +252,12 @@ def process_node_element_sql(node, edge_table, results, db):
     return results
         
 def make_edge_table(edges):
+    """
+    edge_table is a dict that maps the child node of the edge
+    to the dict representing the edge element.  This would break
+    if DAG's or anything more general were needed, but phylografter
+    currently doesn't
+    """
     edge_table = {}
     for edge in edges:
         edge_table[edge[u'@target']] = edge
@@ -224,16 +272,21 @@ sql_parse_methods = [process_meta_element_sql,
                      process_otus_element_sql,
                      process_trees_element_sql]
 
-
+#stub to support parsing in other formats
 target_parsers= {'sql': sql_parse_methods} #, 'bson': bson_parse_methods} 
    
-def parse_nexml(tree,db):
+def parse_nexml(study,db):
+    """
+    Entry point - 
+       study is parsed JSON from a NexSON file
+       db is DAL db to receive results of parse
+    """
     from nexson_sql_update import sql_process
-    if not u'nexml' in tree:
+    if not u'nexml' in study:
         raise SyntaxError
     target = determine_target(db)
     target_parser_set = target_parsers[target]
-    contents = tree[u'nexml']
+    contents = study[u'nexml']
     results = []
     for parser in target_parser_set:
         results = parser(contents,results,db)
