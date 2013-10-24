@@ -226,7 +226,7 @@ def delete_stree(rec):
         n.delete_record()
     rec.delete_record()
 
-@auth.requires_membership('or')
+@auth.requires_membership('contributor')
 def delete():
     i = int(request.args(0) or 0)
     rec = db.stree(i)
