@@ -11,6 +11,7 @@ import time
 import nexson
 import tempfile
 import gzip
+from link import doi2url, normalize_doi_for_url
 
 from externalproc import get_external_proc_dir_for_upload, invoc_status, \
     ExternalProcStatus, get_logger, get_conf, do_ext_proc_launch
@@ -95,9 +96,9 @@ class Virtual(object):
 def index():
     theme = "smoothness"
     for x in (
-        'DataTables-1.8.1/media/js/jquery.js',
+        # 'DataTables-1.8.1/media/js/jquery.js',  # there's already a newer (Bootstrap-compatible) jQuery loaded!
         'DataTables-1.8.1/media/js/jquery.dataTables.min.js',
-        'DataTables-1.8.1/media/css/demo_table.css',
+        'DataTables-1.8.1/media/css/bootstrap_table.css',
         'DataTables-1.8.1/media/ui/css/%s/jquery-ui-1.8.5.custom.css' % theme):
         response.files.append(URL('static',x))
 
@@ -369,6 +370,10 @@ def view():
     t = db.study
     rec = t(request.args(0)) or redirect(URL("create"))
     readonly = not auth.has_membership(role="contributor")
+    t.doi.label = "DOI"
+    # make read-only DOIs into proper hyperlinks
+    if readonly:
+        t.doi.represent = lambda v: A(doi2url(v), _href=doi2url(v), _target='_blank')
     ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ottol.label = 'Focal clade'
     t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
@@ -636,9 +641,9 @@ def tbimport2():
 def tbimport_otus():
     theme = "smoothness"
     for x in (
-        'DataTables-1.8.1/media/js/jquery.js',
+        # 'DataTables-1.8.1/media/js/jquery.js',  # there's already a newer (Bootstrap-compatible) jQuery loaded!
         'DataTables-1.8.1/media/js/jquery.dataTables.min.js',
-        'DataTables-1.8.1/media/css/demo_table.css',
+        'DataTables-1.8.1/media/css/bootstrap_table.css',
         'DataTables-1.8.1/media/ui/css/%s/jquery-ui-1.8.5.custom.css' % theme):
         response.files.append(URL('static',x))
 
@@ -792,17 +797,6 @@ def ref_from_doi():
     wrap this call to an external service here so that the jQuery won't be concerned about
     cross-site scripting in the AJAX code for updating the create form.
     """
-    def normalize_doi_for_url(raw):
-        lowercase = raw.lower()
-        if lowercase.startswith('doi:'):
-            raw = raw[4:]
-        elif lowercase.startswith('doi'):
-            raw = raw[3:]
-        elif lowercase.startswith('http://dx.doi.org/'):
-            raw = raw[18:]
-        if lowercase.endswith('.json'):
-            raw = raw[:-5]
-        return raw
     def format_citation(d):
         '''
         Parses the output of the procite (vnd.citationstyles.csl+json) format
@@ -894,7 +888,11 @@ def ref_from_doi():
         return
     resp.raise_for_status()
     if RETURNS_OBJECT:
-        results = resp.json
+        # Hm, sometimes resp.json is an instance method, and sometimes it's a dict. Be careful!
+        try:
+            results = resp.json()
+        except: 
+            results = resp.json
         #sys.stderr.write('%s\n' % json.dumps(results, sort_keys=True, indent=4))
         #sys.stderr.write('%s\n' % str(dict(results)))
         if results is None:

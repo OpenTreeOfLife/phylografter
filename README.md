@@ -1,4 +1,4 @@
-Below here are notes on installing phylografter on installing phylografter on Mac.
+Install instructions
 
 (1) Install prerequisites. You can get pip from http://www.pip-installer.org/en/latest/  The apt-get commands used on ubuntu for non-Python
 prerequisites and the pip commands are:
@@ -73,7 +73,7 @@ pip install lxml
 </pre>
 
 (6) Download and unpack the source code version of web2py from
-http://www.web2py.com/examples/default/download .  I used Version 1.99.7
+http://www.web2py.com/examples/default/download .
 
 
 (7) Register phylografter as a web2py app by creating a symbolic link

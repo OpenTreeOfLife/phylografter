@@ -1,57 +1,435 @@
-import os, re
+import os, re, csv
+import graph_tool.all as gt
 from collections import defaultdict
 from itertools import imap, ifilter
 dump_name = 'taxonomy'
-dump_loc = '/tmp/ott2.0'
-p = os.path.join(dump_loc, dump_name)
-t = db.ottol_name
+dump_loc = '/home/rree/Desktop/ott2.2'
+dump_path = os.path.join(dump_loc, dump_name)
 delim = '\t|\t'
 split = lambda x: x.split(delim)[:-1]
 
-def query_used(fld='accepted_uid'):
-    q = ((db.otu.ottol_name==db.ottol_name.id)&
-         (db.otu.ottol_name!=None))
-    otu_used = set([ x[fld] for x in db(q).select(t[fld], distinct=True) ])
+class Traverser(gt.DFSVisitor):
+    def __init__(self, pre=None, post=None):
+        # function to call on each vertex, preorder
+        if not pre: pre = lambda x:None
+        self.pre = pre
+        if not post: post = lambda x:None
+        self.post = post # postorder
 
-    q = ((db.snode.ottol_name==db.ottol_name.id)&
-         (db.snode.ottol_name!=None))
-    snode_used = set([ x[fld] for x in db(q).select(t[fld], distinct=True) ])
+    def discover_vertex(self, v):
+        self.pre(v)
 
-    q = ((db.study.focal_clade_ottol==db.ottol_name.id)&
-         (db.study.focal_clade_ottol!=None))
-    study_used = set([ x[fld] for x in db(q).select(t[fld], distinct=True) ])
+    def finish_vertex(self, v):
+        self.post(v)
 
-    used = otu_used | snode_used | study_used
-    return used
+def get_or_create_vp(g, name, ptype):
+    p = g.vp.get(name)
+    if not p:
+        p = g.new_vertex_property(ptype)
+        g.vp[name] = p
+    return p
 
+def get_or_create_ep(g, name, ptype):
+    p = g.ep.get(name)
+    if not p:
+        p = g.new_edge_property(ptype)
+        g.ep[name] = p
+    return p
+
+def _attach_funcs(g):
+    def taxid_name(taxid):
+        v = g.taxid_vertex.get(taxid)
+        if v: return g.vertex_name[v]
+    g.taxid_name = taxid_name
+
+    ## def taxid_dubious(taxid):
+    ##     v = g.taxid_vertex.get(taxid)
+    ##     if v: return g.dubious[v]
+    ## g.taxid_dubious = taxid_dubious
+
+    def taxid_hindex(taxid):
+        v = g.taxid_vertex.get(taxid)
+        if v: return g.hindex[v]
+        else: print 'no hindex:', taxid
+    g.taxid_hindex = taxid_hindex
+
+def index_graph(g, reindex=False):
+    '''
+    create a vertex property map with hierarchical (left, right)
+    indices
+    '''
+    if 'hindex' in g.vp and 'depth' in g.vp and not reindex:
+        return g
+    v = g.vertex(0) # root
+    hindex = get_or_create_vp(g, 'hindex', 'vector<int>')
+    depth = get_or_create_vp(g, 'depth', 'int')
+    n = [g.num_vertices()]
+    def traverse(p, left, dep):
+        depth[p] = dep
+        if p.out_degree():
+            l0 = left
+            for c in p.out_neighbours():
+                l, r = traverse(c, left+1, dep+1)
+                left = r
+            lr = (l0, r+1)
+        else:
+            lr = (left, left+1)
+        hindex[p] = lr
+        ## print g.vertex_name[p], lr
+        print n[0], '\r',
+        n[0] -= 1
+        return lr
+    g.hindex = hindex
+    traverse(v, 1, 0)
+    print 'done'
+
+def _filter(g):
+    # higher taxa that should be removed (nodes collapsed), and their
+    # immmediate children flagged incertae sedis and linked back to
+    # the parent of collapsed node
+    incertae_keywords = [
+        'endophyte','scgc','libraries','samples','metagenome','unclassified',
+        'other','unidentified','mitosporic','uncultured','incertae',
+        'environmental']
+
+    # taxa that are not clades, and should be removed (collapsed) -
+    # children linked to parent of collapsed node
+    collapse_keywords = ['basal ','stem ','early diverging ']
+
+    # higher taxa that should be removed along with all of their children
+    remove_keywords = ['viroids','virus','viruses','viral','artificial']
+
+    print 'removing'
+    rm = g.collapsed
+    def f(x): rm[x] = 1
+    T = Traverser(post=f)
+    for v in ifilter(lambda x:x.out_degree(), g.vertices()):
+        name = g.vertex_name[v].lower()
+        s = name.split()
+        for kw in remove_keywords:
+            if kw in s:
+                gt.dfs_search(g, v, T)
+                break
+
+        for kw in incertae_keywords:
+            if kw in s:
+                rm[v] = 1
+                for c in v.out_neighbours():
+                    g.incertae_sedis[c] = 1
+                break
+
+        s = name.replace('-', ' ')
+        for w in collapse_keywords:
+            if s.startswith(w):
+                rm[v] = 1
+                break
+
+    g.set_vertex_filter(rm, inverted=True)
+    # assume root == vertex 0
+    outer = [ v for v in g.vertices()
+              if int(v) and v.in_degree()==0 ]
+    g.set_vertex_filter(None)
+
+    for v in outer:
+        p = v.in_neighbours().next()
+        while rm[p]:
+            p = p.in_neighbours().next()
+        g.edge_in_taxonomy[g.add_edge(p, v)] = 1
+    print 'done'
+
+    g.set_vertex_filter(rm, inverted=True)
+
+    for v in g.vertices():
+        if int(v): assert v.in_degree()==1
+
+def create_taxonomy_graph():
+    g = gt.Graph()
+    g.vertex_taxid = get_or_create_vp(g, 'taxid', 'int')
+    g.vertex_name = get_or_create_vp(g, 'name', 'string')
+    g.vertex_unique_name = get_or_create_vp(g, 'unique_name', 'string')
+    g.vertex_rank = get_or_create_vp(g, 'rank', 'string')
+    g.vertex_ncbi = get_or_create_vp(g, 'ncbi', 'int')
+    g.vertex_gbif = get_or_create_vp(g, 'gbif', 'int')
+    g.edge_in_taxonomy = get_or_create_ep(g, 'istaxon', 'bool')
+    g.vertex_in_taxonomy = get_or_create_vp(g, 'istaxon', 'bool')
+    ## g.dubious = get_or_create_vp(g, 'dubious', 'bool')
+    g.incertae_sedis = get_or_create_vp(g, 'incertae_sedis', 'bool')
+    g.collapsed = get_or_create_vp(g, 'collapsed', 'bool')
+    g.taxid_vertex = {}
+
+    taxid2vid = {}
+    data = []
+    n = 0
+    split = lambda s: (
+        [ x.strip() or None for x in s.split('|')][:-1] if s[-2]=='\t'
+        else [ x.strip() or None for x in s.split('|')]
+    )
+    with open(dump_path) as f:
+        f.readline()
+        for v in imap(split, f):
+            # convert uid and parent_uid to ints
+            for i in 0,1: v[i] = int(v[i] or 0)
+            taxid = v[0]
+            taxid2vid[taxid] = n
+            data.append(v)
+            print n, '\r',
+            n += 1
+        print 'done'
+
+    g.add_vertex(n)
+    for i, row in enumerate(data):
+        taxid = row[0]
+        parent = row[1]
+        name = row[2]
+        rank = row[3]
+        sinfo = row[4]
+        try:
+            d = dict([ (x or '').split(':') for x in (sinfo or '').split(',') ])
+            ncbi = int(d.get('ncbi') or 0)
+            gbif = int(d.get('gbif') or 0)
+        except ValueError:
+            ncbi = gbif = 0
+        uniqname = row[5]
+
+        v = g.vertex(i)
+        g.vertex_taxid[v] = taxid
+        g.vertex_name[v] = name
+        if uniqname: g.vertex_unique_name[v] = uniqname
+        if rank: g.vertex_rank[v] = rank
+        if ncbi: g.vertex_ncbi[v] = ncbi
+        if gbif: g.vertex_gbif[v] = gbif
+        g.vertex_in_taxonomy[v] = 1
+        g.taxid_vertex[taxid] = v
+
+        #if row[-1] and 'D' in row[-1]: g.dubious[v] = 1
+
+        if parent:
+            pv = g.vertex(taxid2vid[parent])
+            e = g.add_edge(pv, v)
+            g.edge_in_taxonomy[e] = 1
+        print i, '\r',
+    print 'done'
+
+    _filter(g)
+    index_graph(g)
+    _attach_funcs(g)
+
+    g.root = g.vertex(0)
+    return g
+
+g = create_taxonomy_graph()
+g.save('ott22.xml.gz')
+
+## # map uids to dictionaries of row data
+## uid2row = {}
+## with open(dump_path) as f:
+##     fields = split(f.next())
+##     UID = fields.index('uid')
+##     NAME = fields.index('name')
+##     UNIQNAME = fields.index('uniqname')
+##     for row in imap(split, f):
+##         uid = int(row[UID])
+##         row = [ x or None for x in row ]
+##         d = dict(zip(fields, row))
+##         sinfo = d.get('sourceinfo')
+##         if sinfo:
+##             sd = dict([ (x or '').split(':')
+##                         for x in (sinfo or '').split(',') ])
+##             ncbi = int(sd.get('ncbi') or 0) or None
+##             gbif = int(sd.get('gbif') or 0) or None
+##         else:
+##             ncbi = gbif = None
+##         d['ncbi_taxid'] = ncbi; d['gbif_taxid'] = gbif
+##         del d['sourceinfo']
+##         uid2row[uid] = d
+
+with open(os.path.join(dump_loc,'deprecated')) as f:
+    f.next()
+    deprecated = set([ int(x.split()[0]) for x in f ])
+
+used_uid2sqlid = defaultdict(list)
+used_sqlids = set()
+with open('used_ottol_name.csv') as f:
+    fields = f.next().strip().split('\t')
+    for s in f:
+        sqlid, uid, unique_name = s.strip().split('\t')
+        sqlid = int(sqlid)
+        used_sqlids.add(sqlid)
+        try:
+            uid = int(uid)
+            used_uid2sqlid[uid].append(sqlid)
+        except ValueError:
+            pass
+            
+uname2uid = {}
+for v in g.vertices():
+    n = g.vertex_unique_name[v] or g.vertex_name[v]
+    assert n not in uname2uid, n
+    uname2uid[n] = g.vertex_taxid[v]
+
+uid2syn = defaultdict(list)
+with open(os.path.join(dump_loc,'synonyms')) as f:
+    f.next()
+    for name, uid, uniqname in imap(split, f):
+        uid = int(uid)
+        uid2syn[uid].append((name, uniqname))
+        if uniqname not in uname2uid:
+            uname2uid[uniqname] = uid
+        else:
+            print 'non-unique name:', uniqname, uid, uname2uid[uniqname]
+
+insert = open('insert.sql','w')
+update = open('update.sql','w')
+delete = []
+uids_seen = set()
+unique_names_seen = set()
+with open('ottol_name.csv') as f:
+    fields = f.next().strip().split('\t')
+    NAME = fields.index('name')
+    UNIQUE_NAME = fields.index('unique_name')
+
+    def write_update(sqlid, uid, unique_name):
+        v = g.taxid_vertex[uid]
+        nxt, bck = g.hindex[v]
+        d = {}
+        ## d['id'] = sqlid
+        d['accepted_uid'] = uid
+        d['name'] = g.vertex_name[v]
+        d['unique_name'] = unique_name
+        d['next'] = nxt; d['back'] = bck
+        d['ncbi_taxid'] = g.vertex_ncbi[v] or None
+        d['gbif_taxid'] = g.vertex_gbif[v] or None
+        d['rank'] = g.vertex_rank[v] or None
+
+        s = 'update ottol_name set %s where id = %s;'
+        u = []
+        for k,v in d.items():
+            if v is not None:
+                if isinstance(v,(str,unicode)):
+                    v = v.replace('"', r'\"').replace("'", r"\'")
+                    v = '"%s"' % v
+                u.append('%s = %s' % (k,v))
+        s = s % (', '.join(u), sqlid)
+        update.write('%s\n' % s)
+
+    for s in f:
+        v = s.strip().split('\t')
+        sqlid = int(v[0])
+
+        uid = int(v[3] or 0)
+        if uid: uids_seen.add(uid)
+
+        unique_name = v[UNIQUE_NAME]
+        if unique_name in uname2uid:
+            unique_names_seen.add(unique_name)
+
+        # delete rows that are deprecated and not used
+        if uid and uid in deprecated and sqlid not in used_sqlids:
+            delete.append(sqlid)
+            continue
+
+        # delete rows that have no uid and are not used
+        if (not uid) and (sqlid not in used_sqlids):
+            delete.append(sqlid)
+            continue
+
+        # used name, no uid, in OTT; can be updated
+        if (not uid) and (sqlid in used_sqlids) and uname2uid.get(unique_name):
+            uid = uname2uid[unique_name]
+            try: write_update(sqlid, uid, unique_name)
+            except ValueError:
+                if sqlid not in used_sqlids:
+                    uids_seen.remove(uid)
+                    unique_names_seen.remove(unique_names_seen)
+                    delete.append(sqlid)
+            continue
+
+        # update rows where uid and unique_name match OTT
+        if (unique_name and (unique_name in uname2uid) and uid
+            and uname2uid[unique_name] == uid):
+            try: write_update(sqlid, uid, unique_name)
+            except ValueError:
+                if sqlid not in used_sqlids:
+                    uids_seen.remove(uid)
+                    unique_names_seen.remove(unique_name)
+                    delete.append(sqlid)
+            continue
+
+        if sqlid not in used_sqlids:
+            delete.append(sqlid)
+
+with open('delete.sql','w') as f:
+    f.write('delete from ottol_name where id in (%s);' %
+            ','.join(map(str, sorted(set(delete)))))
+
+for v in g.vertices():
+    uid = g.vertex_taxid[v]
+    d = {}
+    if uid not in uids_seen:
+        nxt, bck = g.hindex[v]
+        d['uid'] = uid
+        d['accepted_uid'] = uid
+        d['name'] = g.vertex_name[v]
+        d['unique_name'] = g.vertex_unique_name[v] or g.vertex_name[v]
+        d['next'] = nxt; d['back'] = bck
+        d['ncbi_taxid'] = g.vertex_ncbi[v] or None
+        d['gbif_taxid'] = g.vertex_gbif[v] or None
+        d['rank'] = g.vertex_rank[v] or None
+
+        s = 'insert into ottol_name (%s) values (%s);'
+        flds = []; vals = []
+        for k,v in d.items():
+            if v is not None:
+                flds.append(k)
+                if isinstance(v,(str,unicode)):
+                    v = v.replace('"', r'\"').replace("'", r"\'")
+                    v = '"%s"' % v
+                vals.append(v)
+        s = s % (', '.join(flds), ', '.join(map(str, vals)))
+        insert.write('%s\n' % s)
+
+for uid, syns in uid2syn.iteritems():
+    for name, uname in syns:
+        if uname not in unique_names_seen:
+            v = g.taxid_vertex[uid]
+            #assert v
+            d = {}
+            try:
+                nxt, bck = g.hindex[v]
+            except ValueError:
+                continue
+            d['uid'] = uid
+            d['accepted_uid'] = uid
+            d['name'] = name
+            d['unique_name'] = unique_name
+            d['next'] = nxt; d['back'] = bck
+            d['ncbi_taxid'] = g.vertex_ncbi[v] or None
+            d['gbif_taxid'] = g.vertex_gbif[v] or None
+            d['rank'] = g.vertex_rank[v] or None
+
+            s = 'insert into ottol_name (%s) values (%s);'
+            flds = []; vals = []
+            for k,v in d.items():
+                if v is not None:
+                    flds.append(k)
+                    if isinstance(v,(str,unicode)):
+                        v = v.replace('"', r'\"')
+                        v = '"%s"' % v
+                    vals.append(v)
+            s = s % (', '.join(flds), ', '.join(map(str, vals)))
+            insert.write('%s\n' % s)
+    
+insert.close(); update.close()
+
+######################################################
 name2none = {}
 for r in db(t.uid==None).select():
     name2none[r.unique_name] = r
 print 'names without uids:', len(name2none)
 
-with open(os.path.join(dump_loc,'deprecated')) as f:
-    deprecated = [ int(x.split()[0]) for x in f ]
-
-syn2uid = defaultdict(list)
-with open(os.path.join(dump_loc,'synonyms')) as f:
-    for row in imap(split, f):
-        k = row[0]; v = row[1]
-        syn2uid[k].append(int(v))
-
 ## with open('/tmp/synonym-multiple-uids.txt','w') as f:
 ##     for k, v in sorted(syn2uid.items()):
 ##         if len(v)>1: f.write('%s\t%s\n' % (k, sorted(v)))
-
-uid2row = {}
-name2row = {}
-with open(p) as f:
-    fields = split(f.next())
-    UID = fields.index('uid')
-    for row in imap(split, f):
-        uid = int(row[UID])
-        uid2row[uid] = row
-        name = row[5] or row[2]
-        name2row[name] = row
 
 # select used preottol names
 fld = 'accepted_uid'
