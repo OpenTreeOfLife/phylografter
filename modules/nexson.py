@@ -471,12 +471,12 @@ def node_elt(node_row,db):
 
 def meta_elts_for_node_elt(node_row,db):
     """
-    returns metadata elements for a node (currently ot:isOTU)
+    returns metadata elements for a node (currently ot:isLeaf)
     """
     result=[]
     node_id,parent,otu_id,length,isleaf = node_row
     if isleaf:
-        isOTU_elt = createLiteralMeta("ot:isOTU","true","xsd:boolean")
-        result.append(isOTU_elt)
+        isLeaf_elt = createLiteralMeta("ot:isLeaf","true","xsd:boolean")
+        result.append(isLeaf_elt)
         return dict(meta=result)
     return
