@@ -226,7 +226,7 @@ def delete_stree(rec):
         n.delete_record()
     rec.delete_record()
 
-@auth.requires_membership('editor')
+@auth.requires_membership('contributor')
 def delete():
     i = int(request.args(0) or 0)
     rec = db.stree(i)
@@ -899,3 +899,44 @@ def newick():
             if ifmt: n.label = '_'.join([ proc(n, t, f) for t, f in ifmt ])
         n.label = n.label.replace('(','--').replace(')','--')
     return dict(newick=root.write())
+
+
+## Function to delete a tree from a study
+
+def delete():
+    rec = db.stree(request.args(0))
+    def w(f,v):
+        u = URL(c="study",f="view",args=[v])
+        return A(_study_rep(db.study(v)), _href=u)
+    db.stree.study.widget = w
+    response.subtitle = "Delete source tree %s" % rec.id
+    fields = ["study", "contributor", "newick", "type",
+              "clade_labels_represent", "clade_labels_comment",
+              "branch_lengths_represent", "branch_lengths_comment",
+              "comment"]
+    readonly = not auth.has_membership(role="contributor")
+    form = SQLFORM(db.stree, int(rec), fields=fields, showid=False,
+                   deletable=False, submit_button="Delete Tree",
+                   readonly=readonly)
+    form.add_button('Cancel', URL('study', 'view', args=rec.id))              
+    form.vars.study = rec.study
+                              
+         
+    if form.accepts(request.vars, session):
+     
+         ## Delete the tree record, the remaining pieces will be removed by MySQL using ON DELETE CASCADE
+         del db.stree[rec.id] 
+         ## Selects all of the orphaned otus left behind after the snodes are deleted. Needed because there is no way to cascade a one to many from snode to otu
+         query = db.executesql('SELECT otu.id FROM otu WHERE study="%s" AND NOT EXISTS (SELECT * FROM snode WHERE  snode.otu = otu.id);' %rec.study)
+         ## Deletes all of the orphaned otus left behind after the snodes are deleted.
+         ## Above result returns more than a single column. So multi-delete will give an error in MySQL. 
+         ## Looped through a single delete call as it should be faster based on the SQL documentation because: 
+         ## A) Only one plan will need to be generated
+		 ## B) If you are running these from code, then there is less overhead with ODBC calls and network traffic
+		 ## C) Any indexes will need to be refreshed just once, not many times.
+         for q in query:
+         	db.executesql('DELETE FROM otu WHERE id="%id";' %q)
+         session.flash = "Tree Record Deleted" ## Inform the user
+         redirect(URL('study', 'view', args=rec.study)) ## Return them to study page
+
+    return dict(form=form, rec=rec)

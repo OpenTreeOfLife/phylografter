@@ -2,6 +2,7 @@ import os, uuid
 from cStringIO import StringIO
 from gluon.custom_import import track_changes
 from gluon.storage import Storage
+from gluon.tools import Crud
 
 from StringIO import StringIO
 import requests
@@ -972,3 +973,32 @@ def export_gzipNexSON():
         response.headers['Content-Disposition'] = "attachment;filename=%s"%zipfilename
         return stream.getvalue()              
     return
+ 
+### Function to allow the deletion of a study and all of its corresponding nodes, trees and otus
+    
+def delete_study():
+    'Displays a page to ask for validation before deleting a study that is actively being viewed'
+    t = db.study
+    rec = t(request.args(0)) or redirect(URL("create"))
+    readonly = not auth.has_membership(role="contributor")
+    ## t.focal_clade.readable = t.focal_clade.writable = False
+    t.focal_clade_ottol.label = 'Focal clade'
+    t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
+        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
+        limitby=(0,20), orderby=db.ottol_name.unique_name)
+    form = SQLFORM(t, rec, deletable=False, readonly=False,
+                   fields = ["citation", "year_published", "doi", "label",
+                             "focal_clade_ottol", "treebase_id",
+                             "contributor", "comment", "uploaded"],
+                   showid=False, submit_button="Delete Study")
+    form.add_button('Cancel', URL('study', 'view', args=rec.id))
+                       
+    
+
+    if form.accepts(request.vars, session):
+	## Deletes the study from the database using the DAL. 
+        del db.study[rec.id]
+
+        session.flash = "The Study Has Been Deleted" #Alerts the user the study has been deleted.	
+        redirect(URL('study', 'index'))
+    return dict(form=form, rec = rec)
