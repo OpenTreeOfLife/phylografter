@@ -1,0 +1,10 @@
+*.pyc
+cache
+errors
+sessions
+.svn*
+databases
+cache
+errors
+*~
+*.DS_Store
