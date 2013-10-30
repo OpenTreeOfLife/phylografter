@@ -25,9 +25,9 @@ def sql_process(actions, db):
                 elif current_table == 'tree':
                     current_row['study'] = study_id
                 elif current_table == 'node':
-                    print "Trying to update nodes's tree to %d" % tree_id
+                    #print "Trying to update nodes's tree to %d" % tree_id
                     current_row['tree'] = tree_id
-                print "updating: %d to %s" %(current_row.id,str(current_row))
+                #print "updating: %d to %s" %(current_row.id,str(current_row))
                 current_row.update_record()
                 if new_tags:
                     update_tags(db,current_table,new_tags,current_row.id)
@@ -42,10 +42,10 @@ def sql_process(actions, db):
                     new_id = fixup_table[(current_table,current_id)]
                 else:
                     new_id = current_id
-                print 'about to retrieve %s with id %d' % (current_table,new_id)  
+                #print 'about to retrieve %s with id %d' % (current_table,new_id)  
                 current_row = find_row(db,current_table,new_id,ele_table_map)
                 current_id = new_id    
-            print 'retrieved %s' % str(current_row)
+            #print 'retrieved %s' % str(current_row)
             old_tags = find_tags(db,current_table,current_id)
             if old_tags:
                 #print "%s old tag count = %d" % (current_table,len(old_tags))
@@ -55,7 +55,7 @@ def sql_process(actions, db):
             elif (current_table == 'tree'):
                 tree_id = current_id
         elif (field == 'tag'):
-            print "found tag %s" % value
+            #print "found tag %s" % value
             new_tags.add(value)
         elif (field == 'in_group_clade'):
             pass
@@ -66,7 +66,7 @@ def sql_process(actions, db):
                 else:
                     final_value = value 
                 current_row[field] = final_value
-                print "modifying field %s to %s" % (field,final_value)
+                #print "modifying field %s to %s" % (field,final_value)
                 if (table == 'study' and field=='contributor'):
                     study_contributor = final_value
     return finish_trees(db,study_id)  
@@ -126,9 +126,9 @@ def insert_new_rows(actions, db):
                         action = action_gen.next()
                         field = action[1]
                     table,field,value = action # update for next record
-                    print "About to update: table= %s, update_obj = %s, update_id = %d" % (str(update_table),str(update_obj),update_id)
+                    #print "About to update: table= %s, update_obj = %s, update_id = %d" % (str(update_table),str(update_obj),update_id)
                     new_id = insert_new(db,update_table,update_obj,update_id)
-                    print "just updated, update_table is %s, new_id is %d" % (str(update_table),new_id)
+                    #print "just updated, update_table is %s, new_id is %d" % (str(update_table),new_id)
                     if new_id > 0: # if restore to original id works, no need to add to fixup
                         fixup_table[(update_table,update_id)] = new_id
                 else:
@@ -152,7 +152,7 @@ def insert_new(db,table,values,old_id=None):
                 new_id = db.study.insert(id=old_id,citation=values['citation'],contributor=values['contributor'])
             else:
                 new_id = db.study.insert(citation=values['citation'],contributor=values['contributor'])
-            print "new row is %s" % str(new_id)
+            #print "new row is %s" % str(new_id)
             return new_id
     if table=='study_tag':  #maybe this should be interned, rather than generate - no id is saved
         return db.study_tag.insert()
@@ -215,7 +215,7 @@ def update_tags(db,table,tags,id):
                  "SELECT id FROM study_tag WHERE study = %d AND tag = '%s'" % (id,tag))
             #rows = db((db.study_tag.study == id) & (db.study_tag.tag == tag)).select()
             if not rows:  #only need to add new tags
-                print 'inserting study tag %s to study %d' % (tag,id)
+                #print 'inserting study tag %s to study %d' % (tag,id)
                 db.study_tag.insert(study=id,tag=tag)
     elif table == 'tree':
         for tag in tags:
@@ -223,7 +223,7 @@ def update_tags(db,table,tags,id):
                  "SELECT id FROM stree_tag WHERE stree = %d AND tag = '%s'" % (id,tag))
             #rows = db((db.stree_tag.stree == id) & (db.stree_tag.tag == tag)).select()
             if not rows:  #only need to add new tags
-                print 'inserting tree tag %s to tree %d' % (tag,id)
+                #print 'inserting tree tag %s to tree %d' % (tag,id)
                 db.stree_tag.insert(stree=id,tag=tag)
 
 def remove_old_tags(db,table,tags,id):
@@ -270,8 +270,8 @@ def index_children(db, id,n):
         is_leaf = 'T'
     else:
         is_leaf = 'F'   
-    print "UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
-                   primary_back,is_leaf,id)
+    #print "UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
+    #               primary_back,is_leaf,id)
     db.executesql("UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
                    primary_back,is_leaf,id))
     return next_back
