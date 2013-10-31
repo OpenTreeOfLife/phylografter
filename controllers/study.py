@@ -438,11 +438,11 @@ def view():
         file_name = working_dir + file_date + "_tree_" + treeid + ".JSON" #build filename variable 
         try:
             with open(file_name):
-                graphlist.extend(treeid)
+                graphlist.append(treeid)
         except IOError:                        
             error = "No Json Found" ##do nothing
 
-    return dict(form=form, label=label, trees=trees, files=files, rec=rec, graphlist=graphlist, file_date=file_date, working_dir = working_dir, file_name=file_name)
+    return dict(form=form, label=label, trees=trees, files=files, rec=rec, graphlist=graphlist)
         
 def delete_tag():
     rec = db.study(request.args(0))
