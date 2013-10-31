@@ -424,7 +424,25 @@ def view():
         r = lambda v: A("[Edit file info]", _href=URL(c="study",f="editfile",args=[v]))
         db.study_file.id.represent = r
     files = crud.select(db.study_file, db.study_file.study==rec, truncate=64)
-    return dict(form=form, label=label, trees=trees, files=files, rec=rec)
+    
+    ### determines if there are json files matching the trees for the given study
+    working_dir = os.path.dirname(os.path.realpath(__file__))
+    working_dir = working_dir[:-11]
+    working_dir = str(working_dir)
+    working_dir = working_dir + "static/json/"
+    dirlist = os.listdir(working_dir)# get list of files in working_directory
+    file_date = dirlist[0][:10]# snip the date stamp from one of those files to know what date to look for
+    graphlist = []
+    for t in trees:
+        treeid = str(t.id)
+        file_name = working_dir + file_date + "_tree_" + treeid + ".JSON" #build filename variable 
+        try:
+            with open(file_name):
+                graphlist.extend(treeid)
+        except IOError:                        
+            error = "No Json Found" ##do nothing
+
+    return dict(form=form, label=label, trees=trees, files=files, rec=rec, graphlist=graphlist, file_date=file_date, working_dir = working_dir, file_name=file_name)
         
 def delete_tag():
     rec = db.study(request.args(0))
