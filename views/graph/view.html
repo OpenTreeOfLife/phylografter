@@ -16,8 +16,8 @@
         <script type="text/javascript" src="{{=URL(request.application,'static','jquery.corners.js')}}"></script>
         <script type="text/javascript" src="{{=URL(request.application,'static','utility.js')}}"></script>
         <script type="text/javascript" src="{{=URL(request.application,'static','globals.js')}}"></script>
-
         <script type="text/javascript" src="{{=URL(request.application,'static','widgetUtil.js')}}"></script>
+        <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
 
         <link rel="stylesheet" media="screen,projection" type="text/css" href="{{=URL(request.application,'static','jquery-ui-1.8.5.custom.css')}}" />
         <link rel="stylesheet" media="screen,projection" type="text/css" href="{{=URL(request.application,'static','custom.css')}}" />
@@ -28,25 +28,23 @@
         <div id="modalBoxContainer">
             {{=LOAD(c='widget', f='modalBox', extension='load', ajax=True, target='modalBoxContainer')}}
         </div>
-
-        <div id="treeContainer" class=" blackBorder width95 height95">        
+            
             <script type="text/javascript">
 
-            var data = {{json}};
-
+            var datastring = {{=XML(response.json(json))}};
+            
+            var data = eval('(' + datastring + ')');
             var w = 1024,
                 h = 768,
                 cx = w/2,
                 cy = h/2,
                 fill = d3.scale.category10();
-
             data.nodes.forEach( function(n) {
                 //n.x += cx; n.y += h*0.66;
                 n.ox = n.x; n.oy = n.y;
                 //n.fixed = true;
                 //if (n.isleaf) { n.fixed = true; }
             });
-
             var svg = d3.select("body").append("svg:svg")
                 .attr("id", "figure")
                 .attr("width", w)
@@ -205,9 +203,9 @@
 
             //layout.nodes(data.nodes).links(data.links).start();
 
+            
             </script>
 
-        </div>
 
         <script type="text/javascript" charset="utf-8">
             globals.applicationName = '{{=request.application}}';
