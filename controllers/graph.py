@@ -16,26 +16,22 @@ import os
 ## View a graph of the chosen tree and taxonomy
 
 def view():
+    
     rec = db.stree(request.args(0))
+    treeid = str(rec.id)
     def w(f,v):
         u = URL(c="study",f="view",args=[v])
         return A(_study_rep(db.study(v)), _href=u)
     db.stree.study.widget = w
     response.subtitle = "Graph of taxonomy and source tree %s" % rec.id
-    fields = ["study", "contributor", "newick", "type",
-              "clade_labels_represent", "clade_labels_comment",
-              "branch_lengths_represent", "branch_lengths_comment",
-              "comment"]
-    path =  os.path.abspath("/static/json/" + "/../../")     
-    dirList = os.listdir(path) # get a list of all files in the json directory
-    file_name_date = dirList[0][:10]
-    file_path = ##
-    json_file_name =  file_path + file_name_date + "tree_" + rec 
-    
-    if any(json_file_name in s for s in dirList): ## Check if target JSON file is present:
-      json = open(json_file_name, 'r').read() # read in the entire json as a string
+    working_dir = os.path.dirname(os.path.realpath(__file__))
+    working_dir = working_dir[:-11]
+    working_dir = str(working_dir)
+    working_dir = working_dir + "static/json/"
+    dirlist = os.listdir(working_dir)# get list of files in working_directory
+    file_date = dirlist[0][:10]# snip the date stamp from one of those files to know what date to look for
+    json_file_name = working_dir + file_date + "_tree_" + treeid + ".JSON" #build filename variable 
+    json = open(json_file_name, 'r').read() # read in the entire json as a string
 
-    else:
-      json = "No graph found for tree " + rec
 
-  return dict(rec=rec, json=json)
+    return dict(rec=rec, json=json)
