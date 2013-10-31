@@ -33,6 +33,7 @@ Trees derived from this data set:
 <!-- <td><a href="{{=URL(c='stree',f='v',args=[t.id])}}">view/annotate</a></td> -->
 <td><a href="{{=URL(c='stree',f='edit',args=[t.id])}}">[Edit record]</a></td>
 <td><a href="{{=URL(c='stree',f='svgView',args=[t.id])}}">[View]</a></td>
+<td><a href="{{=URL(c='graph',f='view',args=[t.id])}}">[View Graph]</a></td>
 {{if auth.is_logged_in() and auth.has_membership(role="contributor"):}} 
 	<td><a href="{{=URL(c='stree',f='delete',args=[t.id])}}">[Delete Tree]</a></td>
 {{pass}}
@@ -65,5 +66,9 @@ Trees derived from this data set:
 {{if auth.is_logged_in() and auth.has_membership(role="contributor"):}} 
 	<td><a href="{{=URL(c='study',f='delete_study',args=[rec.id])}}">Delete Study</a></td>
 {{pass}}
+
+TEST CODE:
+
+{{=graphlist}}
 
 {{end}}
