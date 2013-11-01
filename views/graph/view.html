@@ -1,15 +1,7 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="{{=T.accepted_language or 'en'}}">
+{{ globals()['right_sidebar_enabled']=True }}
+{{extend 'layout.html'}}
 
     <head>
-        <title>View Graph</title>
-
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-
-        {{include 'web2py_ajax.html'}}
-
         <script type="text/javascript" src="{{=URL(request.application,'static','raphael.js')}}"></script>
         <script type="text/javascript" src="{{=URL(request.application,'static','jquery.js')}}"></script>
         <script type="text/javascript" src="{{=URL(request.application,'static','jquery-ui-1.8.5.custom.min.js')}}"></script>
@@ -17,25 +9,17 @@
         <script type="text/javascript" src="{{=URL(request.application,'static','utility.js')}}"></script>
         <script type="text/javascript" src="{{=URL(request.application,'static','globals.js')}}"></script>
         <script type="text/javascript" src="{{=URL(request.application,'static','widgetUtil.js')}}"></script>
-        <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
-
-        <link rel="stylesheet" media="screen,projection" type="text/css" href="{{=URL(request.application,'static','jquery-ui-1.8.5.custom.css')}}" />
-        <link rel="stylesheet" media="screen,projection" type="text/css" href="{{=URL(request.application,'static','custom.css')}}" />
+        <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>      
     </head>
 
-    <body>
-
-        <div id="modalBoxContainer">
-            {{=LOAD(c='widget', f='modalBox', extension='load', ajax=True, target='modalBoxContainer')}}
-        </div>
-            
+            <div id="boxContainer">
             <script type="text/javascript">
 
             var datastring = {{=XML(response.json(json))}};
             
             var data = eval('(' + datastring + ')');
-            var w = 1024,
-                h = 768,
+            var w = 1000,
+                h = 700,
                 cx = w/2,
                 cy = h/2,
                 fill = d3.scale.category10();
@@ -205,14 +189,25 @@
 
             
             </script>
-
+            </div>
 
         <script type="text/javascript" charset="utf-8">
             globals.applicationName = '{{=request.application}}';
         </script>
+{{block right_sidebar}}
+<strong>Controls</strong>
+<ul>
+<li>Middle Mouse Wheel to Zoom and and Out
+<li>Left Click and Drag in the white space to drag the entire graph
+<li>Left Click on a node to drag that node around
+</ul>
 
-    </body>
+<strong>Interpretation</strong>
+<ul>
+<li><font color="green"><strong>Green</font></strong> lines trace taxonomy exactly. 
+<li><font color="blue"><strong>Blue</font></strong> lines are relationships in the tree, but not taxonomy, but don’t contradict the taxonomy. 
+<li><font color="red"><strong>Red</font></strong> lines are contradictions between the tree and taxonomy.
+</ul>
 
-</html>
 
               
