@@ -23,7 +23,7 @@ def view():
         u = URL(c="study",f="view",args=[v])
         return A(_study_rep(db.study(v)), _href=u)
     db.stree.study.widget = w
-    response.subtitle = "Graph of taxonomy and source tree %s" % rec.id
+    response.subtitle = "TreeGraph of source tree %s" % rec.id
     working_dir = os.path.dirname(os.path.realpath(__file__))
     working_dir = working_dir[:-11]
     working_dir = str(working_dir)
