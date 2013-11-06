@@ -1,0 +1,7 @@
+#figure {
+    border: 1px solid #ccc;
+    border-radius: 12px;
+/* A darker background might make actually the bordered text less confusing...
+    background-color: #ccc
+ */
+}

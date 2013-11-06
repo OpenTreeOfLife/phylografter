@@ -1,4 +1,5 @@
 {{ globals()['right_sidebar_enabled']=True }}
+{{response.files.append(URL('static','css/graph_view.css'))}}
 {{extend 'layout.html'}}
 
     <head>
@@ -29,9 +30,11 @@
                 //n.fixed = true;
                 //if (n.isleaf) { n.fixed = true; }
             });
-            var svg = d3.select("body").append("svg:svg")
+            // find node using jQuery, append with d3
+            var svgParentNode = $("div.span9:eq(0)")[0];  
+            var svg = d3.select( svgParentNode ).append("svg:svg")
                 .attr("id", "figure")
-                .attr("width", w)
+                .attr("width", '100%')
                 .attr("height", h);
 
             var group = d3.select("#figure").append("svg:g");
