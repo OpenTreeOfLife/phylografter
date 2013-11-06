@@ -27,7 +27,7 @@ def view():
     working_dir = os.path.dirname(os.path.realpath(__file__))
     working_dir = working_dir[:-11]
     working_dir = str(working_dir)
-    working_dir = working_dir + "static/json/"
+    working_dir = working_dir + "static/treegraphjson/ncbi/"
     dirlist = os.listdir(working_dir)# get list of files in working_directory
     file_date = dirlist[0][:10]# snip the date stamp from one of those files to know what date to look for
     json_file_name = working_dir + file_date + "_tree_" + treeid + ".JSON" #build filename variable 
