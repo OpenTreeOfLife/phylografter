@@ -33,6 +33,9 @@ Trees derived from this data set:
 <!-- <td><a href="{{=URL(c='stree',f='v',args=[t.id])}}">view/annotate</a></td> -->
 <td><a href="{{=URL(c='stree',f='edit',args=[t.id])}}">[Edit record]</a></td>
 <td><a href="{{=URL(c='stree',f='svgView',args=[t.id])}}">[View]</a></td>
+{{if auth.is_logged_in() and auth.has_membership(role="contributor"):}} 
+	<td><a href="{{=URL(c='stree',f='delete',args=[t.id])}}">[Delete Tree]</a></td>
+{{pass}}
 <!-- <td><a href="{{=URL(c='stree',f='modalTreeObj',args=[t.id])}}">load pyTree</a></td> -->
     <!-- {{if auth.is_logged_in():}} -->
     <!--     <td><a href="{{=URL(c='gtree',f='backbone',args=[t.id])}}">[Use as grafted tree backbone]</a></td> -->
@@ -59,8 +62,8 @@ Trees derived from this data set:
 
 {{=LOAD('study', 'tag.load', args=[rec.id], ajax=True)}}
 
-<!-- Place Holder button for deleting a study -->
-{{=A('Delete this Study', _class='button', _href=URL('study','delete_study',args=rec.id), _style="margin-top:0.5em")}}
+{{if auth.is_logged_in() and auth.has_membership(role="contributor"):}} 
+	<td><a href="{{=URL(c='study',f='delete_study',args=[rec.id])}}">Delete Study</a></td>
 {{pass}}
 
 {{end}}
