@@ -8,3 +8,4 @@ cache
 errors
 *~
 *.DS_Store
+/static/treegraphjson/
