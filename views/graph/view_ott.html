@@ -18,7 +18,7 @@
 
 
             var datastring; // global variable for d3 = {{=XML(response.json(json))}};
-            var path = "/static/taxonomy-stree-json/"
+            var path = str.concat("/static/taxonomy-stree-json/", {{=taxonomy}}, {{=stree}})
 
             d3.json("path/to/file.json", function(error, json) {
             if (error) return console.warn(error);
