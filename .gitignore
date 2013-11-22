@@ -8,4 +8,4 @@ cache
 errors
 *~
 *.DS_Store
-/static/treegraphjson/
+/static/taxonomy-stree-json/
