@@ -11,22 +11,24 @@
         <script type="text/javascript" src="{{=URL(request.application,'static','globals.js')}}"></script>
         <script type="text/javascript" src="{{=URL(request.application,'static','widgetUtil.js')}}"></script>
         <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>      
+
     </head>
 
             <div id="boxContainer">
             <script type="text/javascript">
 
-
             var datastring; // global variable for d3 = {{=XML(response.json(json))}};
-            var path = "/static/taxonomy-stree-json/"
-
-            d3.json("path/to/file.json", function(error, json) {
-            if (error) return console.warn(error);
-            data = json;
-            visualizeit();
-            });
-
+            //var tree = {{=XML(rec.id)}}
+            //var path = "../../static/taxonomy-stree-json/ncbi/"+ tree + ".JSON";
+            
+            d3.json("tree_1.JSON", function(json) {
+            datastring = json;
+            //document.write(datastring);
+        
+           
+            
             var data = eval('(' + datastring + ')');
+            document.write(data);
             var w = 1000,
                 h = 700,
                 cx = w/2,
@@ -188,17 +190,17 @@
                 }
             }));
 
-            //svg.call(svg_drag);
+            svg.call(svg_drag);
 
-            // svg.style("opacity", 1e-6)
-            //     .transition()
-            //     .duration(2000)
-            //     .style("opacity", 1);
+            svg.style("opacity", 1e-6)
+                .transition()
+                .duration(2000)
+                .style("opacity", 1);
 
 
-            //layout.nodes(data.nodes).links(data.links).start();
+            layout.nodes(data.nodes).links(data.links).start();
 
-            
+             });            
             </script>
             </div>
 
