@@ -33,8 +33,11 @@ Trees derived from this data set:
 <!-- <td><a href="{{=URL(c='stree',f='v',args=[t.id])}}">view/annotate</a></td> -->
 <td><a href="{{=URL(c='stree',f='edit',args=[t.id])}}">[Edit record]</a></td>
 <td><a href="{{=URL(c='stree',f='svgView',args=[t.id])}}">[View]</a></td>
-{{if str(t.id) in graphlist:}}
+{{if str(t.id) in graphlist_ncbi:}}
 <td><a href="{{=URL(c='graph',f='view',args=[t.id])}}">[View NCBI Graph]</a></td>
+{{pass}}
+{{if str(t.id) in graphlist_ott:}}
+<td><a href="{{=URL(c='graph',f='view',args=[t.id])}}">[View OpenTree Graph]</a></td>
 {{pass}}
 {{if auth.is_logged_in() and auth.has_membership(role="contributor"):}} 
 	<td><a href="{{=URL(c='stree',f='delete',args=[t.id])}}">[Delete Tree]</a></td>
