@@ -8,4 +8,3 @@ cache
 errors
 *~
 *.DS_Store
-/static/taxonomy-stree-json/
