@@ -62,7 +62,7 @@ def graph_ncbi():
     working_dir = os.path.dirname(os.path.realpath(__file__))
     working_dir = working_dir[:-11]
     working_dir = str(working_dir)
-    working_dir = working_dir + "static/taxonomy-stree-json/ott/"
+    working_dir = working_dir + "static/taxonomy-stree-json/ncbi/"
     json_file_name = working_dir + "tree_" + treeid + ".JSON" #build filename variable 
     json = open(json_file_name, 'r').read() # read in the entire json as a string
 

@@ -25,7 +25,7 @@ $( document ).ready(function() {
   // Handler for .ready() called.
 
 
-    $.getJSON("{{=URL('graph_ott')}}", function(data){
+    $.getJSON("{{=URL(c='graph',f='graph_ott',args=[rec.id],)}}", function(data){
 
     //json_display(data);
     //document.write(data);

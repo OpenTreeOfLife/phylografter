@@ -4,23 +4,27 @@
 
     <head>
         <script type="text/javascript" src="{{=URL(request.application,'static','raphael.js')}}"></script>
-        <script type="text/javascript" src="{{=URL(request.application,'static/js','jquery.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','jquery.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','jquery-ui-1.8.5.custom.min.js')}}"></script>
         <script type="text/javascript" src="{{=URL(request.application,'static','jquery.corners.js')}}"></script>
         <script type="text/javascript" src="{{=URL(request.application,'static','utility.js')}}"></script>
+        <script type="text/javascript" src="{{=URL(request.application,'static','globals.js')}}"></script>
         <script type="text/javascript" src="{{=URL(request.application,'static','widgetUtil.js')}}"></script>
         <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>      
     </head>
-<div id="boxContainer">
-<script>
 
+
+<div class="figure">
+
+
+<script type="text/javascript">
+
+var result;
 
 $( document ).ready(function() {
   // Handler for .ready() called.
 
-
-
-    var result;
-    $.getJSON("{{=URL('graph_ncbi')}}", function(data){
+    $.getJSON("{{=URL(c='graph',f='graph_ncbi',args=[rec.id],)}}", function(data){
 
     //json_display(data);
     //document.write(data);
@@ -218,5 +222,3 @@ $( document ).ready(function() {
 <li><font color="blue"><strong>Blue</font></strong> lines are relationships in the tree, but not taxonomy, that don’t contradict the taxonomy. 
 <li><font color="red"><strong>Red</font></strong> lines are contradictions between the tree and taxonomy.
 </ul>
-
-              
