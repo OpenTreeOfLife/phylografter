@@ -1,0 +1,11 @@
+{{extend 'layout.html'}}
+<div style="padding:0.5em;font-weight:bold;font-family:sans-serif;color:red;font-size:135%">
+    Warning:</div> <div style="padding:0.5em;font-weight:bold;font-family:sans-serif;color:black;font-size:125%">You are about to delete the following tree:
+</div>
+
+{{=form}}
+{{if form.errors:}}
+{{=BEAUTIFY(form.errors)}}
+
+{{pass}}
+

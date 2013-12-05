@@ -73,14 +73,17 @@ def xmlNameSpace():
             "ot":"http://purl.org/opentree-terms#",
             "xsd":"http://www.w3.org/2001/XMLSchema#"}
 
-def createLiteralMeta(key, value):
-    '''
+def createLiteralMeta(key, value, datatype=None):
+    """
     Creates a dict for the @property key -> value mapping of nex:LiteralMeta type
-    '''
-    return { "@xsi:type": "nex:LiteralMeta",
+    """
+    meta= { "@xsi:type": "nex:LiteralMeta",
              "@property": key,
              "$": value,
            }
+    if datatype:
+        meta["@datatype"] =  datatype
+    return meta
 
 def createResourceMeta(key, value):
     '''
@@ -201,6 +204,19 @@ def focal_clade_meta_for_study(study_row):
         return createLiteralMeta("ot:focalClade", focal_clade)
     else:
         return
+
+def specified_root_meta_for_study(study_row):
+    """
+    generates a specified root element for a study (if available)
+    """
+    if 'specified_root' in db.study.fields:
+       root = study_row.specified_root
+       if (root):
+           return createLiteralMeta("ot:specifiedRoot",root)
+       else:
+           return
+    else:
+        return
         
 def get_study_tags(study_row,db):
     '''
@@ -227,7 +243,7 @@ def get_otu_rows_for_study(study_row,db):
     '''
     returns a tuple of list of otu ids for otu records that link to this study
     '''
-    return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.accepted_uid, ottol_name.name FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % study_row.id)
+    return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.accepted_uid, ottol_name.name, otu.tb_nexml_id FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % study_row.id)
     
 def meta_elts_for_otus(study_row,otuRows,db):
     '''
@@ -259,7 +275,7 @@ def otu_elt(otuRec,db):
     generates an otu element
     '''
     meta_elts = meta_elts_for_otu_elt(otuRec)
-    otu_id,label,ottol_name,accepted_uid,name = otuRec
+    otu_id,label,ottol_name,accepted_uid,name,tb_name = otuRec
     result = {"@id": "otu%d" % otu_id}
     if (name):
         result["@label"] = name
@@ -274,11 +290,16 @@ def meta_elts_for_otu_elt(otuRec):
     '''
     generates meta elements for an otu element
     '''
-    otu_id,label,ottol_name,accepted_uid,name = otuRec
+    otu_id,label,ottol_name,accepted_uid,name,tb_name = otuRec
     orig_label_el = createLiteralMeta("ot:originalLabel", label)
+    meta_list = []
     if accepted_uid:
-        a = createLiteralMeta("ot:ottolid", accepted_uid)
-        return {"meta" : [a, orig_label_el]}
+        meta_list.append(createLiteralMeta("ot:ottId", accepted_uid))
+    if tb_name:
+        meta_list.append(createLiteralMeta("ot:treebaseOTUId", tb_name))
+    if len(meta_list)>0:
+       meta_list.append(orig_label_el)
+       return {"meta": meta_list}
     return {"meta": orig_label_el}
     
 def trees_elt(study,db):
@@ -321,7 +342,7 @@ def tree_elt(tree_row,db):
     meta_elts = meta_elts_for_tree_elt(tree_row,db)
     node_rows = get_snode_recs_for_tree(tree_row,db)
     result = {"@id": 'tree%d' % tree_row.id,
-              "node": tree_nodes(node_rows),
+              "node": tree_nodes(node_rows,db),
               "edge": tree_edges(node_rows)
              }
     if meta_elts:
@@ -331,22 +352,26 @@ def tree_elt(tree_row,db):
     
 bltypes = {"substitutions per site": "ot:substitutionCount",
            "character changes": "ot:changesCount",
-           "time (Myr)": "ot:years",
+           "time (Myr)": "ot:time",
            "bootstrap values": "ot:bootstrapValues",                            
            "posterior support": "ot:posteriorSupport"
            }
 
 def meta_elts_for_tree_elt(tree_row,db):
-    '''
+    """
     returns meta elements for a tree element
-    '''
+    """
     result = []
     ingroup_node = tree_ingroup_node(tree_row,db)
     blRep = tree_row.branch_lengths_represent
     tree_tags = get_tree_tags(tree_row,db)
+    tree_type = tree_row.type
     if blRep in bltypes:
         lengthsElt = createLiteralMeta("ot:branchLengthMode",bltypes[blRep])
         result.append(lengthsElt)
+        if blRep == "time (Myr)":
+            timeUnitElt = createLiteralMeta("ot:branchLengthTimeUnit", "Myr")
+            result.append(timeUnitElt)
     if ingroup_node:
         ingroup_elt = createLiteralMeta("ot:inGroupClade",'node%d' % ingroup_node.id)
         result.append(ingroup_elt)
@@ -354,6 +379,9 @@ def meta_elts_for_tree_elt(tree_row,db):
        for tag in tree_tags:
            tag_elt = createLiteralMeta("ot:tag",tag)
            result.append(tag_elt)
+    if (tree_type != ""):  # this is supposed to be not null, but might still be blank
+        curatedType_elt = createLiteralMeta("ot:curatedType",tree_type)
+        result.append(curatedType_elt)
     if result:
         return dict(meta=result)
     else:
@@ -392,11 +420,11 @@ def get_tree_tags(tree_row,db):
     result = [row.tag for row in rows]
     return result
                         
-def tree_nodes(node_rows):
+def tree_nodes(node_rows,db):
     '''
     formats the nodes corresponding to the rows in node_rows
     '''
-    return [node_elt(node_row) for node_row in node_rows]
+    return [node_elt(node_row,db) for node_row in node_rows]
     
 def tree_edges(node_rows):
     '''
@@ -409,7 +437,7 @@ def edge_elt(child_row):
     '''
     returns an element for a node - note that the information for this comes from the child node
     '''
-    child_id,parent,otu_id,length = child_row
+    child_id,parent,otu_id,length,ignore = child_row
     result ={"@id": "edge%d" % child_id}
     result["@source"]='node%d' % parent
     result["@target"]='node%d' % child_id
@@ -418,16 +446,17 @@ def edge_elt(child_row):
     return result
 
 def get_snode_recs_for_tree(tree_row,db):
-    '''
+    """
     returns a list of the nodes associated with the specified study - now represented as tuples
-    '''
-    return db.executesql('SELECT id,parent,otu,length FROM snode WHERE (tree = %d);' % tree_row.id)
+    """
+    return db.executesql('SELECT id,parent,otu,length,isleaf FROM snode WHERE (tree = %d);' % tree_row.id)
     
-def node_elt(node_row):
-    '''
+def node_elt(node_row,db):
+    """
     returns an element for a node
-    '''
-    node_id,parent,otu_id,length = node_row
+    """
+    node_id,parent,otu_id,length,isleaf = node_row
+    meta_elts = meta_elts_for_node_elt(node_row,db)
     result = {"@id": "node%d" % node_id}
     if (otu_id):
         result["@otu"] = 'otu%d' % otu_id
@@ -435,4 +464,19 @@ def node_elt(node_row):
         pass
     else:
         result["@root"] = 'true'
+    if meta_elts:
+        result["@about"] = "#node%d" % node_id
+        result.update(meta_elts)
     return result
+
+def meta_elts_for_node_elt(node_row,db):
+    """
+    returns metadata elements for a node (currently ot:isLeaf)
+    """
+    result=[]
+    node_id,parent,otu_id,length,isleaf = node_row
+    if isleaf == 'T':
+        isLeaf_elt = createLiteralMeta("ot:isLeaf","true","xsd:boolean")
+        result.append(isLeaf_elt)
+        return dict(meta=result)
+    return

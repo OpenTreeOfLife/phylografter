@@ -1,5 +1,5 @@
 """
-functions for linking nodes to taxa
+functions for linking nodes to taxa, DOIs to dx.doi.org, etc.
 """
 
 def taxa2ncbi(db):
@@ -37,3 +37,28 @@ def suggest(db, root):
             if name:
                 tips[n].add(name)
     return d, tips
+
+def doi2url(doi):
+    """
+    Convert any reasonable DOI (whether URL or simple identifier) into a standard
+    URL on dx.doi.org, suitable for display.
+    """
+    doi = normalize_doi_for_url(doi);
+    return 'http://dx.doi.org/' + doi
+
+def normalize_doi_for_url(raw):
+    """
+    Convert any reasonable DOI (whether URL or simple identifier) into a standard
+    minimal ID
+    """
+    lowercase = raw.lower()
+    if lowercase.startswith('doi:'):
+        raw = raw[4:]
+    elif lowercase.startswith('doi'):
+        raw = raw[3:]
+    elif lowercase.startswith('http://dx.doi.org/'):
+        raw = raw[18:]
+    if lowercase.endswith('.json'):
+        raw = raw[:-5]
+    return raw
+

@@ -1,4 +1,4 @@
-{{#extend 'layout_right_sidebar.html'}}
+{{ globals()['right_sidebar_enabled']=True }}
 {{extend 'layout.html'}}
 
 <div id="sourceTreeInfo">Source tree {{=rec.id}}: {{=rec.type}} from {{=A(_study_rep(rec.study), _href=URL('study','view',args=rec.study.id))}}</div>

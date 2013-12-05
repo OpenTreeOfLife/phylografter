@@ -12,11 +12,11 @@ def parse_nexson(f,db):
     from json import load
     tree = load(f)
     return parse_nexml(tree,db)
-    
-#put this in one place so it can be turned off easily when the time comes    
+
+#put this in one place so it can be turned off easily when the time comes
 def encode(str):
     return str  #.encode('ascii')
-    
+
 def process_meta_element_sql(contents, results, db):
     """
     Builds the list of database updates corresponding to the study
@@ -43,9 +43,9 @@ def process_meta_element_sql(contents, results, db):
         results.append(('study','focal_clade_ottol',metafields['ot:focalClade']))
     if 'ot:tag' in metafields:
         for tag in metafields['ot:tag']:
-            results.append(('study','tag',tag))    
+            results.append(('study','tag',tag))
     return results
-    
+
 def parse_study_meta(metaEle):
     """
     dereferences the collection of meta elements into a dict; keys are NexSON
@@ -77,9 +77,15 @@ def parse_study_meta(metaEle):
             result['ot:focalclade'] = int(p[u'$'])
         elif prop == u'ot:specifiedRoot':
             result['ot:specifiedRoot'] = encode(p[u'$'])
+        elif prop == u'ot:annotation':
+            result['ot:annotation'] = process_annotation_metadata(p)
     if len(studytags)>0:
         result['ot:tag']=studytags
     return (result)
+
+def process_annotation_metadata(p):
+    print "Entering annotation: %s" % str(p)
+    return None
 
 
 def process_otus_element_sql(contents, results, db):
@@ -94,7 +100,7 @@ def process_otus_element_sql(contents, results, db):
     for otu in otu_set:
         results = process_otu_element_sql(otu,results,db)
     return results
-    
+
 def process_otu_element_sql(otu, results, db):
     id = otu[u'@id']
     if id.startswith('otu'):
@@ -119,7 +125,7 @@ def process_otu_element_sql(otu, results, db):
     if tbid:
         results.append(('otu','tb_nexml_id',tbid))
     return results
-    
+
 def process_otu_meta(meta_elements):
     """
     returns a tuple rather than a dict because two elements 
@@ -138,7 +144,7 @@ def process_otu_meta(meta_elements):
             olabel = encode(p[u'$'])
         elif prop == u'ot:treebaseOTUId':
             tbid = encode(p[u'$'])
-    return (ottid,olabel,tbid)    
+    return (ottid,olabel,tbid)
 
 def process_trees_element_sql(contents, results, db):
     """
@@ -250,7 +256,7 @@ def process_node_element_sql(node, edge_table, results, db):
            #print "appending parent %s to node %s" %(parent,raw_id) 
            results.append(('node','parent',int(parent)))    
     return results
-        
+
 def make_edge_table(edges):
     """
     edge_table is a dict that maps the child node of the edge
@@ -262,22 +268,22 @@ def make_edge_table(edges):
     for edge in edges:
         edge_table[edge[u'@target']] = edge
     return edge_table
-    
+
 nexson_elements = [u'@xmlns', u'@nexmljson',u'@about',
                    u'@generator',u'@id', u'@version',
                    u'meta',u'otus',u'trees']
 
-    
+
 sql_parse_methods = [process_meta_element_sql,
                      process_otus_element_sql,
                      process_trees_element_sql]
 
 #stub to support parsing in other formats
 target_parsers= {'sql': sql_parse_methods} #, 'bson': bson_parse_methods} 
-   
+
 def parse_nexml(study,db):
     """
-    Entry point - 
+    Entry point -
        study is parsed JSON from a NexSON file
        db is DAL db to receive results of parse
     """

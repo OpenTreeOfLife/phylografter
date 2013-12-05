@@ -34,7 +34,6 @@ if 'USE_MYSQLDB_ADAPTOR' in os.environ:
 db = DAL("mysql://%s:%s@%s/%s" % (user, password, host, dbname), migrate=False ) 
 #db = DAL("mysql://%s:%s@%s/%s" % (user, password, host, dbname), migrate=False, fake_migrate_all=True, migrate_enabled=False ) 
 
-
 from gluon.tools import *
 ## mail = Mail()                    # mailer
 auth = Auth(globals(),db)           # authentication/authorization
