@@ -27,7 +27,7 @@ def sql_process(actions, db):
                 elif current_table == 'node':
                     #print "Trying to update nodes's tree to %d" % tree_id
                     current_row['tree'] = tree_id
-                #print "updating: %d to %s" %(current_row.id,str(current_row))
+               # print "updating: %d to %s" %(current_row.id,str(current_row))
                 current_row.update_record()
                 if new_tags:
                     update_tags(db,current_table,new_tags,current_row.id)
@@ -106,6 +106,7 @@ def insert_new_rows(actions, db):
     action_gen = generate_actions(actions)
     update_obj = {}
     fixup_table = {}
+    update_table = None
     dummy_counter = 0
     try:
         table,field,value = action_gen.next()
@@ -126,18 +127,24 @@ def insert_new_rows(actions, db):
                         action = action_gen.next()
                         field = action[1]
                     table,field,value = action # update for next record
-                    #print "About to update: table= %s, update_obj = %s, update_id = %d" % (str(update_table),str(update_obj),update_id)
-                    new_id = insert_new(db,update_table,update_obj,update_id)
-                    #print "just updated, update_table is %s, new_id is %d" % (str(update_table),new_id)
-                    if new_id > 0: # if restore to original id works, no need to add to fixup
-                        fixup_table[(update_table,update_id)] = new_id
+                    finish_update(db,update_table,update_obj,update_id,fixup_table)
                 else:
                     table,field,value = action_gen.next()
             else:
                 table,field,value = action_gen.next()
     except StopIteration:
+        if update_table:
+            finish_update(db,update_table,update_obj,update_id,fixup_table)
         return fixup_table
-        
+
+def finish_update(db,update_table,update_obj,update_id,fixup_table):
+    #print "About to update: table= %s, update_obj = %s, update_id = %d" % (str(update_table),str(update_obj),update_id)
+    new_id = insert_new(db,update_table,update_obj,update_id)
+    #print "just updated, update_table is %s, new_id is %d" % (str(update_table),new_id)
+    if new_id > 0: # if restore to original id works, no need to add to fixup
+        fixup_table[(update_table,update_id)] = new_id
+                                    
+                          
           
 def generate_actions(actions):
     for action in actions:
@@ -146,6 +153,7 @@ def generate_actions(actions):
                                 
 #wish could do this with a lookup, but some tables need to be placated with dummy values
 def insert_new(db,table,values,old_id=None):
+    #print "Entering insert_new: %s,%s,%d" % (table,values,old_id)
     if table=='study':
         if 'citation' in values and 'contributor' in values:
             if old_id:
@@ -158,6 +166,7 @@ def insert_new(db,table,values,old_id=None):
         return db.study_tag.insert()
     if table=='otu':
         if 'label' in values:
+            #print "otu label is {0}".format(values['label'])
             if old_id:
                 return db.otu.insert(id=old_id,label=values['label'])
             else:
@@ -211,8 +220,9 @@ def find_tags(db,table,id):
 def update_tags(db,table,tags,id):
     if table == 'study':
         for tag in tags:
+            #print "tag is {0}".format(tag)
             rows = db.executesql(
-                 "SELECT id FROM study_tag WHERE study = %d AND tag = '%s'" % (id,tag))
+                 'SELECT id FROM study_tag WHERE study = %d AND tag = "%s"' % (id,tag))
             #rows = db((db.study_tag.study == id) & (db.study_tag.tag == tag)).select()
             if not rows:  #only need to add new tags
                 #print 'inserting study tag %s to study %d' % (tag,id)
@@ -280,6 +290,8 @@ def restore_labels(db,tree):
     nodes = db.executesql("SELECT id,otu FROM snode WHERE tree = %s AND otu IS NOT NULL" % tree)
     for (id,otu) in nodes:
         ((olabel,),) = db.executesql("SELECT label FROM otu WHERE otu.id = %d" % otu)
+        if olabel.find("'") != -1:
+            olabel = "".join(olabel.split("'"))
         db.executesql("UPDATE snode SET label = '%s' WHERE id = %d" % (olabel,id))
         
 def restore_newick(db,tree):
@@ -296,7 +308,7 @@ def restore_newick(db,tree):
     def proc(node, table, field):
         try: s = str(getattr(getattr(node.rec, table), field))
         except AttributeError: s = ''
-        return '_'.join(s.split())
+        return "".join('_'.join(s.split()).split("'"))
     for n in root:
         n.label = ''
         if n.isleaf: n.label = '_'.join([ proc(n, t, f) for t, f in lfmt ])
@@ -304,4 +316,5 @@ def restore_newick(db,tree):
             pass
         n.label = n.label.replace('(','--').replace(')','--')
     newick_str = root.write()
+    #print "newick_str is {0}".format(newick_str)
     db.executesql("UPDATE stree SET newick = '%s' WHERE id = %d" % (newick_str,tree))
