@@ -15,21 +15,19 @@
 
 
 <div class="figure">
-
-
 <script type="text/javascript">
-
+//<svg id="figure" width="100%" height="700">
+//<g transform="translate(66,83)">...</g>
+//</svg>
 var result;
 
 $( document ).ready(function() {
   // Handler for .ready() called.
 
     $.getJSON("{{=URL(c='graph',f='graph_ncbi',args=[rec.id],)}}", function(data){
-
-    //json_display(data);
-    //document.write(data);
-    var w = 1000,
-        h = 700,
+        
+        var w = "100%",
+        h = 600,
         cx = w/2,
         cy = h/2,
         fill = d3.scale.category10();
@@ -41,13 +39,14 @@ $( document ).ready(function() {
         //if (n.isleaf) { n.fixed = true; }
     });
 
-    var svg = d3.select("body").append("svg:svg")
+    var svg = d3.select("div.figure").append("svg:svg")
+
         .attr("id", "figure")
         .attr("width", w)
         .attr("height", h);
 
     var group = d3.select("#figure").append("svg:g");
-
+    
     var dragging = false;
     var scale = 1.0;
 
