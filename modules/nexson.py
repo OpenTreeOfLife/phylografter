@@ -18,11 +18,11 @@ from gluon.storage import Storage
 # Note - the nexml root element can have meta elements as direct children; unlike everywhere else, there are no id or about
 # attributes as seem to be required for other element types (e.g., otu, node) when they have meta children
 def nexmlStudy(study_id,db):
-    '''
+    """
     Exports the set of trees associated with a study as JSON Nexml
     study - the study to export
     db - database connection
-    '''
+    """
     study_row = db.study(study_id)
     meta_elts = meta_elts_for_nexml(study_row,db) 
     otus = otus_elt_for_study(study_row,db)
@@ -158,6 +158,7 @@ def year_meta_for_study(study_row):
     else:
         return
 
+DOI_PREFIX = 'http://dx.doi.org/'
 def doi_meta_for_study(study_row):
     '''
     generates returns an ot:studyPublication metadata element if a (possibly incomplete) doi or a 
@@ -165,16 +166,16 @@ def doi_meta_for_study(study_row):
     '''
     doi = study_row.doi
     if doi:
-        if (doi.startswith('http://dx.doi.org/')):
+        if (doi.startswith(DOI_PREFIX)):
             pass  #fine, leave as is
         elif (doi.startswith('http://www.')): #not a doi, but an identifier of some sort
             pass
         elif (doi.startswith('doi:')):    #splice the http prefix on
-           doi = 'http://dx.doi.org/' + doi[4:]
+           doi = DOI_PREFIX + doi[4:]
         elif not(doi.startswith('10.')):  #not a doi, or corrupted, treat as blank
             return
         else:
-           doi = 'http://dx.doi.org/' + doi
+           doi = DOI_PREFIX + doi
         return createResourceMeta("ot:studyPublication", doi)
     else:
         return
@@ -194,7 +195,7 @@ def phylografter_id_meta_for_study(study_row):
     generates phylografter study id metadata element for a study
     '''
     return createLiteralMeta("ot:studyId",str(study_row.id))
-    
+
 def focal_clade_meta_for_study(study_row):
     '''
     generates focal clade metadata element for a study
@@ -217,7 +218,7 @@ def specified_root_meta_for_study(study_row):
            return
     else:
         return
-        
+
 def get_study_tags(study_row,db):
     '''
     returns list of tags associated with the study; 
@@ -238,13 +239,13 @@ def otus_elt_for_study(study_row,db):
     otus_element = {"otu": otu_elements,
                     "@id": "otus%d" % study_row.id}
     return {"otus": otus_element}
-    
+
 def get_otu_rows_for_study(study_row,db):
     '''
     returns a tuple of list of otu ids for otu records that link to this study
     '''
     return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.accepted_uid, ottol_name.name, otu.tb_nexml_id FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % study_row.id)
-    
+
 def meta_elts_for_otus(study_row,otuRows,db):
     '''
     generates nexml meta elements that are children of an otus element (currently none)
@@ -269,7 +270,7 @@ def otus_elt_for_tree(tree_row,study_row,db):
     otus_element = {"otu": otu_elements,
                     "@id": "otus %s.%s" % (str(study_row.id),str(tree_row.id))}
     return {"otus",otus_element}
-       
+
 def otu_elt(otuRec,db):
     '''
     generates an otu element
@@ -301,7 +302,7 @@ def meta_elts_for_otu_elt(otuRec):
        meta_list.append(orig_label_el)
        return {"meta": meta_list}
     return {"meta": orig_label_el}
-    
+
 def trees_elt(study,db):
     '''
     generate trees element
@@ -312,12 +313,12 @@ def trees_elt(study,db):
           "@id": "trees%d" % study.id,
           "tree": tree_list}
     return {"trees": body}
-    
+
 def meta_elts_for_trees_elt(study,db):
     '''
     placeholder
     '''
-    return dict()    
+    return dict()
 
 def singleton_trees_elt(tree_row,study_row,db):
     '''
@@ -328,13 +329,13 @@ def singleton_trees_elt(tree_row,study_row,db):
           "tree": tree_list
          }
     return {"trees": body}
-    
+
 def get_single_tree_study_id(tree,db):
     '''
     return the study that contains the specfied tree
     '''
     return db.stree(tree).study
-    
+
 def tree_elt(tree_row,db):
     '''
     generates a tree element
@@ -349,11 +350,11 @@ def tree_elt(tree_row,db):
         result["@about"] = "#tree%d" % tree_row.id
         result.update(meta_elts)
     return result
-    
+
 bltypes = {"substitutions per site": "ot:substitutionCount",
            "character changes": "ot:changesCount",
            "time (Myr)": "ot:time",
-           "bootstrap values": "ot:bootstrapValues",                            
+           "bootstrap values": "ot:bootstrapValues",
            "posterior support": "ot:posteriorSupport"
            }
 
@@ -399,7 +400,7 @@ def tree_ingroup_node(tree_row,db):
         return nodes.first()
     else:
         return deepest_ingroup(nodes)
-        
+
 def deepest_ingroup(nodes):
     '''
     chooses the deepest (closer to root) node when more than one is tagged
@@ -409,7 +410,7 @@ def deepest_ingroup(nodes):
         if (node.next < best.next) and (node.back > best.back):
             best = node
     return best
-                        
+
 def get_tree_tags(tree_row,db):
     '''
     returns a list of tag strings associated with the stree
@@ -419,20 +420,20 @@ def get_tree_tags(tree_row,db):
     rows = db(q).select()
     result = [row.tag for row in rows]
     return result
-                        
+
 def tree_nodes(node_rows,db):
     '''
     formats the nodes corresponding to the rows in node_rows
     '''
     return [node_elt(node_row,db) for node_row in node_rows]
-    
+
 def tree_edges(node_rows):
     '''
     formats the edges leading to each node in the rows in node_rows
     '''
     #node_row[1] is parent - test excludes root node
     return [edge_elt(node_row) for node_row in node_rows if node_row[1]]
-    
+
 def edge_elt(child_row):
     '''
     returns an element for a node - note that the information for this comes from the child node
@@ -450,7 +451,7 @@ def get_snode_recs_for_tree(tree_row,db):
     returns a list of the nodes associated with the specified study - now represented as tuples
     """
     return db.executesql('SELECT id,parent,otu,length,isleaf FROM snode WHERE (tree = %d);' % tree_row.id)
-    
+
 def node_elt(node_row,db):
     """
     returns an element for a node
@@ -458,7 +459,7 @@ def node_elt(node_row,db):
     node_id,parent,otu_id,length,isleaf = node_row
     meta_elts = meta_elts_for_node_elt(node_row,db)
     result = {"@id": "node%d" % node_id}
-    if (otu_id):
+    if otu_id:
         result["@otu"] = 'otu%d' % otu_id
     if parent:
         pass
@@ -471,12 +472,19 @@ def node_elt(node_row,db):
 
 def meta_elts_for_node_elt(node_row,db):
     """
-    returns metadata elements for a node (currently ot:isLeaf)
+    returns metadata elements for a node (currently ot:isLeaf,ot:ottTaxonName)
     """
     result=[]
     node_id,parent,otu_id,length,isleaf = node_row
     if isleaf:
         isLeaf_elt = createLiteralMeta("ot:isLeaf","true","xsd:boolean")
         result.append(isLeaf_elt)
+    if otu_id:
+       names = db.executesql('SELECT ottol_name.name FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.id = %d);' % otu_id)
+       if names:
+            name = names[0][0]
+            if name:
+                result.append(createLiteralMeta("ot:ottTaxonName",name))
+    if len(result)>0:
         return dict(meta=result)
     return
