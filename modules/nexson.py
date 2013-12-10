@@ -472,7 +472,7 @@ def node_elt(node_row,db):
 
 def meta_elts_for_node_elt(node_row,db):
     """
-    returns metadata elements for a node (currently ot:isLeaf)
+    returns metadata elements for a node (currently ot:isLeaf,ot:ottTaxonName)
     """
     result=[]
     node_id,parent,otu_id,length,isleaf = node_row
