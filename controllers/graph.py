@@ -37,7 +37,7 @@ def view_ncbi():
         u = URL(c="study",f="view",args=[v])
         return A(_study_rep(db.study(v)), _href=u)
     db.stree.study.widget = w
-    response.subtitle = "TreeGraph of source tree %s" % rec.id
+    response.subtitle = "NCBI TreeGraph of source tree %s" % rec.id
 
 
     return dict(rec=rec)    
@@ -50,7 +50,7 @@ def view_ott():
         u = URL(c="study",f="view",args=[v])
         return A(_study_rep(db.study(v)), _href=u)
     db.stree.study.widget = w
-    response.subtitle = "TreeGraph of source tree %s" % rec.id
+    response.subtitle = "OTT TreeGraph of source tree %s" % rec.id
 
 
     return dict(rec=rec)                   
