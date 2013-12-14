@@ -1,15 +1,9 @@
 {{ globals()['right_sidebar_enabled']=True }}
 {{response.files.append(URL('static','css/graph_view.css'))}}
+{{response.files.append(URL('static','jquery.corners.js'))}}
+{{response.files.append(URL('static','jquery.corners.js'))}}
+{{response.files.append("http://d3js.org/d3.v3.min.js")}}
 {{extend 'layout.html'}}
-
-    <head>
-        <script type="text/javascript" src="{{=URL(request.application,'static','raphael.js')}}"></script>
-        <script type="text/javascript" src="{{=URL(request.application,'static/js','jquery.js')}}"></script>
-        <script type="text/javascript" src="{{=URL(request.application,'static','jquery.corners.js')}}"></script>
-        <script type="text/javascript" src="{{=URL(request.application,'static','utility.js')}}"></script>
-        <script type="text/javascript" src="{{=URL(request.application,'static','widgetUtil.js')}}"></script>
-        <script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>      
-    </head>
 <body>
 
 <div id="boxContainer">
