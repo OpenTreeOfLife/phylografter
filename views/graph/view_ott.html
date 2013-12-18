@@ -195,10 +195,6 @@ $( document ).ready(function() {
 </script>
 </div>
 
-<script type="text/javascript" charset="utf-8">
-    applicationName = '{{=request.application}}';
-</script>
-
 {{block right_sidebar}}
 <strong>Controls</strong>
 <ul>
@@ -209,10 +205,7 @@ $( document ).ready(function() {
 
 <strong>Interpretation</strong>
 <ul>
-<li><font color="green"><strong>Green</font></strong> lines trace taxonomy exactly. 
-<li><font color="blue"><strong>Blue</font></strong> lines are relationships in the tree, but not taxonomy, that don’t contradict the taxonomy. 
-<li><font color="red"><strong>Red</font></strong> lines are contradictions between the tree and taxonomy.
+<li><font color="green"><strong>Green</font></strong> edges are parent-child relationships in the tree that match the taxonomy. 
+<li><font color="blue"><strong>Blue</font></strong> edges are relationships in the tree that neither exist in the taxonomy nor contradict it (e.g., resolving relationships within a genus).
+<li><font color="red"><strong>Red</font></strong> edges are parent-child relationships in the taxonomy that are not traced by the tree. Red <span style="color:red">nodes</span> are taxa whose monophyly is contradicted by the tree.
 </ul>
-
-
-              
