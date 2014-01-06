@@ -41,6 +41,8 @@ def process_meta_element_sql(contents, results, db):
         results.append(('study','contributor',metafields['ot:curatorName']))
     if 'ot:focalClade' in metafields:
         results.append(('study','focal_clade_ottol',metafields['ot:focalClade']))
+    if 'ot:annotation' in metafields:
+        results.append(('study','annotation',metafields['ot:annotation']))
     if 'ot:tag' in metafields:
         for tag in metafields['ot:tag']:
             results.append(('study','tag',tag))
@@ -84,8 +86,16 @@ def parse_study_meta(metaEle):
     return (result)
 
 def process_annotation_metadata(p):
-    print "Entering annotation: %s" % str(p)
-    return None
+    from json import JSONEncoder 
+    #print "Entering annotation %s " % p[u'$']
+    #print "Author: %s" % p['author']
+    #print "isValid: %s" % p['isValid']
+    #print "id: %s" % p['id']
+    #print "date created: %s" % p['dateCreated']
+    if 'dateModified' in p:
+        print "date modified: %s" % p['dateModified']
+    #print "Messages: %s" % str(p['messages'])
+    return p
 
 
 def process_otus_element_sql(contents, results, db):

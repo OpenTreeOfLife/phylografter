@@ -34,7 +34,7 @@ def _study_rep(x):
         s = s+". %s" % x.label
     return s
 
-def define_tables(db, migrate=False):
+def define_tables(db, migrate=True):
     ## # this table is obsolete and will be removed in the future
     ## db.define_table(
     ##     "ncbi_taxon",
@@ -530,3 +530,12 @@ def define_tables(db, migrate=False):
     ##     Field("comment", "text"),
     ##     migrate=migrate
     ##     )
+    
+    db.define_table(
+        "nexson_annotation",
+        Field("study",db.study),
+        Field("uid","string"),
+        Field("text_contents", "text"),
+        Field("raw_contents","json"),
+    migrate=True
+    )

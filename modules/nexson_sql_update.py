@@ -4,6 +4,7 @@ from gluon import *
 
 
 def sql_process(actions, db):
+    from json import JSONEncoder
     study_contributor = ""
     study_id = -1
     tree_id = -1
@@ -59,6 +60,11 @@ def sql_process(actions, db):
             new_tags.add(value)
         elif (field == 'in_group_clade'):
             pass
+        elif (field == 'annotation'):
+                e = JSONEncoder()
+                foo = e.encode(value)
+                print "Recoded, length = %d" % len(foo)
+                current_row['nexson_annotation']=foo
         else:
             if current_row:
                 if (table,field) in fixup_table:  #sometimes updatable fields may have names different from their value tables

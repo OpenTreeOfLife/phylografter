@@ -989,8 +989,8 @@ def import_NexSON():
     study_id = parse_nexson(cStringIO.StringIO(post_text),db)
     print datetime.datetime.now()
     return study_id
-    
-TESTFILE = "/Users/pmidford/Projects/nexson-sandbox/study9.json"    
+
+TESTFILE = "/Users/pmidford/Projects/phylografter_regression/annotated/report106.json"
 def importTest():
     """
     just for testing
