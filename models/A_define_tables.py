@@ -34,7 +34,7 @@ def _study_rep(x):
         s = s+". %s" % x.label
     return s
 
-def define_tables(db, migrate=True):
+def define_tables(db, migrate=False):
     ## # this table is obsolete and will be removed in the future
     ## db.define_table(
     ##     "ncbi_taxon",

@@ -267,7 +267,7 @@ def index_nodes(db,tree_id):
     for root in root_nodes:  # should be singleton
         node_id = root[0]
         index_children(db,node_id,0)
-        
+
 def index_children(db, id,n):
     n = n+1
     primary_next = n
@@ -285,9 +285,9 @@ def index_children(db, id,n):
     if (primary_back == primary_next + 1):
         is_leaf = 'T'
     else:
-        is_leaf = 'F'   
-    #print "UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
-    #               primary_back,is_leaf,id)
+        is_leaf = 'F'
+    print "UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
+                   primary_back,is_leaf,id)
     db.executesql("UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
                    primary_back,is_leaf,id))
     return next_back
