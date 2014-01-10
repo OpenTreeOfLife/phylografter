@@ -195,8 +195,8 @@
       <div class="container">    
         <div class="sixteen columns">
           <div id="navbar">{{='auth' in globals() and auth.navbar(separators=(' ',' | ',''))}}</div>
-          {{is_mobile=request.user_agent().is_mobile}}
-          <div id="menu">{{=MENU(response.menu, _class='mobile-menu' if is_mobile else 'sf-menu',mobile=is_mobile)}}
+          {{#is_mobile=request.user_agent().is_mobile}}
+          <div id="menu">{{#=MENU(response.menu, _class='mobile-menu' if is_mobile else 'sf-menu',mobile=is_mobile)}}
           </div>
         </div>
       </div>

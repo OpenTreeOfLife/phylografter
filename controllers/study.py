@@ -424,7 +424,30 @@ def view():
         r = lambda v: A("[Edit file info]", _href=URL(c="study",f="editfile",args=[v]))
         db.study_file.id.represent = r
     files = crud.select(db.study_file, db.study_file.study==rec, truncate=64)
-    return dict(form=form, label=label, trees=trees, files=files, rec=rec)
+    
+    ### determines if there are json files matching the trees for the given study
+    working_dir = os.path.dirname(os.path.realpath(__file__))
+    working_dir = working_dir[:-11]
+    working_dir = str(working_dir)
+    working_dir_ncbi = working_dir + "static/taxonomy-stree-json/ncbi/"
+    working_dir_ott = working_dir + "static/taxonomy-stree-json/ott/"
+    dirlist_ncbi = os.listdir(working_dir_ncbi)# get list of files in working_directory
+    dirlist_ott = os.listdir(working_dir_ott)# get list of files in working_directory
+    graphlist_ncbi = []
+    graphlist_ott = []
+    for t in trees:
+        treeid = str(t.id)
+        file_name_ncbi = working_dir_ncbi + "tree_" + treeid + ".JSON" #build filename variable 
+        file_name_ott = working_dir_ott + "tree_" + treeid + ".JSON" #build filename variable 
+        try:
+            with open(file_name_ncbi):
+                graphlist_ncbi.append(treeid)
+            with open(file_name_ott):
+                graphlist_ott.append(treeid)
+        except IOError:                        
+            error = "No Json Found" ##do nothing
+
+    return dict(form=form, label=label, trees=trees, files=files, rec=rec, graphlist_ncbi=graphlist_ncbi, graphlist_ott=graphlist_ott)
         
 def delete_tag():
     rec = db.study(request.args(0))
