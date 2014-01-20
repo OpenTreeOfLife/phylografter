@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf8
 from gluon import *
+from sys import maxsize
 
 
 def parse_nexson(f,db):
@@ -41,6 +42,8 @@ def process_meta_element_sql(contents, results, db):
         results.append(('study','contributor',metafields['ot:curatorName']))
     if 'ot:focalClade' in metafields:
         results.append(('study','focal_clade_ottol',metafields['ot:focalClade']))
+    if 'ot:dataDeposit' in metafields:
+        results.append(('study','dataDeposit',metafields['ot:dataDeposit']))
     if 'ot:annotation' in metafields:
         results.append(('study','annotation',metafields['ot:annotation']))
     if 'ot:tag' in metafields:
@@ -112,6 +115,7 @@ def process_otus_element_sql(contents, results, db):
     return results
 
 def process_otu_element_sql(otu, results, db):
+    from sys import maxsize
     id = otu[u'@id']
     if id.startswith('otu'):
         id = id[3:]
@@ -122,12 +126,21 @@ def process_otu_element_sql(otu, results, db):
     else:
         ottid,olabel,tbid = process_otu_meta(meta_ele)
     if ottid:  #redesign here?
-        query_str = 'SELECT id FROM ottol_name WHERE uid = %d' % ottid
+        #query suppresses synonyms
+        query_str = 'SELECT id FROM ottol_name WHERE uid = %d and parent_uid IS NOT NULL' % ottid
         query_result = db.executesql(query_str)
-        #print "querystr is '%s', result is %s" % (query_str,internal_id)
+        #print "querystr is '%s', result is %s" % (query_str,query_result)
         if query_result:
-           ((internal_id,),) = query_result
-           results.append(('otu','ottol_name',internal_id))  #need to do something special here
+            if len(query_result) == 1:
+               ((internal_id,),) = query_result
+            else:
+                best_id = maxsize
+                for item in query_result:
+                    (r_id,) = item
+                    if r_id < best_id:
+                        best_id = r_id
+                internal_id = best_id
+            results.append(('otu','ottol_name',internal_id))  #need to do something special here
         else:
             print "bad ott id: %d" % ottid
     if olabel:
@@ -146,7 +159,7 @@ def process_otu_meta(meta_elements):
     tbid = None
     for p in meta_elements:
         prop = p[u'@property']
-        if prop == u'ot:ottid':  
+        if prop == u'ot:ottId':
             ottid = int(p[u'$'])
         elif prop == u'ot:ottolid': # 'ot:ottolid' is deprecated (10-2013)
             ottid = int(p[u'$'])
@@ -188,11 +201,11 @@ def process_tree_element_sql(tree, results, db):
     else:
         meta_ele = None
     if isinstance(meta_ele,dict):
-        blmode,tags,ingroup = process_tree_meta([meta_ele])
+        blmode,tags,ingroup,ctype = process_tree_meta([meta_ele])
     elif meta_ele:
-        blmode,tags,ingroup = process_tree_meta(meta_ele)
+        blmode,tags,ingroup,ctype = process_tree_meta(meta_ele)
     else:
-        blmode,tags,ingroup = (None,[],None)
+        blmode,tags,ingroup,ctype = (None,[],None,None)
     results.append(('tree','id',int(id)))
     if blmode:
         results.append(('tree','branch_lengths_represent',blmode))
@@ -224,6 +237,7 @@ def process_tree_meta(meta_elements):
     blmode = None
     tags = []
     ingroup = None
+    ctype = None
     for p in meta_elements:
         prop = p[u'@property']
         if prop == u'ot:branchLengthMode':
@@ -234,7 +248,9 @@ def process_tree_meta(meta_elements):
             tags.append(encode(p[u'$']))
         elif prop == u'ot:inGroupClade':
             ingroup = encode(p[u'$'])
-    return (blmode,tags,ingroup)    
+        elif prop == u'ot:curatedType':
+            ctype = encode(p[u'$'])
+    return (blmode,tags,ingroup,ctype)    
 
 def process_node_element_sql(node, edge_table, results, db):
     """

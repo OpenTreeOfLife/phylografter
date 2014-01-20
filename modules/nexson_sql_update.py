@@ -26,9 +26,7 @@ def sql_process(actions, db):
                 elif current_table == 'tree':
                     current_row['study'] = study_id
                 elif current_table == 'node':
-                    #print "Trying to update nodes's tree to %d" % tree_id
                     current_row['tree'] = tree_id
-               # print "updating: %d to %s" %(current_row.id,str(current_row))
                 current_row.update_record()
                 if new_tags:
                     update_tags(db,current_table,new_tags,current_row.id)
@@ -161,39 +159,56 @@ def generate_actions(actions):
 def insert_new(db,table,values,old_id=None):
     #print "Entering insert_new: %s,%s,%d" % (table,values,old_id)
     if table=='study':
-        if 'citation' in values and 'contributor' in values:
-            if old_id:
-                new_id = db.study.insert(id=old_id,citation=values['citation'],contributor=values['contributor'])
-            else:
-                new_id = db.study.insert(citation=values['citation'],contributor=values['contributor'])
-            #print "new row is %s" % str(new_id)
-            return new_id
+        return insert_new_study(db,values,old_id)
     if table=='study_tag':  #maybe this should be interned, rather than generate - no id is saved
         return db.study_tag.insert()
     if table=='otu':
-        if 'label' in values:
-            #print "otu label is {0}".format(values['label'])
-            if old_id:
-                return db.otu.insert(id=old_id,label=values['label'])
-            else:
-                return db.otu.insert(label=values['label'])
+        return insert_new_otu(db,values,old_id)
     if table=='tree':
-        if 'contributor' in values:
-            if old_id:
-                new_id = db.stree.insert(id=old_id,contributor=values['contributor'],newick='')
-            else:
-                new_id = db.stree.insert(contributor=values['contributor'],newick='',type='')
-        else: 
-            if old_id:
-                new_id = db.stree.insert(id=old_id,contributor='',newick='',type='')
-            else:
-                new_id = db.stree.insert(contributor='',newick='',type='')
-            return new_id  
+        return insert_new_tree(db,values,old_id)
     if table=='node':
+        return insert_new_node(db,values,old_id)
+
+def insert_new_study(db,values,old_id):
+    if 'citation' in values and 'contributor' in values:
         if old_id:
-            return db.snode.insert(id=old_id,tree=None) #required, not available
+            new_id = db.study.insert(id=old_id,citation=values['citation'],contributor=values['contributor'])
         else:
-            return db.snode.insert(tree=None)
+            new_id = db.study.insert(citation=values['citation'],contributor=values['contributor'])
+        #print "new row is %s" % str(new_id)
+        return new_id
+
+def insert_new_otu(db,values,old_id):
+    if 'label' in values:
+        #print "otu label is {0}".format(values['label'])
+        if old_id:
+            return db.otu.insert(id=old_id,label=values['label'])
+        else:
+            return db.otu.insert(label=values['label'])
+
+def insert_new_tree(db,values,old_id):
+    if 'contributor' in values:
+        if old_id:
+            new_id = db.stree.insert(id=old_id,contributor=values['contributor'],newick='')
+        else:
+            new_id = db.stree.insert(contributor=values['contributor'],newick='',type='')
+    else: 
+        if old_id:
+            new_id = db.stree.insert(id=old_id,contributor='',newick='',type='')
+        else:
+            new_id = db.stree.insert(contributor='',newick='',type='')
+        return new_id  
+
+
+def insert_new_node(db,values,old_id):
+    if old_id:
+        return db.snode.insert(id=old_id,tree=None) #required, not available
+    else:
+        return db.snode.insert(tree=None)
+
+
+
+
 
 
 immediately_updateable_table = {"study": ("citation","contributor"),
@@ -286,8 +301,8 @@ def index_children(db, id,n):
         is_leaf = 'T'
     else:
         is_leaf = 'F'
-    print "UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
-                   primary_back,is_leaf,id)
+    #print "UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
+    #               primary_back,is_leaf,id)
     db.executesql("UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
                    primary_back,is_leaf,id))
     return next_back
