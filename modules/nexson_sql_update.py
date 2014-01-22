@@ -19,6 +19,7 @@ def sql_process(actions, db):
     current_row = None
     for action in actions:
         table,field,value = action
+        #print "Action is %s %s %s", action
         if (field == 'id'):  #time to update the previous element
             if current_row:
                 if current_table == 'otu':
@@ -32,8 +33,8 @@ def sql_process(actions, db):
                     update_tags(db,current_table,new_tags,current_row.id)
                 if (current_table == 'node' and current_row.id in special_clades):
                     current_row['ingroup'] = True
-            current_table = table
             current_id = value
+            current_table = table
             new_tags = set()
             current_row = find_row(db,current_table,current_id,ele_table_map)
             if current_row is None:
@@ -69,10 +70,15 @@ def sql_process(actions, db):
                     final_value = fixup_table[(table,field)]
                 else:
                     final_value = value 
-                current_row[field] = final_value
-                #print "modifying field %s to %s" % (field,final_value)
-                if (table == 'study' and field=='contributor'):
-                    study_contributor = final_value
+                #if field in ['ot:dataDeposit','ot:annotation','ot:focalClade']:
+                    #print "modifying field %s to %s" % (field,final_value)
+                if (table == 'study' and field=='dataDeposit'):
+                    current_row['treebase_id'] = final_value
+                elif (table == 'study' and field=='contributor'):
+                    current_row['study_contributor'] = final_value
+                else:
+                    current_row[field] = final_value
+
     return finish_trees(db,study_id)  
 
 def init_map(db):
@@ -81,8 +87,15 @@ def init_map(db):
             'otu': db.otu.id,
             'tree': db.stree.id,
             'node': db.snode.id}
-            
-         
+
+NAMETABLEMAP={'study': 'study',
+              'study_tag': 'study_tag',
+              'otu': 'otu',
+              'tree': 'stree',
+              'stree': 'stree',
+              'node': 'snode',
+              'snode': 'snode'}
+
 def find_row(db, table,id,ele_table):
     rows = db(ele_table[table] == id)
     if rows:
@@ -227,12 +240,10 @@ def find_tags(db,table,id):
     """
     returns set of rows of id records (from study_tag, or stree_tag as appropriate)
     """
-    if (table == 'study'):
-        rows = db.executesql('SELECT tag from study_tag WHERE study = %d' % id)
-        tags = [row[0][0] for row in rows]
-        return set(tags)
-    elif (table == 'tree'):
-        rows = db.executesql('SELECT tag from stree_tag WHERE stree = %d' % id)
+    sqltable = NAMETABLEMAP[table]
+    tags_table = get_tag_table(table)
+    if tags_table:
+        rows = db.executesql('SELECT tag from %s WHERE %s = %d' % (tags_table,NAMETABLEMAP[table],id))
         tags = [row[0][0] for row in rows]
         return set(tags)
     else:
@@ -258,14 +269,20 @@ def update_tags(db,table,tags,id):
                 db.stree_tag.insert(stree=id,tag=tag)
 
 def remove_old_tags(db,table,tags,id):
-    if table == 'study':
+    sqltable = NAMETABLEMAP[table]
+    tags_table = get_tag_table(table)
+    if tags_table:
         for tag in tags:
-            db.executesql("DELETE FROM study_tag WHERE (study = %d AND tag = '%s')" % (id,tag))       
+            db.executesql("DELETE FROM %s WHERE (%s = %d AND tag = '%s')" % (tags_table,sqltable,id,tag))       
             #db((db.study_tag.study == id) & (db.study_tag.tag == tag)).delete()
-    if table == 'tree':
-        for tag in tags:
-            db.executesql("DELETE FROM stree_tag WHERE (stree = %d AND tag = '%s')" % (id,tag))           
-            #db((db.stree_tag.stree == id) & (db.stree_tag.tag == tag)).delete()
+
+def get_tag_table(table_name):
+    if table_name == 'study':
+        return 'study_tag'
+    elif table_name == 'stree':
+        return 'stree_tag'
+    else:
+        return None
 
 
 def finish_trees(db,study_id):
