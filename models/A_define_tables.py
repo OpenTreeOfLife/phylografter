@@ -227,6 +227,7 @@ def define_tables(db, migrate=False):
               writable=False, notnull=True),
         Field("treebase_id", "integer"),
         Field("last_modified", "datetime", readable=False, writable=False),
+        Field("data_deposit", "string"),
         format=_study_rep,
         migrate=migrate
         )

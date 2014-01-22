@@ -73,7 +73,7 @@ def sql_process(actions, db):
                 #if field in ['ot:dataDeposit','ot:annotation','ot:focalClade']:
                     #print "modifying field %s to %s" % (field,final_value)
                 if (table == 'study' and field=='dataDeposit'):
-                    current_row['treebase_id'] = final_value
+                    current_row['data_deposit'] = final_value
                 elif (table == 'study' and field=='contributor'):
                     current_row['study_contributor'] = final_value
                 else:
