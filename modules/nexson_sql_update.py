@@ -70,7 +70,7 @@ def sql_process(actions, db):
                     final_value = fixup_table[(table,field)]
                 else:
                     final_value = value 
-                #if field in ['ot:dataDeposit','ot:annotation','ot:focalClade']:
+                #if field in ['focal_clade_ottol','dataDeposit']:
                     #print "modifying field %s to %s" % (field,final_value)
                 if (table == 'study' and field=='dataDeposit'):
                     current_row['data_deposit'] = final_value
@@ -220,19 +220,15 @@ def insert_new_node(db,values,old_id):
         return db.snode.insert(tree=None)
 
 
-
-
-
-
-immediately_updateable_table = {"study": ("citation","contributor"),
+IMMEDIATELY_UPDATEABLE_TABLE = {"study": ("citation","contributor"),
                                 "study_tag": None,
                                 "otu": ("label",),
                                 "tree": ("contributor","newick","type"),
                                 "node": None}
                                 
 def immediately_updateable(table,value):
-    if immediately_updateable_table[table]:
-        return value in immediately_updateable_table[table]
+    if IMMEDIATELY_UPDATEABLE_TABLE[table]:
+        return value in IMMEDIATELY_UPDATEABLE_TABLE[table]
     else:
         return False
         
