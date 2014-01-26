@@ -108,9 +108,9 @@ def meta_elts_for_nexml(study_row,db):
     curator_meta = curator_meta_for_study(study_row)
     if curator_meta:
         meta_array.append(curator_meta)
-    treebase_deposit_meta = treebase_deposit_meta_for_study(study_row)
-    if treebase_deposit_meta:
-        meta_array.append(treebase_deposit_meta)
+    data_deposit_meta = data_deposit_meta_for_study(study_row)
+    if data_deposit_meta:
+        meta_array.append(data_deposit_meta)
     phylografter_id_meta = phylografter_id_meta_for_study(study_row)
     if phylografter_id_meta:
         meta_array.append(phylografter_id_meta)
@@ -137,12 +137,15 @@ def curator_meta_for_study(study_row):
     else:
         return
 
-def treebase_deposit_meta_for_study(study_row):
+def data_deposit_meta_for_study(study_row):
     '''
     generates text citation metadata element for a study
     '''
+    data_deposit = study_row.data_deposit
     treebaseId = study_row.treebase_id
-    if treebaseId:
+    if data_deposit:
+        return createResourceMeta("ot:dataDeposit",data_deposit)
+    elif treebaseId:
         return createResourceMeta("ot:dataDeposit",
                                   "http://purl.org/phylo/treebase/phylows/study/TB2:S%d" % treebaseId)
     else:
