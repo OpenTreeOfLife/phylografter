@@ -79,7 +79,7 @@ def parse_study_meta(metaEle):
         elif prop == u'ot:tag':
             studytags.append(encode(p[u'$']))
         elif prop == u'ot:focalClade':
-            result['ot:focalclade'] = int(p[u'$'])
+            result['ot:focalClade'] = int(p[u'$'])
         elif prop == u'ot:specifiedRoot':
             result['ot:specifiedRoot'] = encode(p[u'$'])
         elif prop == u'ot:annotation':
