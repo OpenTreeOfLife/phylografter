@@ -1,3 +1,5 @@
+<H2>This branch is being modified to work with Postgresql instead of mySQL or MariaDB. Without the proper configurations and a copy of the Postgresql dump (still a work in progress) it will not work properly. Be careful checking it out or working with it.</H2> 
+
 Install instructions
 
 (1) Install prerequisites. You can get pip from http://www.pip-installer.org/en/latest/  The apt-get commands used on ubuntu for non-Python
