@@ -89,7 +89,7 @@ def parse_study_meta(metaEle):
     return (result)
 
 def process_annotation_metadata(p):
-    from json import JSONEncoder 
+    import json
     #print "Entering annotation %s " % p[u'$']
     #print "Author: %s" % p['author']
     #print "isValid: %s" % p['isValid']
@@ -98,6 +98,9 @@ def process_annotation_metadata(p):
     if 'dateModified' in p:
         print "date modified: %s" % p['dateModified']
     #print "Messages: %s" % str(p['messages'])
+    print "About to test json.dumps"
+    testString = json.dumps(p)
+    print "testString length = %d" % len(testString)
     return p
 
 
