@@ -112,6 +112,8 @@ python web2py.py --nogui -a '&lt;recycle&gt;'
 (10) Direct a browser to http://127.0.0.1:8000/phylografter/stree/index
 (should display a "Source trees" table).
 
+(11) Download the required files and setup information for the taxonomy graph tools here: https://github.com/OpenTreeOfLife/taxonomy-stree-json
+
 
 Authorizing users to upload
 --------------
