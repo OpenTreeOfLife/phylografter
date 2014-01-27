@@ -120,6 +120,9 @@ def meta_elts_for_nexml(study_row,db):
     focal_clade_meta = focal_clade_meta_for_study(study_row)
     if focal_clade_meta:
         meta_array.append(focal_clade_meta)
+    focal_clade_name_meta = focal_clade_name_meta_for_study(study_row,db)
+    if focal_clade_name_meta:
+        meta_array.append(focal_clade_name_meta)
     study_tags = get_study_tags(study_row,db)
     if study_tags:
         for tag in study_tags:
@@ -203,8 +206,19 @@ def focal_clade_meta_for_study(study_row):
     focal_clade = study_row.focal_clade_ottol
     if (focal_clade):
         return createLiteralMeta("ot:focalClade", focal_clade)
-    else:
-        return
+
+def focal_clade_name_meta_for_study(study_row,db):
+    """
+    generates a metadata element containing the OTT name of the focal clade
+    (i.e., the name of the node returned in the preceeding function
+    """
+    focal_clade = study_row.focal_clade_ottol
+    if (focal_clade):
+        name_query = db.executesql('SELECT ottol_name.name FROM ottol_name WHERE (ottol_name.id = %s)' % focal_clade);
+        if name_query:
+            ((name,)) = name_query[0]
+            return createLiteralMeta("ot:focalCladeOTTTaxonName",name)
+
 
 def specified_root_meta_for_study(study_row):
     """
