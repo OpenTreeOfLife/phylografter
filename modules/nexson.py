@@ -59,7 +59,7 @@ def nexml_header():
     '''
     return {"@xmlns":xmlNameSpace(),
             "@version":'0.9',
-            "@nexmljson":"http://opentree.wikispaces.com/NexSON",
+            "@nexmljson":"http://purl.org/opentree/nexson",
             "@generator":"Phylografter nexml-json exporter"}
 
 def xmlNameSpace():
