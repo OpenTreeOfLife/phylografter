@@ -490,7 +490,7 @@ def meta_elts_for_node_elt(node_row,db):
     """
     result=[]
     node_id,parent,otu_id,length,isleaf = node_row
-    if isleaf:
+    if isleaf == 'T':
         isLeaf_elt = createLiteralMeta("ot:isLeaf","true","xsd:boolean")
         result.append(isLeaf_elt)
     if otu_id:
