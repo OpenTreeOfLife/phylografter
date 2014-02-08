@@ -18,6 +18,13 @@ def parse_nexson(f,db):
 def encode(str):
     return str  #.encode('ascii')
 
+SQLFIELDS = {'ot:studyPublication': 'doi',
+             'ot:studyPublicationReference': 'citation',
+             'ot:studyYear': 'year_published',
+             'ot:curatorName': 'contributor',
+             'ot:focalClade': 'focal_clade_ottol',
+             'ot:dataDeposit': 'dataDeposit'}
+
 def process_meta_element_sql(contents, results, db):
     """
     Builds the list of database updates corresponding to the study
@@ -32,24 +39,19 @@ def process_meta_element_sql(contents, results, db):
         results = [('study','id',metafields['ot:studyId'])]
     else:
         return results  #no id, nothing to do
-    if 'ot:studyPublication' in metafields:
-        results.append(('study','doi',metafields['ot:studyPublication']))
-    if 'ot:studyPublicationReference' in metafields:
-        results.append(('study','citation',metafields['ot:studyPublicationReference']))
-    if 'ot:studyYear' in metafields:
-        results.append(('study','year_published',metafields['ot:studyYear']))
-    if 'ot:curatorName' in metafields:
-        results.append(('study','contributor',metafields['ot:curatorName']))
-    if 'ot:focalClade' in metafields:
-        results.append(('study','focal_clade_ottol',metafields['ot:focalClade']))
-    if 'ot:dataDeposit' in metafields:
-        results.append(('study','dataDeposit',metafields['ot:dataDeposit']))
-    if 'ot:annotation' in metafields:
-        results.append(('study','annotation',metafields['ot:annotation']))
-    if 'ot:tag' in metafields:
-        for tag in metafields['ot:tag']:
-            results.append(('study','tag',tag))
+    for mf in metafields:
+        if mf == 'ot:annotation':
+            results.append(('annotation','id',metafields['ot:studyId']))
+            results.append(('annotation','annotation',metafields['ot:annotation']))
+        elif mf == 'ot:tag':
+            for tag in metafields['ot:tag']:
+                results.append(('study','tag',tag))
+        elif mf in SQLFIELDS:
+            results.append(('study',SQLFIELDS[mf],metafields[mf]))
+        else:
+            print "Unrecognized meta field: %s" % mf
     return results
+
 
 def parse_study_meta(metaEle):
     """
@@ -60,28 +62,12 @@ def parse_study_meta(metaEle):
     result = {}
     for p in metaEle:
         prop = p[u'@property']
-        if prop == u'ot:studyId':
-            result['ot:studyId'] = int(p[u'$'])
-        elif prop == u'ot:studyPublication':
-            result['ot:studyPublication'] = encode(p[u'@href'])
-        elif prop == u'ot:studyYear':
-            result['ot:studyYear'] = int(p[u'$'])
-        elif prop == u'ot:studyPublicationReference':
-            result['ot:studyPublicationReference'] = encode(p[u'$'])
-        elif prop == u'ot:curatorName':
-            result['ot:curatorName'] = encode(p[u'$'])
-        elif prop == u'ot:dataDeposit':
-            result['ot:dataDeposit'] = encode(p[u'@href'])
-        elif prop == u'ot:contributor':
-            result['ot:contributor'] = encode(p[u'$'])
-        elif prop == u'ot:dataDeposit':
-            result['ot:dataDeposit'] = encode(p[u'@href'])
-        elif prop == u'ot:tag':
-            studytags.append(encode(p[u'$']))
-        elif prop == u'ot:focalClade':
-            result['ot:focalClade'] = int(p[u'$'])
-        elif prop == u'ot:specifiedRoot':
-            result['ot:specifiedRoot'] = encode(p[u'$'])
+        if prop in [u'ot:studyId',u'ot:studyYear',u'ot:focalClade']:
+            result[prop] = int(p[u'$'])
+        elif prop in [u'ot:studyPublication',u'ot:dataDeposit']:
+            result[prop] = encode(p[u'@href'])
+        elif prop in [u'ot:studyPublicationReference',u'ot:curatorName',u'ot:contributor',u'ot:tag',u'ot:specifiedRoot']:
+            result[prop] = encode(p[u'$'])
         elif prop == u'ot:annotation':
             result['ot:annotation'] = process_annotation_metadata(p)
     if len(studytags)>0:

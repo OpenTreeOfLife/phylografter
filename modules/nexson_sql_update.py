@@ -63,7 +63,7 @@ def sql_process(actions, db):
                 e = JSONEncoder()
                 foo = e.encode(value)
                 print "Recoded, length = %d" % len(foo)
-                current_row['nexson_annotation']=foo
+                current_row['raw_contents']=foo
         else:
             if current_row:
                 if (table,field) in fixup_table:  #sometimes updatable fields may have names different from their value tables
@@ -81,12 +81,16 @@ def sql_process(actions, db):
 
     return finish_trees(db,study_id)  
 
+#annotation table is odd - no ids, so ignore web2py's id, use the study id
+#note - if we decide in future to attach annotations to individual elements
+#annotations will need to be special cased even more than they are already 
 def init_map(db):
     return {'study': db.study.id,
             'study_tag': db.study_tag.id,
             'otu': db.otu.id,
             'tree': db.stree.id,
-            'node': db.snode.id}
+            'node': db.snode.id,
+            'annotation': db.nexson_annotation.study}
 
 NAMETABLEMAP={'study': 'study',
               'study_tag': 'study_tag',
@@ -94,7 +98,8 @@ NAMETABLEMAP={'study': 'study',
               'tree': 'stree',
               'stree': 'stree',
               'node': 'snode',
-              'snode': 'snode'}
+              'snode': 'snode',
+              'annotation': 'nexson_annotation'}
 
 def find_row(db, table,id,ele_table):
     rows = db(ele_table[table] == id)
@@ -106,7 +111,7 @@ def find_row(db, table,id,ele_table):
 # should return true if existing row with matching id is compatible                
 def validate_row(db, table,id,ele_table):
     return True
-        
+
 def collect_special_clades(actions):
     return [action[2] for action in actions if special_clade_test(action)]    
 #    for action in actions:
@@ -129,7 +134,7 @@ def insert_new_rows(actions, db):
         table,field,value = action_gen.next()
         while True:
             if (field == 'id'):
-                #print "loop check: %s, field %s, value %s" % (table,field,value)
+                print "loop check: %s, field %s, value %s" % (table,field,value)
                 current_row = find_row(db,table,value,ele_table_map)
                 if current_row is None:
                     update_table = table
@@ -160,14 +165,11 @@ def finish_update(db,update_table,update_obj,update_id,fixup_table):
     #print "just updated, update_table is %s, new_id is %d" % (str(update_table),new_id)
     if new_id > 0: # if restore to original id works, no need to add to fixup
         fixup_table[(update_table,update_id)] = new_id
-                                    
-                          
-          
+
 def generate_actions(actions):
     for action in actions:
         yield action
 
-                                
 #wish could do this with a lookup, but some tables need to be placated with dummy values
 def insert_new(db,table,values,old_id=None):
     #print "Entering insert_new: %s,%s,%d" % (table,values,old_id)
@@ -181,6 +183,8 @@ def insert_new(db,table,values,old_id=None):
         return insert_new_tree(db,values,old_id)
     if table=='node':
         return insert_new_node(db,values,old_id)
+    if table=='annotation':
+        return insert_new_annotation(db,values,old_id)
 
 def insert_new_study(db,values,old_id):
     if 'citation' in values and 'contributor' in values:
@@ -219,13 +223,17 @@ def insert_new_node(db,values,old_id):
     else:
         return db.snode.insert(tree=None)
 
+def insert_new_annotation(db,values,study_id):
+    return db.nexson_annotation.insert(study=study_id);
+
 
 IMMEDIATELY_UPDATEABLE_TABLE = {"study": ("citation","contributor"),
                                 "study_tag": None,
                                 "otu": ("label",),
                                 "tree": ("contributor","newick","type"),
-                                "node": None}
-                                
+                                "node": None,
+                                "annotation": None}   ##this is pessimistic as long as we don't interpret annotations
+
 def immediately_updateable(table,value):
     if IMMEDIATELY_UPDATEABLE_TABLE[table]:
         return value in IMMEDIATELY_UPDATEABLE_TABLE[table]
@@ -264,6 +272,8 @@ def update_tags(db,table,tags,id):
                 #print 'inserting tree tag %s to tree %d' % (tag,id)
                 db.stree_tag.insert(stree=id,tag=tag)
 
+                
+                
 def remove_old_tags(db,table,tags,id):
     sqltable = NAMETABLEMAP[table]
     tags_table = get_tag_table(table)
@@ -273,12 +283,8 @@ def remove_old_tags(db,table,tags,id):
             #db((db.study_tag.study == id) & (db.study_tag.tag == tag)).delete()
 
 def get_tag_table(table_name):
-    if table_name == 'study':
-        return 'study_tag'
-    elif table_name == 'stree':
-        return 'stree_tag'
-    else:
-        return None
+    if table_name in ['study','stree']:
+        return table_name+'_tag'
 
 
 def finish_trees(db,study_id):
