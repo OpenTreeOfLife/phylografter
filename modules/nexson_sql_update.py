@@ -134,7 +134,7 @@ def insert_new_rows(actions, db):
         table,field,value = action_gen.next()
         while True:
             if (field == 'id'):
-                print "loop check: %s, field %s, value %s" % (table,field,value)
+                #print "loop check: %s, field %s, value %s" % (table,field,value)
                 current_row = find_row(db,table,value,ele_table_map)
                 if current_row is None:
                     update_table = table

@@ -15,6 +15,7 @@
 
 from gluon.storage import Storage
 
+
 # Note - the nexml root element can have meta elements as direct children; unlike everywhere else, there are no id or about
 # attributes as seem to be required for other element types (e.g., otu, node) when they have meta children
 def nexmlStudy(study_id,db):
@@ -128,6 +129,9 @@ def meta_elts_for_nexml(study_row,db):
         for tag in study_tags:
            tag_elt = createLiteralMeta("ot:tag", tag)
            meta_array.append(tag_elt)
+    annotation_meta = annotation_meta_for_study(study_row,db)
+    if annotation_meta:
+        meta_array.append(annotation_meta)
     return {"meta": meta_array}
 
 def curator_meta_for_study(study_row):
@@ -235,6 +239,23 @@ def specified_root_meta_for_study(study_row):
            return
     else:
         return
+
+def annotation_meta_for_study(study_row,db):
+    """
+    retrieves a record from nexson_annotations for the study, parses it back
+    from json which will already be an annotation element
+    """
+    import gluon,json
+    q = (db.nexson_annotation.study == study_row.id)
+    rows = db(q).select()
+    if len(rows) == 0:
+        return
+    elif len(rows) > 1:
+        raise(gluon.HTTP(500))
+    else:
+        json_string = rows[0].raw_contents
+        json_struct = json.loads(json_string)
+        return json_struct
 
 def get_study_tags(study_row,db):
     '''
