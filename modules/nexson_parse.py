@@ -18,7 +18,8 @@ def parse_nexson(f,db):
 def encode(str):
     return str  #.encode('ascii')
 
-SQLFIELDS = {'ot:studyPublication': 'doi',
+SQLFIELDS = {'ot:studyId': 'id',
+             'ot:studyPublication': 'doi',
              'ot:studyPublicationReference': 'citation',
              'ot:studyYear': 'year_published',
              'ot:curatorName': 'contributor',
@@ -36,9 +37,10 @@ def process_meta_element_sql(contents, results, db):
     metaEle = contents[u'meta']
     metafields = parse_study_meta(metaEle)
     if 'ot:studyId' in metafields:
-        results = [('study','id',metafields['ot:studyId'])]
+        results.append(('study','id',metafields['ot:studyId']))
     else:
-        return results  #no id, nothing to do
+        print "No study id found";
+        return None  #no id, nothing to do
     for mf in metafields:
         if mf == 'ot:annotation':
             results.append(('annotation','id',metafields['ot:studyId']))
@@ -48,6 +50,8 @@ def process_meta_element_sql(contents, results, db):
                 results.append(('study','tag',tag))
         elif mf in SQLFIELDS:
             results.append(('study',SQLFIELDS[mf],metafields[mf]))
+        elif mf == 'ot:studyId':
+            pass
         else:
             print "Unrecognized meta field: %s" % mf
     return results

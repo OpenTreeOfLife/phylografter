@@ -4,15 +4,10 @@ from gluon import *
 
 
 def sql_process(actions, db):
-    from json import JSONEncoder
-    study_contributor = ""
+    validate_actions(actions)
     study_id = -1
     tree_id = -1
     ele_table_map = init_map(db)
-    first_table,first_field,first_id= actions[0]
-    if (first_table != 'study' or first_field != 'id'):
-        raise HTTP(400,"Head of nexson file was not a study identifier - exiting")
-        return
     fixup_table = insert_new_rows(actions,db)
     db.commit()  # think this is necessary
     special_clades = collect_special_clades(actions)
@@ -22,10 +17,8 @@ def sql_process(actions, db):
         #print "Action is %s %s %s", action
         if (field == 'id'):  #time to update the previous element
             if current_row:
-                if current_table == 'otu':
+                if current_table in ['otu','tree']:
                     current_row['study']= study_id
-                elif current_table == 'tree':
-                    current_row['study'] = study_id
                 elif current_table == 'node':
                     current_row['tree'] = tree_id
                 current_row.update_record()
@@ -60,26 +53,30 @@ def sql_process(actions, db):
         elif (field == 'in_group_clade'):
             pass
         elif (field == 'annotation'):
-                e = JSONEncoder()
-                foo = e.encode(value)
-                print "Recoded, length = %d" % len(foo)
-                current_row['raw_contents']=foo
+            current_row['raw_contents'] = encode_annotation(value)
         else:
             if current_row:
-                if (table,field) in fixup_table:  #sometimes updatable fields may have names different from their value tables
-                    final_value = fixup_table[(table,field)]
-                else:
-                    final_value = value 
-                #if field in ['focal_clade_ottol','dataDeposit']:
-                    #print "modifying field %s to %s" % (field,final_value)
                 if (table == 'study' and field=='dataDeposit'):
-                    current_row['data_deposit'] = final_value
+                    current_row['data_deposit'] = value
                 elif (table == 'study' and field=='contributor'):
-                    current_row['study_contributor'] = final_value
+                    current_row['study_contributor'] = value
                 else:
-                    current_row[field] = final_value
+                    current_row[field] = value
 
     return finish_trees(db,study_id)  
+
+
+#simple check, probably overkill
+def validate_actions(actions):
+    """
+    checks that the first tuple in the actions list specifies the study's id
+    """
+    first_table,first_field,first_id= actions[0]
+    if (first_table != 'study' or first_field != 'id'):
+        print "actions[0] = %s,%s,%s\n" % actions[0]
+        print "actions[1] = %s,%s,%s\n" % actions[1]
+        raise HTTP(400,"Head of nexson file was not a study identifier - exiting")
+
 
 #annotation table is odd - no ids, so ignore web2py's id, use the study id
 #note - if we decide in future to attach annotations to individual elements
@@ -114,10 +111,6 @@ def validate_row(db, table,id,ele_table):
 
 def collect_special_clades(actions):
     return [action[2] for action in actions if special_clade_test(action)]    
-#    for action in actions:
-#        if _special_clade_test(action):
-#           results.append(action[2])         
-#    return results
 
 def special_clade_test(action):
     table,field,value = action
@@ -250,8 +243,6 @@ def find_tags(db,table,id):
         rows = db.executesql('SELECT tag from %s WHERE %s = %d' % (tags_table,NAMETABLEMAP[table],id))
         tags = [row[0][0] for row in rows]
         return set(tags)
-    else:
-        return None
 
 def update_tags(db,table,tags,id):
     if table == 'study':
@@ -286,6 +277,13 @@ def get_tag_table(table_name):
     if table_name in ['study','stree']:
         return table_name+'_tag'
 
+def encode_annotation(value):
+    from json import JSONEncoder
+    e = JSONEncoder()
+    encoded = e.encode(value)
+    print "Recoded, length = %d" % len(encoded)
+    return encoded
+
 
 def finish_trees(db,study_id):
    trees = db.executesql("SELECT id FROM stree WHERE study = %d" % study_id)
@@ -297,7 +295,7 @@ def finish_trees(db,study_id):
    return study_id
 
 def index_nodes(db,tree_id):
-    root_nodes = db.executesql("SELECT id FROM snode WHERE (tree = %d) AND (parent IS NULL)"% tree_id)
+    root_nodes = db.executesql("SELECT id FROM snode WHERE (tree = %d) AND (parent IS NULL)" % tree_id)
     for root in root_nodes:  # should be singleton
         node_id = root[0]
         index_children(db,node_id,0)
