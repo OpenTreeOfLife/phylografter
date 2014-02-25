@@ -996,32 +996,36 @@ def export_gzipNexSON():
         response.headers['Content-Disposition'] = "attachment;filename=%s"%zipfilename
         return stream.getvalue()              
     return
-    
+
+#@auth.requires_membership('contributor')
 def import_NexSON():
     """
     Imports a Nexson (JSON Nexml) file, updating an existing study record or creating a new one as needed
     """
     import datetime
     import cStringIO
-    from nexson_parse import parse_nexson
+    from nexson_parse import ingest_nexson,check_nexson
     if not(request.post_vars):
         raise HTTP(400)  #if no post, then it's a bad request
     ##Per Massimo Di Pierro's answer for google groups question about @request.restful    
-    post_text = request.body.read()  
+    post_text = request.body.read()
     print datetime.datetime.now()
-    study_id = parse_nexson(cStringIO.StringIO(post_text),db)
+    study_exists = check_nexson(cStringIO.StringIO(post_text),db)
+    study_id = ingest_nexson(cStringIO.StringIO(post_text),db)
     print datetime.datetime.now()
     return study_id
 
-TESTFILE = "/Users/pmidford/Projects/phylografter_regression/annotated/report105.json"
+TESTFILE = "/Users/pmidford/Projects/phylografter_regression/base/base105.json"
 def importTest():
     """
     just for testing
     """
     import datetime
-    from nexson_parse import parse_nexson
+    from nexson_parse import ingest_nexson,check_nexson
     print datetime.datetime.now()
-    study_id = parse_nexson(open(TESTFILE),db)
+    study_exists = check_nexson(open(TESTFILE),db)
+    print "check_nexson returned %s" % str(study_exists)
+    study_id = ingest_nexson(open(TESTFILE),db)
     print datetime.datetime.now()
     #redirect(URL(c="study",f="view",args=[study_id]))
     return study_id

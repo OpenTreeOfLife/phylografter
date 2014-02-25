@@ -3,16 +3,49 @@
 from gluon import *
 from sys import maxsize
 
+def check_nexson(f,db):
+    """
+    checks if study with a matching identifier (doi or citation if no doi) is
+    already present so user can be warned
+    """
+    from json import load
+    json_tree = load(f)       #want api call that returns study identifier(s)
+    return check_json_study(json_tree,db)
 
-def parse_nexson(f,db):
+def check_json_study(json_tree,db):
+    """
+    Returns True if db contains a study with matching doi (best) or
+    reference citation
+    """
+    contents =json_tree[u'nexml']
+    metaEle = contents[u'meta']
+    metafields = parse_study_meta(metaEle)
+    if 'ot:studyPublication' in metafields:
+        doi = metafields['ot:studyPublication']
+        q = (db.study.doi == doi)
+        rows = db(q).select()
+        if len(rows) > 0:
+            return rows[0].id
+    elif 'ot:studyPublicationReference' in metafields:
+        ref = metafields['ot:studyPublicationReference']
+        q = (db.study.citation == ref)
+        rows = db(q).select()
+        if len(rows) > 0:
+            return rows[0].id
+    else:
+        print "No study identifier found"
+        return False
+
+
+def ingest_nexson(f,db):
     """
     Entry point - nexson is parsed and dispatched to the appropriate updater
     f - file like object (generally a CStringIO, retrieved from a post)
     db - web2py database object
     """
     from json import load
-    tree = load(f)
-    return parse_nexml(tree,db)
+    json_tree = load(f)
+    return ingest_json_study(json_tree,db)
 
 #put this in one place so it can be turned off easily when the time comes
 def encode(str):
@@ -70,8 +103,10 @@ def parse_study_meta(metaEle):
             result[prop] = int(p[u'$'])
         elif prop in [u'ot:studyPublication',u'ot:dataDeposit']:
             result[prop] = encode(p[u'@href'])
-        elif prop in [u'ot:studyPublicationReference',u'ot:curatorName',u'ot:contributor',u'ot:tag',u'ot:specifiedRoot']:
+        elif prop in [u'ot:studyPublicationReference',u'ot:curatorName',u'ot:contributor',u'ot:specifiedRoot']:
             result[prop] = encode(p[u'$'])
+        elif prop in [u'ot:tag']:
+            studytags.append(encode(p[u'$']))
         elif prop == u'ot:annotation':
             result['ot:annotation'] = process_annotation_metadata(p)
     if len(studytags)>0:
@@ -300,7 +335,7 @@ sql_parse_methods = [process_meta_element_sql,
 #stub to support parsing in other formats
 target_parsers= {'sql': sql_parse_methods} #, 'bson': bson_parse_methods} 
 
-def parse_nexml(study,db):
+def ingest_json_study(study,db):
     """
     Entry point -
        study is parsed JSON from a NexSON file
@@ -309,8 +344,8 @@ def parse_nexml(study,db):
     from nexson_sql_update import sql_process
     if not u'nexml' in study:
         raise SyntaxError
-    target = determine_target(db)
-    target_parser_set = target_parsers[target]
+    target = sql_parse_methods
+    target_parser_set = sql_parse_methods
     contents = study[u'nexml']
     results = []
     for parser in target_parser_set:
@@ -320,7 +355,3 @@ def parse_nexml(study,db):
         return new_study
     else:
         raise(500,"NexSON study ingest failed")
-
-def determine_target(db):
-    #TODO infer whether sql or document store based on properties of db
-    return 'sql'

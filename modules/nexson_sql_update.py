@@ -21,24 +21,22 @@ def sql_process(actions, db):
                     current_row['study']= study_id
                 elif current_table == 'node':
                     current_row['tree'] = tree_id
+                    if current_row.id in special_clades:
+                        current_row['ingroup'] = True
+                print "About to update: %s" % str(current_row)
                 current_row.update_record()
                 if new_tags:
                     update_tags(db,current_table,new_tags,current_row.id)
-                if (current_table == 'node' and current_row.id in special_clades):
-                    current_row['ingroup'] = True
-            current_id = value
             current_table = table
-            new_tags = set()
+            if (current_table,value) in fixup_table:
+                current_id = fixup_table[(current_table,value)]
+            else:
+                current_id = value
             current_row = find_row(db,current_table,current_id,ele_table_map)
-            if current_row is None:
-                if (current_table,current_id) in fixup_table:
-                    new_id = fixup_table[(current_table,current_id)]
-                else:
-                    new_id = current_id
-                #print 'about to retrieve %s with id %d' % (current_table,new_id)  
-                current_row = find_row(db,current_table,new_id,ele_table_map)
-                current_id = new_id    
+            if (current_row is None):
+                print "id %d in table %s failed to retrieve a row" % (current_id,current_table)
             #print 'retrieved %s' % str(current_row)
+            new_tags = set()
             old_tags = find_tags(db,current_table,current_id)
             if old_tags:
                 #print "%s old tag count = %d" % (current_table,len(old_tags))
@@ -62,7 +60,6 @@ def sql_process(actions, db):
                     current_row['study_contributor'] = value
                 else:
                     current_row[field] = value
-
     return finish_trees(db,study_id)  
 
 
@@ -182,42 +179,82 @@ def insert_new(db,table,values,old_id=None):
 def insert_new_study(db,values,old_id):
     if 'citation' in values and 'contributor' in values:
         if old_id:
-            new_id = db.study.insert(id=old_id,citation=values['citation'],contributor=values['contributor'])
+            #new_id = db.study.insert(id=old_id,citation=values['citation'],contributor=values['contributor'])
+            citation_clean = "'".join(values['citation'].split('"'))
+            contrib_clean = "'".join(values['contributor'].split('"'))
+            sqlstr = 'INSERT INTO study (id,citation,contributor) VALUES (%s, "%s", "%s")' % (old_id,citation_clean,contrib_clean)
+            db.executesql(sqlstr)
+            new_id = old_id
         else:
-            new_id = db.study.insert(citation=values['citation'],contributor=values['contributor'])
-        #print "new row is %s" % str(new_id)
+            citation_clean = "'".join(values['citation'].split('"'))
+            contrib_clean = "'".join(values['contributor'].split('"'))
+            sqlstr = 'INSERT INTO study (citation,contributor) VALUES ("%s", "%s")' % (citation_clean,contrib_clean)
+            db.executesql(sqlstr)
+            sqlstr = 'SELECT max(id) FROM study'
+            id_result = db.executesql(sqlstr)
+            if id_result:
+                new_id = int(id_result[0])
+            else:
+                new_id = None
         return new_id
 
 def insert_new_otu(db,values,old_id):
     if 'label' in values:
         #print "otu label is {0}".format(values['label'])
         if old_id:
-            return db.otu.insert(id=old_id,label=values['label'])
+            sqlstr = 'INSERT INTO otu (id,label) VALUES (%s, "%s")' % (old_id,values['label'])
+            db.executesql(sqlstr)
+            return old_id
         else:
-            return db.otu.insert(label=values['label'])
+            sqlstr = 'INSERT INTO otu (label) VALUES ("%s")' % values['label']
+            db.executesql(sqlstr)
+            sqlstr = 'SELECT max(id) FROM study'
+            id_result = db.executesql(sqlstr)
+            return id_result
 
 def insert_new_tree(db,values,old_id):
     if 'contributor' in values:
         if old_id:
-            new_id = db.stree.insert(id=old_id,contributor=values['contributor'],newick='')
+            sqlstr = 'INSERT INTO stree (id,contributor,newick) VALUES (%s, "%s","")' % (old_id,values['contributor'])
+            db.executesql(sqlstr)
+            return old_id
         else:
-            new_id = db.stree.insert(contributor=values['contributor'],newick='',type='')
-    else: 
+            sqlstr = 'INSERT INTO stree (contributor,newick) VALUES ("%s","")' % values['contributor']
+            db.executesql(sqlstr)
+            sqlstr = 'SELECT max(id) FROM study'
+            id_result = db.executesql(sqlstr)
+            return id_result
+    else:
         if old_id:
-            new_id = db.stree.insert(id=old_id,contributor='',newick='',type='')
+            sqlstr = 'INSERT INTO stree (id,contributor,newick) VALUES (%s, "", "")' % (old_id)
+            db.executesql(sqlstr)
+            return old_id
         else:
-            new_id = db.stree.insert(contributor='',newick='',type='')
-        return new_id  
+            sqlstr = 'INSERT INTO stree (contributor,newick) VALUES ("","")'
+            db.executesql(sqlstr)
+            sqlstr = 'SELECT max(id) FROM study'
+            id_result = db.executesql(sqlstr)
+            return id_result
 
 
 def insert_new_node(db,values,old_id):
     if old_id:
-        return db.snode.insert(id=old_id,tree=None) #required, not available
+        sqlstr = 'INSERT INTO snode (id,tree) VALUES (%s, NULL)' % old_id
+        db.executesql(sqlstr)
+        return old_id
     else:
-        return db.snode.insert(tree=None)
+        sqlstr = 'INSERT INTO snode (tree) VALUES (NULL)'
+        db.executesql(sqlstr)
+        sqlstr = 'SELECT max(id) FROM study'
+        id_result = db.executesql(sqlstr)
+        return id_result
 
 def insert_new_annotation(db,values,study_id):
-    return db.nexson_annotation.insert(study=study_id);
+    sqlstr = 'INSERT INTO nexson_annotation (study) VALUES (%s)' % study_id
+    db.executesql(sqlstr)
+    sqlstr = 'SELECT max(id) FROM study'
+    id_result = db.executesql(sqlstr)
+    return id_result
 
 
 IMMEDIATELY_UPDATEABLE_TABLE = {"study": ("citation","contributor"),
@@ -232,7 +269,7 @@ def immediately_updateable(table,value):
         return value in IMMEDIATELY_UPDATEABLE_TABLE[table]
     else:
         return False
-        
+
 def find_tags(db,table,id):
     """
     returns set of rows of id records (from study_tag, or stree_tag as appropriate)
@@ -263,9 +300,11 @@ def update_tags(db,table,tags,id):
                 #print 'inserting tree tag %s to tree %d' % (tag,id)
                 db.stree_tag.insert(stree=id,tag=tag)
 
-                
-                
+
 def remove_old_tags(db,table,tags,id):
+    """
+    deletes all the tag records associated with the entity in table identified by by
+    """
     sqltable = NAMETABLEMAP[table]
     tags_table = get_tag_table(table)
     if tags_table:
@@ -278,6 +317,10 @@ def get_tag_table(table_name):
         return table_name+'_tag'
 
 def encode_annotation(value):
+    """
+    serializes the dictionary structure representing a nexson (study) annotation back in textual json
+    (might be worthwhile to zip compress the text as well)
+    """
     from json import JSONEncoder
     e = JSONEncoder()
     encoded = e.encode(value)
@@ -286,6 +329,10 @@ def encode_annotation(value):
 
 
 def finish_trees(db,study_id):
+   """
+   recomputes the binary indexing, retrieves ottol-based labels and regenerates
+   the newick string for each tree in the study
+   """
    trees = db.executesql("SELECT id FROM stree WHERE study = %d" % study_id)
    for tree_result in trees:
        tree = tree_result[0]
@@ -325,6 +372,9 @@ def index_children(db, id,n):
     return next_back
 
 def restore_labels(db,tree):
+    """
+    restores labels from otu taxa (maybe should check for existing label first?)
+    """
     nodes = db.executesql("SELECT id,otu FROM snode WHERE tree = %s AND otu IS NOT NULL" % tree)
     for (id,otu) in nodes:
         ((olabel,),) = db.executesql("SELECT label FROM otu WHERE otu.id = %d" % otu)

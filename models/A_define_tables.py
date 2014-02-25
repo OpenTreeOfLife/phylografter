@@ -228,6 +228,7 @@ def define_tables(db, migrate=False):
         Field("treebase_id", "integer"),
         Field("last_modified", "datetime", readable=False, writable=False),
         Field("data_deposit", "string"),
+        Field("nexson_id", "string",writable=False),
         format=_study_rep,
         migrate=migrate
         )
@@ -270,6 +271,7 @@ def define_tables(db, migrate=False):
         Field("ottol_name", db.ottol_name, ondelete="NO ACTION"),
         Field("tb_nexml_id"),
         ## Field("genus", db.taxon, ondelete="NO ACTION"),
+        Field("nexson_id", "string",writable=False),
         format="%(label)s",
         migrate=migrate
         )
@@ -313,6 +315,7 @@ def define_tables(db, migrate=False):
         Field("tb_tree_id", "string", length=128),
         Field("comment", "text"),
         Field("last_modified", "datetime", readable=False, writable=False),
+        Field("nexson_id", "string",writable=False),
         format="%(type)s [%(id)s]",
         migrate=migrate
         )
@@ -366,6 +369,7 @@ def define_tables(db, migrate=False):
               readable=False, writable=False),
         Field("mtime", "datetime", default=datetime.datetime.now(),
               readable=False, writable=False),
+        Field("nexson_id", "string",writable=False),
         migrate=migrate
         )
 
@@ -531,12 +535,13 @@ def define_tables(db, migrate=False):
     ##     Field("comment", "text"),
     ##     migrate=migrate
     ##     )
-    
+
     db.define_table(
         "nexson_annotation",
         Field("study",db.study),
         Field("uid","string"),
         Field("text_contents", "text"),
         Field("raw_contents","json"),
-    migrate=True
+        Field("nexson_id", "string",writable=False),
+        migrate=migrate
     )
