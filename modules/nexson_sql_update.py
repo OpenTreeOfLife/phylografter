@@ -7,44 +7,41 @@ def sql_process(actions, db):
     validate_actions(actions)
     study_id = -1
     tree_id = -1
-    ele_table_map = init_map(db)
     fixup_table = insert_new_rows(actions,db)
     db.commit()  # think this is necessary
     special_clades = collect_special_clades(actions)
     current_row = None
     for action in actions:
         table,field,value = action
-        #print "Action is %s %s %s", action
-        if (field == 'id'):  #time to update the previous element
+        print "Action is %s %s %s" % action
+        print "current row = %s" % str(current_row)
+        if (field == 'nexson_id'):  #time to update the previous element
+            print "Only if current field is nexson_id"
             if current_row:
+                print "Need to be filling in a row here"
                 if current_table in ['otu','tree']:
                     current_row['study']= study_id
                 elif current_table == 'node':
                     current_row['tree'] = tree_id
-                    if current_row.id in special_clades:
-                        current_row['ingroup'] = True
+                    #if current_row.id in special_clades:  #is this sql_id or nexson_id?
+                    #    current_row['ingroup'] = True
                 print "About to update: %s" % str(current_row)
-                current_row.update_record()
-                if new_tags:
-                    update_tags(db,current_table,new_tags,current_row.id)
+                if sql_id == None:
+                    print "failed sql_id lookup"
+                else:
+                    update_inserted_row(db,current_table,sql_id,current_row)
+                    if new_tags:
+                        update_tags(db,current_table,new_tags,sql_id)
+            sql_id = get_sql_id(db,table,value)
+            current_row = dict();
+            current_id = sql_id
             current_table = table
-            if (current_table,value) in fixup_table:
-                current_id = fixup_table[(current_table,value)]
-            else:
-                current_id = value
-            current_row = find_row(db,current_table,current_id,ele_table_map)
-            if (current_row is None):
-                print "id %d in table %s failed to retrieve a row" % (current_id,current_table)
             #print 'retrieved %s' % str(current_row)
             new_tags = set()
-            old_tags = find_tags(db,current_table,current_id)
-            if old_tags:
-                #print "%s old tag count = %d" % (current_table,len(old_tags))
-                remove_old_tags(db,current_table,old_tags,current_id)
             if (current_table == 'study'):
-                study_id = current_id
+                study_id = sql_id
             elif (current_table == 'tree'):
-                tree_id = current_id
+                tree_id = sql_id
         elif (field == 'tag'):
             #print "found tag %s" % value
             new_tags.add(value)
@@ -52,15 +49,14 @@ def sql_process(actions, db):
             pass
         elif (field == 'annotation'):
             current_row['raw_contents'] = encode_annotation(value)
+        elif (field == 'dataDeposit'):
+            if (table == 'study'):
+                current_row['data_deposit'] = value
+            print "Got to fall through"
         else:
-            if current_row:
-                if (table == 'study' and field=='dataDeposit'):
-                    current_row['data_deposit'] = value
-                elif (table == 'study' and field=='contributor'):
-                    current_row['study_contributor'] = value
-                else:
-                    current_row[field] = value
-    return finish_trees(db,study_id)  
+            print "Got to fall through"
+            current_row[field] = value
+    return finish_trees(db,study_id)
 
 
 #simple check, probably overkill
@@ -69,11 +65,28 @@ def validate_actions(actions):
     checks that the first tuple in the actions list specifies the study's id
     """
     first_table,first_field,first_id= actions[0]
-    if (first_table != 'study' or first_field != 'id'):
+    if (first_table != 'study' or first_field != 'nexson_id'):
         print "actions[0] = %s,%s,%s\n" % actions[0]
         print "actions[1] = %s,%s,%s\n" % actions[1]
         raise HTTP(400,"Head of nexson file was not a study identifier - exiting")
 
+
+NAMETABLEMAP={'study': 'study',
+              'study_tag': 'study_tag',
+              'otu': 'otu',
+              'tree': 'stree',
+              'stree': 'stree',
+              'node': 'snode',
+              'snode': 'snode',
+              'annotation': 'nexson_annotation'}
+
+def get_sql_id(db,table,nexson_id):
+    query = 'SELECT id FROM %s WHERE nexson_id = "%s" ' % (NAMETABLEMAP[table],nexson_id)
+    id_results = db.executesql(query)
+    id_results = db.executesql(query)
+    if id_results:
+        print id_results[0][0]
+        return id_results[0][0]
 
 #annotation table is odd - no ids, so ignore web2py's id, use the study id
 #note - if we decide in future to attach annotations to individual elements
@@ -86,21 +99,13 @@ def init_map(db):
             'node': db.snode.id,
             'annotation': db.nexson_annotation.study}
 
-NAMETABLEMAP={'study': 'study',
-              'study_tag': 'study_tag',
-              'otu': 'otu',
-              'tree': 'stree',
-              'stree': 'stree',
-              'node': 'snode',
-              'snode': 'snode',
-              'annotation': 'nexson_annotation'}
-
 def find_row(db, table,id,ele_table):
-    rows = db(ele_table[table] == id)
-    if rows:
-        return rows.select().first()
-    else:
-        return None
+    return dict();
+#    rows = db(ele_table[table] == id)
+#    if rows:
+#        return rows.select().first()
+#    else:
+#        return None
 
 # should return true if existing row with matching id is compatible                
 def validate_row(db, table,id,ele_table):
@@ -112,36 +117,30 @@ def collect_special_clades(actions):
 def special_clade_test(action):
     table,field,value = action
     return (table == 'tree' and field == 'in_group_clade')
-    
+
 def insert_new_rows(actions, db):
-    ele_table_map = init_map(db)
     action_gen = generate_actions(actions)
     update_obj = {}
     fixup_table = {}
     update_table = None
     dummy_counter = 0
+    print "Entering insert new rows"
     try:
         table,field,value = action_gen.next()
         while True:
-            if (field == 'id'):
-                #print "loop check: %s, field %s, value %s" % (table,field,value)
-                current_row = find_row(db,table,value,ele_table_map)
-                if current_row is None:
-                    update_table = table
-                    update_id = value
-                    update_obj = {}
+            if usable_id(table,field):
+                print "loop check: %s, field %s, value %s" % (table,field,value)
+                update_table = table
+                update_id = value
+                update_obj = {field: update_id}
+                action = action_gen.next()
+                field = action[1]
+                while not(usable_id(table,field)):
                     action = action_gen.next()
-                    field = action[1]
-                    while not(field == 'id'):
-                        table,field,value = action
-                        if immediately_updateable(table,field):
-                            update_obj[field] = value
-                        action = action_gen.next()
-                        field = action[1]
-                    table,field,value = action # update for next record
-                    finish_update(db,update_table,update_obj,update_id,fixup_table)
-                else:
-                    table,field,value = action_gen.next()
+                    #print "inner loop check: %s, field %s, value %s" % (table,field,value)
+                    table,field,value = action
+                table,field,value = action # update for next record
+                finish_update(db,update_table,update_obj,update_id,fixup_table)
             else:
                 table,field,value = action_gen.next()
     except StopIteration:
@@ -149,126 +148,78 @@ def insert_new_rows(actions, db):
             finish_update(db,update_table,update_obj,update_id,fixup_table)
         return fixup_table
 
+def usable_id(table,field):
+    return (field == 'nexson_id')
+
 def finish_update(db,update_table,update_obj,update_id,fixup_table):
-    #print "About to update: table= %s, update_obj = %s, update_id = %d" % (str(update_table),str(update_obj),update_id)
-    new_id = insert_new(db,update_table,update_obj,update_id)
-    #print "just updated, update_table is %s, new_id is %d" % (str(update_table),new_id)
-    if new_id > 0: # if restore to original id works, no need to add to fixup
-        fixup_table[(update_table,update_id)] = new_id
+    print "About to insert new: table= %s, update_obj = %s, update_id = %s" % (str(update_table),str(update_obj),update_id)
+    insert_new(db,update_table,update_obj)
 
 def generate_actions(actions):
     for action in actions:
         yield action
 
 #wish could do this with a lookup, but some tables need to be placated with dummy values
-def insert_new(db,table,values,old_id=None):
+def insert_new(db,table,values):
     #print "Entering insert_new: %s,%s,%d" % (table,values,old_id)
     if table=='study':
-        return insert_new_study(db,values,old_id)
+        insert_new_study(db,values)
     if table=='study_tag':  #maybe this should be interned, rather than generate - no id is saved
-        return db.study_tag.insert()
+        db.study_tag.insert()
     if table=='otu':
-        return insert_new_otu(db,values,old_id)
+        insert_new_otu(db,values)
     if table=='tree':
-        return insert_new_tree(db,values,old_id)
+        insert_new_tree(db,values)
     if table=='node':
-        return insert_new_node(db,values,old_id)
+        insert_new_node(db,values)
     if table=='annotation':
-        return insert_new_annotation(db,values,old_id)
+        insert_new_annotation(db,values)
 
-def insert_new_study(db,values,old_id):
-    if 'citation' in values and 'contributor' in values:
-        if old_id:
-            #new_id = db.study.insert(id=old_id,citation=values['citation'],contributor=values['contributor'])
-            citation_clean = "'".join(values['citation'].split('"'))
-            contrib_clean = "'".join(values['contributor'].split('"'))
-            sqlstr = 'INSERT INTO study (id,citation,contributor) VALUES (%s, "%s", "%s")' % (old_id,citation_clean,contrib_clean)
-            db.executesql(sqlstr)
-            new_id = old_id
-        else:
-            citation_clean = "'".join(values['citation'].split('"'))
-            contrib_clean = "'".join(values['contributor'].split('"'))
-            sqlstr = 'INSERT INTO study (citation,contributor) VALUES ("%s", "%s")' % (citation_clean,contrib_clean)
-            db.executesql(sqlstr)
-            sqlstr = 'SELECT max(id) FROM study'
-            id_result = db.executesql(sqlstr)
-            if id_result:
-                new_id = int(id_result[0])
-            else:
-                new_id = None
-        return new_id
-
-def insert_new_otu(db,values,old_id):
-    if 'label' in values:
-        #print "otu label is {0}".format(values['label'])
-        if old_id:
-            sqlstr = 'INSERT INTO otu (id,label) VALUES (%s, "%s")' % (old_id,values['label'])
-            db.executesql(sqlstr)
-            return old_id
-        else:
-            sqlstr = 'INSERT INTO otu (label) VALUES ("%s")' % values['label']
-            db.executesql(sqlstr)
-            sqlstr = 'SELECT max(id) FROM study'
-            id_result = db.executesql(sqlstr)
-            return id_result
-
-def insert_new_tree(db,values,old_id):
-    if 'contributor' in values:
-        if old_id:
-            sqlstr = 'INSERT INTO stree (id,contributor,newick) VALUES (%s, "%s","")' % (old_id,values['contributor'])
-            db.executesql(sqlstr)
-            return old_id
-        else:
-            sqlstr = 'INSERT INTO stree (contributor,newick) VALUES ("%s","")' % values['contributor']
-            db.executesql(sqlstr)
-            sqlstr = 'SELECT max(id) FROM study'
-            id_result = db.executesql(sqlstr)
-            return id_result
-    else:
-        if old_id:
-            sqlstr = 'INSERT INTO stree (id,contributor,newick) VALUES (%s, "", "")' % (old_id)
-            db.executesql(sqlstr)
-            return old_id
-        else:
-            sqlstr = 'INSERT INTO stree (contributor,newick) VALUES ("","")'
-            db.executesql(sqlstr)
-            sqlstr = 'SELECT max(id) FROM study'
-            id_result = db.executesql(sqlstr)
-            return id_result
-
-
-def insert_new_node(db,values,old_id):
-    if old_id:
-        sqlstr = 'INSERT INTO snode (id,tree) VALUES (%s, NULL)' % old_id
-        db.executesql(sqlstr)
-        return old_id
-    else:
-        sqlstr = 'INSERT INTO snode (tree) VALUES (NULL)'
-        db.executesql(sqlstr)
-        sqlstr = 'SELECT max(id) FROM study'
-        id_result = db.executesql(sqlstr)
-        return id_result
-
-def insert_new_annotation(db,values,study_id):
-    sqlstr = 'INSERT INTO nexson_annotation (study) VALUES (%s)' % study_id
+def insert_new_study(db,values):
+    print "In insert new study: values = %s" % str(values)
+    sqlstr = 'INSERT INTO study (nexson_id) VALUES ("%s")' % values['nexson_id']
     db.executesql(sqlstr)
-    sqlstr = 'SELECT max(id) FROM study'
-    id_result = db.executesql(sqlstr)
-    return id_result
 
+def insert_new_otu(db,values):
+    sqlstr = 'INSERT INTO otu (nexson_id) VALUES ("%s")' % values['nexson_id']
+    db.executesql(sqlstr)
 
-IMMEDIATELY_UPDATEABLE_TABLE = {"study": ("citation","contributor"),
-                                "study_tag": None,
-                                "otu": ("label",),
-                                "tree": ("contributor","newick","type"),
-                                "node": None,
-                                "annotation": None}   ##this is pessimistic as long as we don't interpret annotations
+def insert_new_tree(db,values):
+    sqlstr = 'INSERT INTO stree (nexson_id) VALUES ("%s")' % values['nexson_id']
+    db.executesql(sqlstr)
 
-def immediately_updateable(table,value):
-    if IMMEDIATELY_UPDATEABLE_TABLE[table]:
-        return value in IMMEDIATELY_UPDATEABLE_TABLE[table]
-    else:
-        return False
+def insert_new_node(db,values):
+    sqlstr = 'INSERT INTO snode (nexson_id,tree) VALUES ("%s",NULL)' % values['nexson_id']
+    db.executesql(sqlstr)
+
+def insert_new_annotation(db,values):
+    sqlstr = 'INSERT INTO nexson_annotation (study) VALUES (%s)' % values['nexson_id']
+    db.executesql(sqlstr)
+
+LOOKUP_SQL_FIELDS = {"study": None,
+                     "study_tag": None,
+                     "otu": None,
+                     "tree": None,
+                     "node": ("otu", "parent"),
+                     "annotation": None}
+
+FIELD_TO_TABLE = {("node","otu"): "otu",
+                  ("node","parent"): "node"}
+
+def update_inserted_row(db,table,sql_id,row_data):
+    for field in row_data:
+        if field != 'nexson_id':
+            resolved_data = row_data[field]
+            if (table in LOOKUP_SQL_FIELDS):
+                if LOOKUP_SQL_FIELDS[table] and field in LOOKUP_SQL_FIELDS[table]:
+                    resolved_data = get_sql_id(db,FIELD_TO_TABLE[(table,field)],resolved_data)
+                    print "resolved data = %d" % sql_id
+            if resolved_data:
+                sqlstr = 'UPDATE %s SET %s = "%s" WHERE id = %d' % (NAMETABLEMAP[table],field,resolved_data,sql_id)
+                print sqlstr
+                #"updating %s field in table %s with id %d" % (field,NAMETABLEMAP[table],sql_id)
+                db.executesql(sqlstr)
+    return sql_id
 
 def find_tags(db,table,id):
     """
@@ -338,7 +289,7 @@ def finish_trees(db,study_id):
        tree = tree_result[0]
        index_nodes(db,tree)
        restore_labels(db,tree)
-       restore_newick(db,tree)
+       #restore_newick(db,tree)
    return study_id
 
 def index_nodes(db,tree_id):

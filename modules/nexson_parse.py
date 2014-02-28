@@ -51,8 +51,7 @@ def ingest_nexson(f,db):
 def encode(str):
     return str  #.encode('ascii')
 
-SQLFIELDS = {'ot:studyId': 'id',
-             'ot:studyPublication': 'doi',
+SQLFIELDS = {'ot:studyPublication': 'doi',
              'ot:studyPublicationReference': 'citation',
              'ot:studyYear': 'year_published',
              'ot:curatorName': 'contributor',
@@ -70,13 +69,13 @@ def process_meta_element_sql(contents, results, db):
     metaEle = contents[u'meta']
     metafields = parse_study_meta(metaEle)
     if 'ot:studyId' in metafields:
-        results.append(('study','id',metafields['ot:studyId']))
+        results.append(('study','nexson_id',metafields['ot:studyId']))
     else:
         print "No study id found";
         return None  #no id, nothing to do
     for mf in metafields:
-        if mf == 'ot:annotation':
-            results.append(('annotation','id',metafields['ot:studyId']))
+        if mf == 'ot:annotation':  #note that annotations don't seem to have their own id
+            results.append(('annotation','nexson_id',metafields['ot:studyId'])) # use containing study's id
             results.append(('annotation','annotation',metafields['ot:annotation']))
         elif mf == 'ot:tag':
             for tag in metafields['ot:tag']:
@@ -109,6 +108,10 @@ def parse_study_meta(metaEle):
             studytags.append(encode(p[u'$']))
         elif prop == u'ot:annotation':
             result['ot:annotation'] = process_annotation_metadata(p)
+        elif 'extra_properties' in result:  #last two cases handle unrecognized properties
+            result['extra_properties'].append(p)
+        else:
+            result['extra_properties'] = [p]
     if len(studytags)>0:
         result['ot:tag']=studytags
     return (result)
@@ -145,14 +148,12 @@ def process_otus_element_sql(contents, results, db):
 def process_otu_element_sql(otu, results, db):
     from sys import maxsize
     id = otu[u'@id']
-    if id.startswith('otu'):
-        id = id[3:]
-    results.append(('otu','id',int(id)))
+    results.append(('otu','nexson_id',otu[u'@id']))
     meta_ele = otu[u'meta']
     if isinstance(meta_ele,dict):
-        ottid,olabel,tbid = process_otu_meta([meta_ele])
+        ottid,olabel,tbid,extra = process_otu_meta([meta_ele])
     else:
-        ottid,olabel,tbid = process_otu_meta(meta_ele)
+        ottid,olabel,tbid,extra = process_otu_meta(meta_ele)
     if ottid:  #redesign here?
         #query suppresses synonyms
         query_str = 'SELECT id FROM ottol_name WHERE uid = %d and parent_uid IS NOT NULL' % ottid
@@ -185,6 +186,7 @@ def process_otu_meta(meta_elements):
     ottid = None
     olabel = None
     tbid = None
+    extra = []
     for p in meta_elements:
         prop = p[u'@property']
         if prop == u'ot:ottId':
@@ -195,7 +197,9 @@ def process_otu_meta(meta_elements):
             olabel = encode(p[u'$'])
         elif prop == u'ot:treebaseOTUId':
             tbid = encode(p[u'$'])
-    return (ottid,olabel,tbid)
+        else:
+            extra.append(p)
+    return (ottid,olabel,tbid,extra)
 
 def process_trees_element_sql(contents, results, db):
     """
@@ -220,8 +224,6 @@ def process_tree_element_sql(tree, results, db):
     during node parsing
     """
     id = tree[u'@id']
-    if id.startswith('tree'):
-        id = id[4:]
     nodes = tree[u'node']
     edges = tree[u'edge'] 
     if u'meta' in tree:
@@ -234,7 +236,7 @@ def process_tree_element_sql(tree, results, db):
         blmode,tags,ingroup,ctype = process_tree_meta(meta_ele)
     else:
         blmode,tags,ingroup,ctype = (None,[],None,None)
-    results.append(('tree','id',int(id)))
+    results.append(('tree','nexson_id',id))
     if blmode:
         results.append(('tree','branch_lengths_represent',blmode))
     for tag in tags:
@@ -266,6 +268,7 @@ def process_tree_meta(meta_elements):
     tags = []
     ingroup = None
     ctype = None
+    extra = []
     for p in meta_elements:
         prop = p[u'@property']
         if prop == u'ot:branchLengthMode':
@@ -278,7 +281,9 @@ def process_tree_meta(meta_elements):
             ingroup = encode(p[u'$'])
         elif prop == u'ot:curatedType':
             ctype = encode(p[u'$'])
-    return (blmode,tags,ingroup,ctype)    
+        else:
+            extra.append(p)
+    return (blmode,tags,ingroup,ctype)
 
 def process_node_element_sql(node, edge_table, results, db):
     """
@@ -287,29 +292,44 @@ def process_node_element_sql(node, edge_table, results, db):
     snode table and a value.  Some mess because phylografter stores
     parent and branch length with the node and has no edge table
     """
-    raw_id = node[u'@id']
-    if raw_id.startswith('node'):
-        id = raw_id[4:]
+    id = node[u'@id']
+    if u'meta' in node:
+        meta_ele = node[u'meta']
     else:
-        id = raw_id
-    results.append(('node','id',int(id)))
+        meta_ele = None
+    if isinstance(meta_ele,dict):
+        extra = process_node_meta([meta_ele])
+    elif meta_ele:
+        extra = process_node_meta(meta_ele)
+    else:
+        extra = None
+    results.append(('node','nexson_id',id))
     if u'@otu' in node:
         otu = node[u'@otu']
         if otu.startswith('otu'):
             otu = otu[3:]
         results.append(('node','otu',int(otu)))
-    if raw_id in edge_table:
-       parent_link = edge_table[raw_id]
+    if id in edge_table:
+       parent_link = edge_table[id]
        if u'@length' in parent_link:
            raw_length = parent_link[u'@length']
            results.append(('node','length',float(raw_length)))
        if u'@source' in parent_link:
            parent = parent_link[u'@source']
-           if parent.startswith('node'):
-               parent = parent[4:]
            #print "appending parent %s to node %s" %(parent,raw_id) 
-           results.append(('node','parent',int(parent)))    
+           results.append(('node','parent',parent))
     return results
+
+def process_node_meta(meta_elements):
+    """
+    This is basically a stub, especially since there are no currently
+    defined meta elements for nodes, but this should handle any 
+    unrecognized that appear.
+    """
+    extra = []
+    for p in meta_elements:
+        extra.append(p)
+    return extra
 
 def make_edge_table(edges):
     """
