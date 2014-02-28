@@ -1015,7 +1015,7 @@ def import_NexSON():
     print datetime.datetime.now()
     return study_id
 
-TESTFILE = "/Users/pmidford/Projects/phylografter_regression/base/base105.json"
+TESTFILE = "/Users/pmidford/Projects/phylografter_regression/base/base10.json"
 def importTest():
     """
     just for testing
