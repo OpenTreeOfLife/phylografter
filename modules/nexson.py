@@ -476,7 +476,7 @@ def edge_elt(child_row):
     '''
     returns an element for a node - note that the information for this comes from the child node
     '''
-    child_id,parent,otu_id,length,ignore = child_row
+    child_id,label,parent,otu_id,length,ignore = child_row
     result ={"@id": "edge%d" % child_id}
     result["@source"]='node%d' % parent
     result["@target"]='node%d' % child_id
@@ -488,15 +488,17 @@ def get_snode_recs_for_tree(tree_row,db):
     """
     returns a list of the nodes associated with the specified study - now represented as tuples
     """
-    return db.executesql('SELECT id,parent,otu,length,isleaf FROM snode WHERE (tree = %d);' % tree_row.id)
+    return db.executesql('SELECT id,label,parent,otu,length,isleaf FROM snode WHERE (tree = %d);' % tree_row.id)
 
 def node_elt(node_row,db):
     """
     returns an element for a node
     """
-    node_id,parent,otu_id,length,isleaf = node_row
+    node_id,label,parent,otu_id,length,isleaf = node_row
     meta_elts = meta_elts_for_node_elt(node_row,db)
     result = {"@id": "node%d" % node_id}
+    if label:
+        result["@label"] = label
     if otu_id:
         result["@otu"] = 'otu%d' % otu_id
     if parent:
@@ -513,7 +515,7 @@ def meta_elts_for_node_elt(node_row,db):
     returns metadata elements for a node (currently ot:isLeaf,ot:ottTaxonName)
     """
     result=[]
-    node_id,parent,otu_id,length,isleaf = node_row
+    node_id,label,parent,otu_id,length,isleaf = node_row
     if isleaf:
         isLeaf_elt = createLiteralMeta("ot:isLeaf","true","xsd:boolean")
         result.append(isLeaf_elt)

@@ -10,14 +10,17 @@ def sql_process(actions, db):
     fixup_table = insert_new_rows(actions,db)
     db.commit()  # think this is necessary
     special_clades = collect_special_clades(actions)
-    current_row = None
+    current_table = None
+    sql_id = None
+    current_row = {}
+    new_tags = None
     for action in actions:
         table,field,value = action
         print "Action is %s %s %s" % action
         print "current row = %s" % str(current_row)
         if (field == 'nexson_id'):  #time to update the previous element
             print "Only if current field is nexson_id"
-            if current_row:
+            if current_table:
                 print "Need to be filling in a row here"
                 if current_table in ['otu','tree']:
                     current_row['study']= study_id
@@ -29,9 +32,7 @@ def sql_process(actions, db):
                 if sql_id == None:
                     print "failed sql_id lookup"
                 else:
-                    update_inserted_row(db,current_table,sql_id,current_row)
-                    if new_tags:
-                        update_tags(db,current_table,new_tags,sql_id)
+                    finish_row(db,current_table,sql_id,current_row,new_tags)
             sql_id = get_sql_id(db,table,value)
             current_row = dict();
             current_id = sql_id
@@ -56,6 +57,7 @@ def sql_process(actions, db):
         else:
             print "Got to fall through"
             current_row[field] = value
+    finish_row(db,current_table,sql_id,current_row,new_tags)  #catch last record (probably node)
     return finish_trees(db,study_id)
 
 
@@ -70,6 +72,12 @@ def validate_actions(actions):
         print "actions[1] = %s,%s,%s\n" % actions[1]
         raise HTTP(400,"Head of nexson file was not a study identifier - exiting")
 
+def finish_row(db,current_table,sql_id,current_row,new_tags):
+    """
+    """
+    update_inserted_row(db,current_table,sql_id,current_row)
+    if new_tags:
+        update_tags(db,current_table,new_tags,sql_id)
 
 NAMETABLEMAP={'study': 'study',
               'study_tag': 'study_tag',
@@ -107,7 +115,7 @@ def find_row(db, table,id,ele_table):
 #    else:
 #        return None
 
-# should return true if existing row with matching id is compatible                
+# should return true if existing row with matching id is compatible
 def validate_row(db, table,id,ele_table):
     return True
 
@@ -210,10 +218,13 @@ def update_inserted_row(db,table,sql_id,row_data):
     for field in row_data:
         if field != 'nexson_id':
             resolved_data = row_data[field]
+            if (table == "node"):
+                print "Field check; field = %s; resolved_data = %s" % (field,str(resolved_data))
             if (table in LOOKUP_SQL_FIELDS):
                 if LOOKUP_SQL_FIELDS[table] and field in LOOKUP_SQL_FIELDS[table]:
                     resolved_data = get_sql_id(db,FIELD_TO_TABLE[(table,field)],resolved_data)
-                    print "resolved data = %d" % sql_id
+            if (table == "node"):
+                print "Field check2; field = %s; resolved_data = %s" % (field,str(resolved_data))
             if resolved_data:
                 sqlstr = 'UPDATE %s SET %s = "%s" WHERE id = %d' % (NAMETABLEMAP[table],field,resolved_data,sql_id)
                 print sqlstr
@@ -285,15 +296,18 @@ def finish_trees(db,study_id):
    the newick string for each tree in the study
    """
    trees = db.executesql("SELECT id FROM stree WHERE study = %d" % study_id)
+   print "tree set = %s" % str(trees)
    for tree_result in trees:
        tree = tree_result[0]
+       db.commit()  # make sure everything is in before tree update
        index_nodes(db,tree)
        restore_labels(db,tree)
-       #restore_newick(db,tree)
+       restore_newick(db,tree)
    return study_id
 
 def index_nodes(db,tree_id):
     root_nodes = db.executesql("SELECT id FROM snode WHERE (tree = %d) AND (parent IS NULL)" % tree_id)
+    print "root node set = %s" % str(root_nodes)
     for root in root_nodes:  # should be singleton
         node_id = root[0]
         index_children(db,node_id,0)
@@ -316,8 +330,8 @@ def index_children(db, id,n):
         is_leaf = 'T'
     else:
         is_leaf = 'F'
-    #print "UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
-    #               primary_back,is_leaf,id)
+    print "UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
+                   primary_back,is_leaf,id)
     db.executesql("UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" %(primary_next,
                    primary_back,is_leaf,id))
     return next_back

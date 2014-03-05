@@ -306,9 +306,7 @@ def process_node_element_sql(node, edge_table, results, db):
     results.append(('node','nexson_id',id))
     if u'@otu' in node:
         otu = node[u'@otu']
-        if otu.startswith('otu'):
-            otu = otu[3:]
-        results.append(('node','otu',int(otu)))
+        results.append(('node','otu', otu))
     if id in edge_table:
        parent_link = edge_table[id]
        if u'@length' in parent_link:
