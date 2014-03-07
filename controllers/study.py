@@ -930,6 +930,103 @@ def ref_from_doi():
     else:
         print resp.text
 
+@auth.requires_membership('contributor')
+def tolfetch():
+    t = db.study
+    key = "fetched_nexson_%s" % auth.user.id
+    #contributor = "%s %s" % (auth.user.first_name, auth.user.last_name)
+    status = None
+    tbid = request.args(0)
+    if tbid:
+        try:
+            e = treebase.fetch_study(tbid)
+            nexml = treebase.parse_nexml(e)
+        except:
+            nexml = { }
+            status = "Valid study id required"
+        if nexml:
+            nexml.meta['contributor'] = contributor
+            cache.ram.clear(key)
+            x = cache.ram(key, lambda:nexml, time_expire=10000)
+            redirect(URL('study','tolfetch2',args=tbid))
+    uploadfolder = request.folder+'uploads'
+    fields = [Field("study_id", "string", default=tbid),
+              Field("nexml_file", "upload", uploadfolder=uploadfolder)]
+    form = SQLFORM.factory(*fields)
+    if form.accepts(request.vars, session, dbio=False):
+        if form.vars.study_id:
+            try:
+                e = treebase.fetch_study(form.vars.study_id)
+                nexml = treebase.parse_nexml(e)
+            except:
+                nexml = { }
+                status = "Valid study id required"
+        elif form.vars.nexml_file:
+            ## print form.vars.nexml_file
+            path = os.path.join(uploadfolder,
+                                form.vars.nexml_file)
+                                ## form.vars.nexml_file_newfilename)
+            nexml = treebase.parse_nexml(path)
+            os.remove(path)
+        else:
+            nexml = {}
+            request.flash = "Valid study id or nexml file required"
+        if nexml:
+            nexml.meta['contributor'] = contributor
+            cache.ram.clear(key)
+            x = cache.ram(key, lambda:nexml, time_expire=10000)
+            redirect(URL('study','tolfetch2',args=tbid))
+    return dict(form=form, status=status )
+
+@auth.requires_membership('contributor')
+def tolfetch2():
+    tbid = request.args(0)
+    t = db.study
+    ## t.focal_clade.readable = t.focal_clade.writable = False
+    t.focal_clade_ottol.label = 'Focal clade'
+    t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
+        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
+        limitby=(0,20), orderby=db.ottol_name.unique_name)
+    t.uploaded.readable=False
+    key = "fetched_nexson_%s" % auth.user.id
+    nexson = cache.ram(key, lambda:None, time_expire=10000)
+    if not nexml:
+        session.flash = "Please fetch from the repository again"
+        redirect(URL('study','tolfetch'))
+    cache.ram(key, lambda:nexml, time_expire=10000)
+    ## assert nexml
+    ## cache.ram.clear(key)
+    get = lambda x: nexml.meta.get(x) or None
+    treebase_id = int(get('tb:identifier.study'))
+    rec = db(t.treebase_id==treebase_id).select().first()
+    year = int(get('prism:publicationDate') or 0)
+    d = dict(citation = get('dcterms:bibliographicCitation'),
+             year_published = year if year else None,
+             label = get('tb:title.study'),
+             treebase_id = treebase_id,
+             contributor = get('contributor'))
+
+    diffs = []
+    if rec: # edit an existing study record
+        if not tbid: response.flash = "Record exists: study id = %s" % rec.id
+        diffs = [ (k, v) for k, v in d.items()
+                  if rec[k] != v and k != 'contributor' ]
+        form = SQLFORM(t, rec, showid=False, submit_button="Update study")
+
+    else:
+        for k, v in d.items():
+            if v and k in t.fields: t[k].default = v
+        form = SQLFORM(t, submit_button="Insert study")
+    
+    ## form = crud.create(t, next="view/[id]")
+    if form.accepts(request.vars, session):
+        if rec: response.flash = "record updated"
+        else: response.flash = "record inserted"
+        ## t.update_record( last_modified = datetime.datetime.now() )
+        ## redirect(URL('study','view',args=form.vars.id))
+
+    return dict(form=form, rec=rec, diffs=diffs)
+        
 def export_NexSON():
     'Exports the otus and trees in the study specified by the argument as JSON NeXML'
     studyid = request.args(0)
@@ -1015,7 +1112,7 @@ def import_NexSON():
     print datetime.datetime.now()
     return study_id
 
-TESTFILE = "/Users/pmidford/Projects/phylografter_regression/base/base10.json"
+TESTFILE = "/Users/pmidford/Projects/phylografter_regression/base/base9.json"
 def importTest():
     """
     just for testing
@@ -1026,6 +1123,23 @@ def importTest():
     study_exists = check_nexson(open(TESTFILE),db)
     print "check_nexson returned %s" % str(study_exists)
     study_id = ingest_nexson(open(TESTFILE),db)
+    print datetime.datetime.now()
+    #redirect(URL(c="study",f="view",args=[study_id]))
+    return study_id
+
+repository_list = ["http://dev.opentreeoflife.org/api/v1/study/10.json?output_nexml2json=0.0.0"
+                   ]
+
+def repositoryTest():
+    """
+    just for testing
+    """
+    import datetime
+    from nexson_parse import ingest_nexson,check_nexson
+    print datetime.datetime.now()
+    study_exists = check_nexson(repository_list[0],db)
+    print "check_nexson returned %s" % str(study_exists)
+    study_id = ingest_nexson(repository_list[0],db)
     print datetime.datetime.now()
     #redirect(URL(c="study",f="view",args=[study_id]))
     return study_id

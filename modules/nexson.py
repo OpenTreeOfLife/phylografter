@@ -420,6 +420,7 @@ def meta_elts_for_tree_elt(tree_row,db):
            result.append(tag_elt)
     if (tree_type != ""):  # this is supposed to be not null, but might still be blank
         curatedType_elt = createLiteralMeta("ot:curatedType",tree_type)
+        print "curated type is %s" % str(curatedType_elt)
         result.append(curatedType_elt)
     if result:
         return dict(meta=result)
@@ -469,8 +470,8 @@ def tree_edges(node_rows):
     '''
     formats the edges leading to each node in the rows in node_rows
     '''
-    #node_row[1] is parent - test excludes root node
-    return [edge_elt(node_row) for node_row in node_rows if node_row[1]]
+    #node_row[2] is parent - test excludes root node
+    return [edge_elt(node_row) for node_row in node_rows if node_row[2]]
 
 def edge_elt(child_row):
     '''

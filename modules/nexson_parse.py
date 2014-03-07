@@ -3,13 +3,15 @@
 from gluon import *
 from sys import maxsize
 
-def check_nexson(f,db):
+def check_nexson(u,db):
     """
     checks if study with a matching identifier (doi or citation if no doi) is
     already present so user can be warned
     """
-    from json import load
-    json_tree = load(f)       #want api call that returns study identifier(s)
+    #from json import load
+    import requests
+    r = requests.get(u)
+    json_tree = r.json()       #want api call that returns study identifier(s)
     return check_json_study(json_tree,db)
 
 def check_json_study(json_tree,db):
@@ -37,14 +39,16 @@ def check_json_study(json_tree,db):
         return False
 
 
-def ingest_nexson(f,db):
+def ingest_nexson(u,db):
     """
     Entry point - nexson is parsed and dispatched to the appropriate updater
     f - file like object (generally a CStringIO, retrieved from a post)
     db - web2py database object
     """
-    from json import load
-    json_tree = load(f)
+    #from json import load
+    import requests
+    r = requests.get(u)
+    json_tree = r.json()
     return ingest_json_study(json_tree,db)
 
 #put this in one place so it can be turned off easily when the time comes
@@ -243,6 +247,8 @@ def process_tree_element_sql(tree, results, db):
         results.append(('tree','tag',tag))
     if ingroup:
         results.append(('tree','in_group_clade',ingroup))
+    if ctype:
+        results.append(('tree','type',ctype))
     edge_table = make_edge_table(edges)
     for node in nodes:
         results = process_node_element_sql(node, edge_table, results, db)
