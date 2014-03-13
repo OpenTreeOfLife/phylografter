@@ -25,13 +25,13 @@ response.menu = [
     (T('Instructions'), False, URL('default','quickstart'), []),
     ## (T('Taxa'), False, URL('taxon','index'), []),
     (T('Studies'), False, URL('study','index'), [
-        ("New study", False, URL('study','create', [])),
-        ("Import from TreeBASE", False, URL('study','tbimport', [])),
-        ("Load from Nexson", False, URL('study','importTest', [])),
+        (T('New study'), False, URL('study','create', [])),
+        (T('Import from TreeBASE'), False, URL('study','tbimport', [])),
+        (T('Load from Nexson'), False, URL('study','importTest', [])),
         ]),
     ## (T('OTUs'), False, URL('otu','index'), []),
     (T('Source Trees'), False, URL('stree','index'), [
-      ("Taxon Search", False, URL('stree','otus_within',[]))
+      (T('Taxon Search'), False, URL('stree','otus_within',[]))
       ]),
     (T('Grafted Trees'), False, URL('gtree','index'), [])
     #(T('Share Your Trees'), False, URL('collab','index'), [])
