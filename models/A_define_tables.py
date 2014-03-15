@@ -539,9 +539,7 @@ def define_tables(db, migrate=False):
     db.define_table(
         "nexson_annotation",
         Field("study",db.study),
-        Field("uid","string"),
-        Field("text_contents", "text"),
         Field("raw_contents","json"),
-        Field("nexson_id", "string",writable=False),
-        migrate=migrate
+        Field("checksum","integer"),
+        migrate=True
     )

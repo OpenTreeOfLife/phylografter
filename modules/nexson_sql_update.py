@@ -3,11 +3,12 @@
 from gluon import *
 
 
-def sql_process(actions, db):
+def sql_process(actions, db, recycle_id):
     validate_actions(actions)
     study_id = -1
     tree_id = -1
-    fixup_table = insert_new_rows(actions,db)
+    print " (sql_process) recycle_id = %s" % recycle_id
+    fixup_table = insert_new_rows(actions,db,recycle_id)
     db.commit()  # think this is necessary
     special_clades = collect_special_clades(actions)
     current_table = None
@@ -33,7 +34,10 @@ def sql_process(actions, db):
                     print "failed sql_id lookup"
                 else:
                     finish_row(db,current_table,sql_id,current_row,new_tags)
-            sql_id = get_sql_id(db,table,value)
+            if (table == 'study' and recycle_id): #id of study previously deleted
+                sql_id = recycle_id
+            else:
+                sql_id = get_sql_id(db,table,value)
             current_row = dict();
             current_id = sql_id
             current_table = table
@@ -48,8 +52,10 @@ def sql_process(actions, db):
             new_tags.add(value)
         elif (field == 'in_group_clade'):
             pass
-        elif (field == 'annotation'):
-            current_row['raw_contents'] = encode_annotation(value)
+        elif (field == 'annotation'):  #special handling for annotation within study 'block'
+            db.nexson_annotation.update_or_insert(db.nexson_annotation.study==study_id,
+                                                  study=study_id,
+                                                  raw_contents=value)
         elif (field == 'dataDeposit'):
             if (table == 'study'):
                 current_row['data_deposit'] = value
@@ -126,17 +132,21 @@ def special_clade_test(action):
     table,field,value = action
     return (table == 'tree' and field == 'in_group_clade')
 
-def insert_new_rows(actions, db):
+def insert_new_rows(actions, db, recycle_id):
     action_gen = generate_actions(actions)
     update_obj = {}
     fixup_table = {}
     update_table = None
     dummy_counter = 0
+    print "recycle_id = %s" % recycle_id
     print "Entering insert new rows"
     try:
         table,field,value = action_gen.next()
         while True:
             if usable_id(table,field):
+                if ((table == 'study') and recycle_id):
+                    print "recycle_id detected: %d" % recycle_id
+                    value = recycle_id
                 print "loop check: %s, field %s, value %s" % (table,field,value)
                 update_table = table
                 update_id = value
@@ -148,18 +158,23 @@ def insert_new_rows(actions, db):
                     #print "inner loop check: %s, field %s, value %s" % (table,field,value)
                     table,field,value = action
                 table,field,value = action # update for next record
-                finish_update(db,update_table,update_obj,update_id,fixup_table)
+                print "About to check for reuse: table = %s, value = %s" % (table,value)
+                if (update_table== 'study' and (update_id == recycle_id)):
+                    print "updating: %d" % value
+                    insert_reusing_id(db,update_obj,recycle_id)
+                else:
+                    finish_update(db,update_table,update_obj,update_id)
             else:
                 table,field,value = action_gen.next()
     except StopIteration:
         if update_table:
-            finish_update(db,update_table,update_obj,update_id,fixup_table)
+            finish_update(db,update_table,update_obj,update_id)
         return fixup_table
 
 def usable_id(table,field):
     return (field == 'nexson_id')
 
-def finish_update(db,update_table,update_obj,update_id,fixup_table):
+def finish_update(db,update_table,update_obj,update_id):
     print "About to insert new: table= %s, update_obj = %s, update_id = %s" % (str(update_table),str(update_obj),update_id)
     insert_new(db,update_table,update_obj)
 
@@ -182,6 +197,14 @@ def insert_new(db,table,values):
         insert_new_node(db,values)
     if table=='annotation':
         insert_new_annotation(db,values)
+
+def insert_reusing_id(db,values,reused_id):
+    print "In insert reusing %d;  values = %s" % (reused_id,str(values))
+    sqlstr = 'INSERT INTO study (id,nexson_id) VALUES (%d,"%s")' % (reused_id,values['nexson_id'])
+    print sqlstr
+    db.executesql(sqlstr)
+    db.commit()
+    
 
 def insert_new_study(db,values):
     print "In insert new study: values = %s" % str(values)
@@ -283,11 +306,16 @@ def encode_annotation(value):
     serializes the dictionary structure representing a nexson (study) annotation back in textual json
     (might be worthwhile to zip compress the text as well)
     """
-    from json import JSONEncoder
-    e = JSONEncoder()
-    encoded = e.encode(value)
-    print "Recoded, length = %d" % len(encoded)
-    return encoded
+    import json
+    import base64
+    import zlib
+    ej = json.JSONEncoder()
+    jsonStr = ej.encode(value)
+    checksum = zlib.adler32(jsonStr) & 0xffffffff
+    zjson = zlib.compress(jsonStr)
+    b64zjson = base64.b64encode(zjson)
+    print "Recoded, length = %d" % len(b64zjson)
+    return (b64zjson,checksum)
 
 
 def finish_trees(db,study_id):

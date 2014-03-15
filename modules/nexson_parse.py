@@ -39,17 +39,19 @@ def check_json_study(json_tree,db):
         return False
 
 
-def ingest_nexson(u,db):
+def ingest_nexson(u,db,id):
     """
     Entry point - nexson is parsed and dispatched to the appropriate updater
     f - file like object (generally a CStringIO, retrieved from a post)
     db - web2py database object
+    id - if a number, specifies a study id to use.
     """
     #from json import load
     import requests
     r = requests.get(u)
     json_tree = r.json()
-    return ingest_json_study(json_tree,db)
+    print "(ingest_nexson)recycle_id = %s" % id
+    return ingest_json_study(json_tree,db,id)
 
 #put this in one place so it can be turned off easily when the time comes
 def encode(str):
@@ -359,11 +361,12 @@ sql_parse_methods = [process_meta_element_sql,
 #stub to support parsing in other formats
 target_parsers= {'sql': sql_parse_methods} #, 'bson': bson_parse_methods} 
 
-def ingest_json_study(study,db):
+def ingest_json_study(study,db,id):
     """
     Entry point -
        study is parsed JSON from a NexSON file
        db is DAL db to receive results of parse
+       id if numeric is value to force for study id
     """
     from nexson_sql_update import sql_process
     if not u'nexml' in study:
@@ -375,7 +378,8 @@ def ingest_json_study(study,db):
     for parser in target_parser_set:
         results = parser(contents,results,db)
     if results:
-        new_study = sql_process(results,db)
+        print "(ingest_json_study) recycle_id = %s" % id
+        new_study = sql_process(results,db,id)
         return new_study
     else:
         raise(500,"NexSON study ingest failed")
