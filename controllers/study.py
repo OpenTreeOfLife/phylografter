@@ -1108,24 +1108,26 @@ def import_NexSON():
     post_text = request.body.read()
     print datetime.datetime.now()
     study_exists = check_nexson(cStringIO.StringIO(post_text),db)
+    if study_exists: #will contain study id; go delete it and replace
+        print "Study exists returns: " + str(study_exists)
     study_id = ingest_nexson(cStringIO.StringIO(post_text),db)
     print datetime.datetime.now()
     return study_id
 
-TESTFILE = "/Users/pmidford/Projects/phylografter_regression/base/base9.json"
-def importTest():
-    """
-    just for testing
-    """
-    import datetime
-    from nexson_parse import ingest_nexson,check_nexson
-    print datetime.datetime.now()
-    study_exists = check_nexson(open(TESTFILE),db)
-    print "check_nexson returned %s" % str(study_exists)
-    study_id = ingest_nexson(open(TESTFILE),db)
-    print datetime.datetime.now()
-    #redirect(URL(c="study",f="view",args=[study_id]))
-    return study_id
+##TESTFILE = "/Users/pmidford/Projects/phylografter_regression/base/base9.json"
+##def importTest():
+##    """
+##    just for testing
+##    """
+##    import datetime
+##    from nexson_parse import ingest_nexson,check_nexson
+##    print datetime.datetime.now()
+##    study_exists = check_nexson(open(TESTFILE),db)
+##    print "check_nexson returned %s" % str(study_exists)
+##    study_id = ingest_nexson(open(TESTFILE),db)
+##    print datetime.datetime.now()
+##    #redirect(URL(c="study",f="view",args=[study_id]))
+##    return study_id
 
 repository_list = ["http://dev.opentreeoflife.org/api/v1/study/10.json?output_nexml2json=0.0.0"
                    ]
@@ -1134,15 +1136,51 @@ def repositoryTest():
     """
     just for testing
     """
-    import datetime
-    from nexson_parse import ingest_nexson,check_nexson
-    print datetime.datetime.now()
+    from nexson_parse import check_nexson
     study_exists = check_nexson(repository_list[0],db)
     print "check_nexson returned %s" % str(study_exists)
-    study_id = ingest_nexson(repository_list[0],db)
+    if study_exists:
+        redirect(URL(c="study",f="overwrite_study",args=[study_exists]))
+    else:
+        redirect(URL(c="study",f="load_nexson_study"))
+
+def load_nexson_study():
+    import datetime
+    from nexson_parse import ingest_nexson,check_nexson
+    recycle_id = request.args(0)
+    if recycle_id:
+        recycle_id = int(recycle_id)
+        print "recycle_id = %d" % recycle_id
     print datetime.datetime.now()
-    #redirect(URL(c="study",f="view",args=[study_id]))
-    return study_id
+    study_id = ingest_nexson(repository_list[0],db,recycle_id)
+    print datetime.datetime.now()
+    redirect(URL(c="study",f="view",args=[study_id]))
+
+def overwrite_study():
+    """
+    Displays a page to ask for verification before deleting and replacing a study
+    """
+    t = db.study
+    overwrite_id = request.args(0)
+    rec = t(overwrite_id)
+    readonly = not auth.has_membership(role="contributor")
+    ## t.focal_clade.readable = t.focal_clade.writable = False
+    t.focal_clade_ottol.label = 'Focal clade'
+    t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
+        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
+        limitby=(0,20), orderby=db.ottol_name.unique_name)
+    form = SQLFORM(t, rec, deletable=False, readonly=False,
+                   fields = ["citation", "year_published", "doi", "label",
+                             "focal_clade_ottol", "treebase_id",
+                             "contributor", "comment", "uploaded"],
+                   showid=False, submit_button="Overwrite study")
+    form.add_button('Cancel', URL('study', 'view', args=rec.id))
+    if form.accepts(request.vars, session):
+	## Deletes the study from the database using the DAL. 
+        del db.study[rec.id]
+        session.flash = "The Study will be overwritten" #Alerts the user the study gone; replacement about to loaded
+        redirect(URL('study', 'load_nexson_study',args=[overwrite_id]))
+    return dict(form=form, rec = rec)
 
  
 ### Function to allow the deletion of a study and all of its corresponding nodes, trees and otus
