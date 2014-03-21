@@ -67,10 +67,11 @@ SQLFIELDS = {'ot:studyPublication': 'doi',
 def process_meta_element_sql(contents, results, db):
     """
     Builds the list of database updates corresponding to the study
-    element's child 'meta' elements.  Each tuple added to results 
-    should contain study (the table), a valid field in the study table,
-    and an appropriate value.  Note that this is mapping Nexson vocabulary
-    to phylografter fields (should happen here and similar functions below)
+    element's child 'meta' elements.  Each tuple added to results
+    should contain the literal 'study' (the table), a valid field
+    in the study table, and an appropriate value.  Note that this
+    is mapping Nexson vocabulary to phylografter fields (should 
+    happen here and in similar functions below)
     """
     metaEle = contents[u'meta']
     metafields = parse_study_meta(metaEle)
@@ -90,8 +91,10 @@ def process_meta_element_sql(contents, results, db):
             results.append(('study',SQLFIELDS[mf],metafields[mf]))
         elif mf == 'ot:studyId':
             pass
+        elif mf == 'other_metadata':
+            results.append(('study','other_metadata',metafields['other_metadata']))
         else:
-            print "Unrecognized meta field: %s" % mf
+            print "Unrecognized meta field (this indicates a parsing bug): %s" % mf
     return results
 
 
@@ -101,7 +104,7 @@ def parse_study_meta(metaEle):
     vocabulary, not phylografter fields (hopefully reusable)
     """
     studytags = []
-    result = {}
+    result = {'other_metadata': []}
     for p in metaEle:
         prop = p[u'@property']
         if prop in [u'ot:studyId',u'ot:studyYear',u'ot:focalClade']:
@@ -112,27 +115,21 @@ def parse_study_meta(metaEle):
             result[prop] = encode(p[u'$'])
         elif prop in [u'ot:tag']:
             studytags.append(encode(p[u'$']))
-        elif prop == u'ot:annotation':
-            result['ot:annotation'] = process_annotation_metadata(p)
-        elif 'extra_properties' in result:  #last two cases handle unrecognized properties
-            result['extra_properties'].append(p)
         else:
-            result['extra_properties'] = [p]
+            result['other_metadata'].append(p)
     if len(studytags)>0:
         result['ot:tag']=studytags
     return (result)
 
-def process_annotation_metadata(p):
+def reserialize_json(p):
     import json
-    #print "Entering annotation %s " % p[u'$']
+    print "reserializing metadata %s " % str(p)
     #print "Author: %s" % p['author']
     #print "isValid: %s" % p['isValid']
     #print "id: %s" % p['id']
     #print "date created: %s" % p['dateCreated']
-    if 'dateModified' in p:
-        print "date modified: %s" % p['dateModified']
     #print "Messages: %s" % str(p['messages'])
-    print "About to test json.dumps"
+    #print "About to test json.dumps"
     testString = json.dumps(p)
     print "testString length = %d" % len(testString)
     return p

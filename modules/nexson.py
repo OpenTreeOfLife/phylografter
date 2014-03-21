@@ -129,9 +129,10 @@ def meta_elts_for_nexml(study_row,db):
         for tag in study_tags:
            tag_elt = createLiteralMeta("ot:tag", tag)
            meta_array.append(tag_elt)
-    annotation_meta = annotation_meta_for_study(study_row,db)
-    if annotation_meta:
-        meta_array.append(annotation_meta)
+    other_meta = other_meta_for_element(study_row,db)
+    if other_meta:
+        for item in other_meta:
+            meta_array.append(item)
     return {"meta": meta_array}
 
 def curator_meta_for_study(study_row):
@@ -240,6 +241,13 @@ def specified_root_meta_for_study(study_row):
     else:
         return
 
+def other_meta_for_element(element_row,db):
+    """
+    """
+    import gluon,json
+    if 'other_metadata' in element_row:
+        return element_row.other_metadata
+
 def annotation_meta_for_study(study_row,db):
     """
     retrieves a record from nexson_annotations for the study, parses it back
@@ -253,8 +261,7 @@ def annotation_meta_for_study(study_row,db):
     elif len(rows) > 1:
         raise(gluon.HTTP(500))
     else:
-        json_string = rows[0].raw_contents
-        json_struct = json.loads(json_string)
+        json_struct = rows[0].raw_contents
         return json_struct
 
 def get_study_tags(study_row,db):
@@ -282,7 +289,7 @@ def get_otu_rows_for_study(study_row,db):
     '''
     returns a tuple of list of otu ids for otu records that link to this study
     '''
-    return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.accepted_uid, ottol_name.name, otu.tb_nexml_id FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % study_row.id)
+    return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.accepted_uid, ottol_name.name, otu.tb_nexml_id, otu.other_metadata FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % study_row.id)
 
 def meta_elts_for_otus(study_row,otuRows,db):
     '''
@@ -314,7 +321,7 @@ def otu_elt(otuRec,db):
     generates an otu element
     '''
     meta_elts = meta_elts_for_otu_elt(otuRec)
-    otu_id,label,ottol_name,accepted_uid,name,tb_name = otuRec
+    otu_id,label,ottol_name,accepted_uid,name,tb_name,other_meta = otuRec
     result = {"@id": "otu%d" % otu_id}
     if (name):
         result["@label"] = name
@@ -329,13 +336,16 @@ def meta_elts_for_otu_elt(otuRec):
     '''
     generates meta elements for an otu element
     '''
-    otu_id,label,ottol_name,accepted_uid,name,tb_name = otuRec
+    otu_id,label,ottol_name,accepted_uid,name,tb_name,other_meta = otuRec
     orig_label_el = createLiteralMeta("ot:originalLabel", label)
     meta_list = []
     if accepted_uid:
         meta_list.append(createLiteralMeta("ot:ottId", accepted_uid))
     if tb_name:
         meta_list.append(createLiteralMeta("ot:treebaseOTUId", tb_name))
+    if other_meta:
+        for item in other_meta:
+            meta_list.append(item)
     if len(meta_list)>0:
        meta_list.append(orig_label_el)
        return {"meta": meta_list}
@@ -405,6 +415,7 @@ def meta_elts_for_tree_elt(tree_row,db):
     blRep = tree_row.branch_lengths_represent
     tree_tags = get_tree_tags(tree_row,db)
     tree_type = tree_row.type
+    tree_other_meta = tree_row.other_metadata
     if blRep in bltypes:
         lengthsElt = createLiteralMeta("ot:branchLengthMode",bltypes[blRep])
         result.append(lengthsElt)
@@ -418,6 +429,9 @@ def meta_elts_for_tree_elt(tree_row,db):
        for tag in tree_tags:
            tag_elt = createLiteralMeta("ot:tag",tag)
            result.append(tag_elt)
+    if tree_other_meta:
+        for item in tree_other_meta:
+            result.append(item)
     if (tree_type != ""):  # this is supposed to be not null, but might still be blank
         curatedType_elt = createLiteralMeta("ot:curatedType",tree_type)
         print "curated type is %s" % str(curatedType_elt)

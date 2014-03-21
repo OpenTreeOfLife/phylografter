@@ -229,6 +229,7 @@ def define_tables(db, migrate=False):
         Field("last_modified", "datetime", readable=False, writable=False),
         Field("data_deposit", "string"),
         Field("nexson_id", "string",writable=False),
+        Field("other_metadata", "json",readable=False, writable=False),
         format=_study_rep,
         migrate=migrate
         )
@@ -272,6 +273,7 @@ def define_tables(db, migrate=False):
         Field("tb_nexml_id"),
         ## Field("genus", db.taxon, ondelete="NO ACTION"),
         Field("nexson_id", "string",writable=False),
+        Field("other_metadata", "json", readable=False, writable=False),
         format="%(label)s",
         migrate=migrate
         )
@@ -316,6 +318,7 @@ def define_tables(db, migrate=False):
         Field("comment", "text"),
         Field("last_modified", "datetime", readable=False, writable=False),
         Field("nexson_id", "string",writable=False),
+        Field("other_metadata", "json", readable=False, writable=False),
         format="%(type)s [%(id)s]",
         migrate=migrate
         )
@@ -370,6 +373,7 @@ def define_tables(db, migrate=False):
         Field("mtime", "datetime", default=datetime.datetime.now(),
               readable=False, writable=False),
         Field("nexson_id", "string",writable=False),
+        Field("other_metadata","json",readable=False,writable=False),
         migrate=migrate
         )
 
@@ -541,5 +545,5 @@ def define_tables(db, migrate=False):
         Field("study",db.study),
         Field("raw_contents","json"),
         Field("checksum","integer"),
-        migrate=True
+        migrate=migrate
     )

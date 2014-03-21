@@ -31,7 +31,10 @@ def sql_process(actions, db, recycle_id):
                     #    current_row['ingroup'] = True
                 print "About to update: %s" % str(current_row)
                 if sql_id == None:
-                    print "failed sql_id lookup"
+                    if current_table == 'annotation':  #hack to 'capture' study fields after an annotation
+                        finish_row(db,'study',study_id,current_row,new_tags)
+                    else:
+                        print "failed sql_id lookup; table = %s" % current_table
                 else:
                     finish_row(db,current_table,sql_id,current_row,new_tags)
             if (table == 'study' and recycle_id): #id of study previously deleted
@@ -52,10 +55,6 @@ def sql_process(actions, db, recycle_id):
             new_tags.add(value)
         elif (field == 'in_group_clade'):
             pass
-        elif (field == 'annotation'):  #special handling for annotation within study 'block'
-            db.nexson_annotation.update_or_insert(db.nexson_annotation.study==study_id,
-                                                  study=study_id,
-                                                  raw_contents=value)
         elif (field == 'dataDeposit'):
             if (table == 'study'):
                 current_row['data_deposit'] = value
@@ -160,7 +159,7 @@ def insert_new_rows(actions, db, recycle_id):
                 table,field,value = action # update for next record
                 print "About to check for reuse: table = %s, value = %s" % (table,value)
                 if (update_table== 'study' and (update_id == recycle_id)):
-                    print "updating: %d" % value
+                    print "updating: %s" % value
                     insert_reusing_id(db,update_obj,recycle_id)
                 else:
                     finish_update(db,update_table,update_obj,update_id)
@@ -238,8 +237,19 @@ FIELD_TO_TABLE = {("node","otu"): "otu",
                   ("node","parent"): "node"}
 
 def update_inserted_row(db,table,sql_id,row_data):
+    import json
     for field in row_data:
-        if field != 'nexson_id':
+        if field == 'nexson_id':
+            pass
+        elif field == 'other_metadata':
+            #token = row_data['other_metadata']
+            token = {'test': 1}
+            print "testing conversion: %s" % json.dumps(token)
+            #print "Updating other metadata of %s (%s) \n %s" % (str(db(q)),str(db(q).select()),str(token)) #,str(row_data['other_metadata']))
+            ret= db(db.study.id==sql_id).validate_and_update(other_metadata=json.dumps(row_data['other_metadata'])) #row_data['other_metadata'])
+            print "Error was %s\n" % str(ret)
+        else:
+            field != 'nexson_id'
             resolved_data = row_data[field]
             if (table == "node"):
                 print "Field check; field = %s; resolved_data = %s" % (field,str(resolved_data))
