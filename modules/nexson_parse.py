@@ -19,6 +19,9 @@ def check_json_study(json_tree,db):
     Returns True if db contains a study with matching doi (best) or
     reference citation
     """
+    if u'error' in json_tree:
+        description = json_tree[u'description']
+        return (description,None)
     contents =json_tree[u'nexml']
     metaEle = contents[u'meta']
     metafields = parse_study_meta(metaEle)
@@ -27,16 +30,20 @@ def check_json_study(json_tree,db):
         q = (db.study.doi == doi)
         rows = db(q).select()
         if len(rows) > 0:
-            return rows[0].id
+            return (None,rows[0].id)
+        else:
+            return (None,None)
     elif 'ot:studyPublicationReference' in metafields:
         ref = metafields['ot:studyPublicationReference']
         q = (db.study.citation == ref)
         rows = db(q).select()
         if len(rows) > 0:
-            return rows[0].id
+            return (None,rows[0].id)
+        else:
+            return (None,None)
     else:
         print "No study identifier found"
-        return False
+        return (None,None)
 
 
 def ingest_nexson(u,db,id):
@@ -124,12 +131,6 @@ def parse_study_meta(metaEle):
 def reserialize_json(p):
     import json
     print "reserializing metadata %s " % str(p)
-    #print "Author: %s" % p['author']
-    #print "isValid: %s" % p['isValid']
-    #print "id: %s" % p['id']
-    #print "date created: %s" % p['dateCreated']
-    #print "Messages: %s" % str(p['messages'])
-    #print "About to test json.dumps"
     testString = json.dumps(p)
     print "testString length = %d" % len(testString)
     return p
