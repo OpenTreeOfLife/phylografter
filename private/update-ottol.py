@@ -2,8 +2,8 @@ import os, re, csv
 import graph_tool.all as gt
 from collections import defaultdict
 from itertools import imap, ifilter
-dump_name = 'taxonomy'
-dump_loc = '/home/rree/Desktop/ott2.2'
+dump_name = 'taxonomy.tsv'
+dump_loc = '/home/rree/ott2.4/ott'
 dump_path = os.path.join(dump_loc, dump_name)
 delim = '\t|\t'
 split = lambda x: x.split(delim)[:-1]
@@ -113,9 +113,10 @@ def _filter(g):
 
         for kw in incertae_keywords:
             if kw in s:
-                rm[v] = 1
-                for c in v.out_neighbours():
-                    g.incertae_sedis[c] = 1
+                gt.dfs_search(g, v, T)
+                ## rm[v] = 1
+                ## for c in v.out_neighbours():
+                ##     g.incertae_sedis[c] = 1
                 break
 
         s = name.replace('-', ' ')
@@ -150,9 +151,11 @@ def create_taxonomy_graph():
     g.vertex_rank = get_or_create_vp(g, 'rank', 'string')
     g.vertex_ncbi = get_or_create_vp(g, 'ncbi', 'int')
     g.vertex_gbif = get_or_create_vp(g, 'gbif', 'int')
+    g.vertex_silva = get_or_create_vp(g, 'silva', 'string')
+    g.vertex_irmng = get_or_create_vp(g, 'irmng', 'int')
     g.edge_in_taxonomy = get_or_create_ep(g, 'istaxon', 'bool')
     g.vertex_in_taxonomy = get_or_create_vp(g, 'istaxon', 'bool')
-    ## g.dubious = get_or_create_vp(g, 'dubious', 'bool')
+    g.vertex_flags = get_or_create_vp(g, 'flags', 'string')
     g.incertae_sedis = get_or_create_vp(g, 'incertae_sedis', 'bool')
     g.collapsed = get_or_create_vp(g, 'collapsed', 'bool')
     g.taxid_vertex = {}
@@ -187,9 +190,12 @@ def create_taxonomy_graph():
             d = dict([ (x or '').split(':') for x in (sinfo or '').split(',') ])
             ncbi = int(d.get('ncbi') or 0)
             gbif = int(d.get('gbif') or 0)
+            silva = d.get('silva')
+            irmng = int(d.get('irmng') or 0)
         except ValueError:
-            ncbi = gbif = 0
+            ncbi = gbif = irmng = 0
         uniqname = row[5]
+        flags = row[6]
 
         v = g.vertex(i)
         g.vertex_taxid[v] = taxid
@@ -198,6 +204,9 @@ def create_taxonomy_graph():
         if rank: g.vertex_rank[v] = rank
         if ncbi: g.vertex_ncbi[v] = ncbi
         if gbif: g.vertex_gbif[v] = gbif
+        if silva: g.vertex_silva[v] = silva
+        if irmng: g.vertex_irmng[v] = irmng
+        if flags: g.vertex_flags[v] = flags
         g.vertex_in_taxonomy[v] = 1
         g.taxid_vertex[taxid] = v
 
@@ -218,7 +227,7 @@ def create_taxonomy_graph():
     return g
 
 g = create_taxonomy_graph()
-g.save('ott22.xml.gz')
+g.save('ott24.xml.gz')
 
 ## # map uids to dictionaries of row data
 ## uid2row = {}
@@ -243,10 +252,6 @@ g.save('ott22.xml.gz')
 ##         del d['sourceinfo']
 ##         uid2row[uid] = d
 
-with open(os.path.join(dump_loc,'deprecated')) as f:
-    f.next()
-    deprecated = set([ int(x.split()[0]) for x in f ])
-
 used_uid2sqlid = defaultdict(list)
 used_sqlids = set()
 with open('used_ottol_name.csv') as f:
@@ -261,6 +266,16 @@ with open('used_ottol_name.csv') as f:
         except ValueError:
             pass
             
+deprecated = {}
+with open(os.path.join(dump_loc,'deprecated.tsv')) as f:
+    f.next()
+    for s in f:
+        w = s.split('\t')
+        k = int(w[0])
+        v = int(w[5]) if (w[5] and w[5].strip() != '*') else None
+        deprecated[k] = v
+    ## deprecated = set([ int(x.split()[0]) for x in f ])
+
 uname2uid = {}
 for v in g.vertices():
     n = g.vertex_unique_name[v] or g.vertex_name[v]
@@ -268,9 +283,9 @@ for v in g.vertices():
     uname2uid[n] = g.vertex_taxid[v]
 
 uid2syn = defaultdict(list)
-with open(os.path.join(dump_loc,'synonyms')) as f:
+with open(os.path.join(dump_loc,'synonyms.tsv')) as f:
     f.next()
-    for name, uid, uniqname in imap(split, f):
+    for name, uid, typ, uniqname in imap(split, f):
         uid = int(uid)
         uid2syn[uid].append((name, uniqname))
         if uniqname not in uname2uid:
