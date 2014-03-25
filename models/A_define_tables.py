@@ -1,4 +1,4 @@
-from gluon.dal import Field
+from gluon import *
 
 ## def _sdata_rep(x):
 ##     w = x.citation.split(); nw = len(w)
