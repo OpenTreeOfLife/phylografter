@@ -86,20 +86,27 @@ def define_tables(db, migrate=False):
     ##     migrate=migrate
     ##     )
 
-    ## db.define_table(
-    ##     "ottol_node",
-    ##     Field("uid", "integer", required=True, unique=True, notnull=True),
-    ##     Field("parent", "integer"),
-    ##     Field("next", "integer"),
-    ##     Field("back", "integer"),
-    ##     Field("depth", "integer"),
-    ##     Field("name", "string", required=True, notnull=True),
-    ##     Field("mtime", "datetime", default=datetime.datetime.now(),
-    ##           readable=False, writable=False),
-    ##     format="%(name)s",
-    ##     migrate=migrate
-    ##     )
+    db.define_table(
+        "ott_node",
+        Field("parent", "integer"),
+        Field("next", "integer"),
+        Field("back", "integer"),
+        Field("depth", "integer"),
+        Field("name", "string"),
+        Field("unique_name", "string"),
+        format="%(name)s",
+        migrate=False
+        )
 
+    db.define_table(
+        "ott_name",
+        Field("node", db.ott_node),
+        Field("name", "string"),
+        Field("unique_name", "string"),
+        format="%(name)s",
+        migrate=False
+        )
+    
     db.define_table(
         "ottol_name",
         Field("uid", "integer"),
