@@ -696,15 +696,17 @@ def tbimport_otus():
     left = db.ott_node.on(db.otu.ott_node==db.ott_node.id)
     rows = db(db.otu.study==rec.id).select(db.otu.ALL, db.ott_node.ALL,
                                            left=left)
-    d = dict([ (x.ott_node.treebase, x.otu.id)
-               for x in rows if x.ott_node and x.ott_node.treebase ])
-    d.update(dict([ (x.otu.label, x.otu) for x in rows ]))
+    ## d = dict([ (x.ott_node.treebase, x.otu.id)
+    ##            for x in rows if x.ott_node and x.ott_node.treebase ])
+    ## d.update(dict([ (x.otu.label, x.otu) for x in rows ]))
+    d = dict([ (x.otu.label, x.otu) for x in rows ])
     d.update(dict([ (x.otu.tb_nexml_id, x.otu) for x in rows ]))
-    existing = [ not ((v.treebase_taxid in d) or (v.label in d) or (v.id in d))
+        
+    existing = [ not ((v.label in d) or (v.id in d))
                  for k, v in otus ]
     for k, v in otus:
         o = nexml.otus[k]
-        o.otu = d.get(v.id) or d.get(v.label) or d.get(v.treebase_taxid)
+        o.otu = d.get(v.id) or d.get(v.label)
 
     colnames = ["Nexml id", "Label", "NCBI taxid", "NameBank id",
                 "Taxon match?", "New?"]
@@ -750,8 +752,8 @@ def tbimport_otus():
                 t = matches.get(x.label) or matches.get(x.ncbi_taxid)
                 if t:
                     r = db.ott_node[t]
-                    if not r.treebase and x.treebase_taxid:
-                        r.update_record(treebase_taxid=x.treebase_taxid)
+                    ## if not r.treebase and x.treebase_taxid:
+                    ##     r.update_record(treebase_taxid=x.treebase_taxid)
                     if not r.ncbi and x.ncbi_taxid:
                         r.update_record(ncbi=x.ncbi_taxid)
                     ## if not r.namebank_taxid and x.namebank_taxid:

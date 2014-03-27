@@ -95,6 +95,10 @@ def define_tables(db, migrate=False):
         Field("depth", "integer"),
         Field("name", "string"),
         Field("unique_name", "string"),
+        Field("ncbi", "integer"),
+        Field("gbif", "integer"),
+        Field("irmng", "integer"),
+        Field("silva", "integer"),
         format="%(name)s",
         migrate=False
         )
