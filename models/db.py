@@ -65,12 +65,13 @@ else:
     except:
         host = "localhost:8000"
             
-
+rpx_api_key = conf.get("RPX", "api_key")
+rpx_domain = conf.get("RPX", "domain")
 from gluon.contrib.login_methods.rpx_account import RPXAccount
 auth.settings.actions_disabled=['register','change_password','request_reset_password']
 auth.settings.login_form = RPXAccount(
-    request, api_key='9435bcb6253fa24c4680cbbd0d4e75a0accde8b3',
-    domain='phylografter',
+    request, api_key=rpx_api_key,
+    domain=rpx_domain,
     url = "http://%s/%s/default/user/login" % (host, request.application)
     )
 

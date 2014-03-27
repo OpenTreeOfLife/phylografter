@@ -98,7 +98,7 @@ def define_tables(db, migrate=False):
         Field("ncbi", "integer"),
         Field("gbif", "integer"),
         Field("irmng", "integer"),
-        Field("silva", "integer"),
+        Field("silva", "string"),
         format="%(name)s",
         migrate=False
         )

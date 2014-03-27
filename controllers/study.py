@@ -103,7 +103,6 @@ def index():
         response.files.append(URL('static',x))
 
     t = db.study
-    fields = t.fields
     colnames = ["Id", "Focal clade", "Citation",
                 "Year", "OTUs", "Trees", "Uploaded", "By"]
     widths = ["5%", "10%", "25%", "5%", "5%", "15%","10%","7%"]
@@ -188,8 +187,7 @@ def dtrecords():
             return str(n)
 
     data = [ (r.study.id,
-              (db.ott_node[r.study.focal_clade_ott].name
-               if r.study.focal_clade_ott else ''),
+              (r.study.focal_clade_ott.name if r.study.focal_clade_ott else ''),
               r.study.study_url.xml(),
               r.study.year_published,
               otus(r),
@@ -197,6 +195,7 @@ def dtrecords():
               r.study.uploaded,
               r.study.contributor)
              for r in rows ]
+
     totalrecs = db(q0).count()
     disprecs = db(q).count()
     return dict(aaData=data,
