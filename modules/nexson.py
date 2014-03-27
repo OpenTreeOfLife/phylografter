@@ -203,7 +203,7 @@ def focal_clade_meta_for_study(study_row):
     '''
     generates focal clade metadata element for a study
     '''
-    focal_clade = study_row.focal_clade_ottol
+    focal_clade = study_row.focal_clade_ott
     if (focal_clade):
         return createLiteralMeta("ot:focalClade", focal_clade)
 
@@ -212,9 +212,9 @@ def focal_clade_name_meta_for_study(study_row,db):
     generates a metadata element containing the OTT name of the focal clade
     (i.e., the name of the node returned in the preceeding function
     """
-    focal_clade = study_row.focal_clade_ottol
+    focal_clade = study_row.focal_clade_ott
     if (focal_clade):
-        name_query = db.executesql('SELECT ottol_name.name FROM ottol_name WHERE (ottol_name.id = %s)' % focal_clade);
+        name_query = db.executesql('SELECT ott_node.name FROM ott_node WHERE (ott_node.id = %s)' % focal_clade);
         if name_query:
             ((name,)) = name_query[0]
             return createLiteralMeta("ot:focalCladeOTTTaxonName",name)
@@ -258,7 +258,7 @@ def get_otu_rows_for_study(study_row,db):
     '''
     returns a tuple of list of otu ids for otu records that link to this study
     '''
-    return db.executesql('SELECT otu.id, otu.label, otu.ottol_name, ottol_name.accepted_uid, ottol_name.name, otu.tb_nexml_id FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d);' % study_row.id)
+    return db.executesql('SELECT otu.id, otu.label, otu.ott_node, ott_node.accepted_uid, ott_node.name, otu.tb_nexml_id FROM otu LEFT JOIN ott_node ON (otu.ott_node = ott_node.id) WHERE (otu.study = %d);' % study_row.id)
 
 def meta_elts_for_otus(study_row,otuRows,db):
     '''
@@ -290,7 +290,7 @@ def otu_elt(otuRec,db):
     generates an otu element
     '''
     meta_elts = meta_elts_for_otu_elt(otuRec)
-    otu_id,label,ottol_name,accepted_uid,name,tb_name = otuRec
+    otu_id,label,ott_node,accepted_uid,name,tb_name = otuRec
     result = {"@id": "otu%d" % otu_id}
     if (name):
         result["@label"] = name
@@ -305,7 +305,7 @@ def meta_elts_for_otu_elt(otuRec):
     '''
     generates meta elements for an otu element
     '''
-    otu_id,label,ottol_name,accepted_uid,name,tb_name = otuRec
+    otu_id,label,ott_node,accepted_uid,name,tb_name = otuRec
     orig_label_el = createLiteralMeta("ot:originalLabel", label)
     meta_list = []
     if accepted_uid:
@@ -494,7 +494,7 @@ def meta_elts_for_node_elt(node_row,db):
         isLeaf_elt = createLiteralMeta("ot:isLeaf","true","xsd:boolean")
         result.append(isLeaf_elt)
     if otu_id:
-       names = db.executesql('SELECT ottol_name.name FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.id = %d);' % otu_id)
+       names = db.executesql('SELECT ott_node.name FROM otu LEFT JOIN ott_node ON (otu.ott_node = ott_node.id) WHERE (otu.id = %d);' % otu_id)
        if names:
             name = names[0][0]
             if name:

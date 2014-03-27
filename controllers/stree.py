@@ -130,7 +130,7 @@ def dtrecords():
     t = db.stree
     ## t.virtualfields.append(Virtual())
     leaf_count = db.snode.id.count()
-    fields = [ t.id, db.study.focal_clade_ottol, t.study, t.type,
+    fields = [ t.id, db.study.focal_clade_ott, t.study, t.type,
                t.uploaded, t.contributor, leaf_count ]
     orderby = []
     if request.vars.iSortCol_0:
@@ -138,7 +138,7 @@ def dtrecords():
             col = int(request.vars.get("iSortCol_%s" % i))
             scol = None
             if col == 0: scol = db.stree.id
-            elif col == 1: scol = db.ottol_name.name
+            elif col == 1: scol = db.ott_node.name
             elif col == 2: scol = db.study.citation
             elif col == 3: scol = db.stree.type
             elif col == 4: scol = leaf_count
@@ -162,7 +162,7 @@ def dtrecords():
         if sterm and len(sterm)>1:
             print 'sterm', i, sterm
             if i == 0: f = db.stree.id
-            elif i == 1: f = db.ottol_name.name
+            elif i == 1: f = db.ott_node.name
             elif i == 2: f = db.study.citation
             elif i == 3: f = db.stree.type
             elif i == 4: f = db.stree.uploaded
@@ -174,14 +174,14 @@ def dtrecords():
                 
     left = [db.snode.on(db.stree.id==db.snode.tree),
             db.study.on(db.stree.study==db.study.id),
-            db.ottol_name.on(db.study.focal_clade_ottol==db.ottol_name.id)]
+            db.ott_node.on(db.study.focal_clade_ott==db.ott_node.id)]
     ## join = []
     rows = db(q).select(*fields, orderby=orderby, limitby=limitby,
                         left=left, groupby=db.stree.id)
 
     def clade(r):
-        t = db.ottol_name
-        if r.study.focal_clade_ottol: return t[r.study.focal_clade_ottol].name
+        t = db.ott_node
+        if r.study.focal_clade_ott: return t[r.study.focal_clade_ott].name
         return ''
 
     def study_url(r):
@@ -238,7 +238,7 @@ def _lookup_taxa(nodes):
         try: float(x.label or "x"); return False
         except: return True
     v = [ (n.label or "").replace("_", " ") for n in filter(f, nodes) ]
-    t = db.ottol_name
+    t = db.ott_node
     rows = db(t.unique_name.belongs(v)).select(t.unique_name, t.id)
     return dict([ (x.unique_name, x.id) for x in rows ])
 
@@ -266,13 +266,13 @@ def _insert_stree(study, data):
         otu = None
         if n.isleaf:
             otu = lab2otu.get(label)
-            if otu and otu.ottol_name: taxid = otu.ottol_name
+            if otu and otu.ott_node: taxid = otu.ott_node
             if not otu:
-                otu = db.otu.insert(study=study, label=label, ottol_name=taxid)
+                otu = db.otu.insert(study=study, label=label, ott_node=taxid)
 
         i = db.snode.insert(label=n.label, isleaf=n.isleaf, otu=otu,
                             next=n.next, back=n.back, depth=n.depth,
-                            length=n.length, tree=stree, ottol_name=taxid,
+                            length=n.length, tree=stree, ott_node=taxid,
                             pruned=False)
         n.id = i
         i2n[i] = n
@@ -461,8 +461,8 @@ def getNodeInfo():
     node = db.snode[i]
     color = "black"
     label = node.label or "[%s]" % node.id
-    if node.ottol_name:
-        label = node.ottol_name.name
+    if node.ott_node:
+        label = node.ott_node.name
         color = "green"
     return {'nodeId': node.id, 'label': label, 'labelcolor': color}
 
@@ -487,8 +487,8 @@ def load_html():
     nodes = list(root.iternodes())
     for node in nodes:
         label = node.rec.label or node.label
-        if node.rec.ottol_name:
-            label = db.ottol_name[node.rec.ottol_name].name
+        if node.rec.ott_node:
+            label = db.ott_node[node.rec.ott_node].name
         node.label = label
     def onclick(nid):
         u = URL(c="snode",f="update_snode.load", args=[nid])
@@ -506,8 +506,8 @@ def treediv():
     nodes = list(root.iternodes())
     for node in nodes:
         label = node.rec.label or node.label
-        if node.rec.ottol_name:
-            label = db.ottol_name[node.rec.ottol_name].name
+        if node.rec.ott_node:
+            label = db.ott_node[node.rec.ott_node].name
         node.label = label
     def onclick(nid):
         u = URL(c="snode",f="update_snode.load", args=[nid])
@@ -527,8 +527,8 @@ def html():
     nodes = list(root.iternodes())
     for node in nodes:
         label = node.rec.label or node.label
-        if node.rec.ottol_name:
-            label = db.ottol_name[node.rec.ottol_name].name
+        if node.rec.ott_node:
+            label = db.ott_node[node.rec.ott_node].name
         node.label = label
 
     modal = PluginMModal(id="mymodal", title="Edit node properties", content="")
@@ -654,10 +654,10 @@ def import_cached_nexml():
         for n in t.root.iternodes():
             taxid = None
             label = n.otu.otu.label if n.isleaf and n.otu.otu else n.label
-            if n.isleaf and n.otu.otu and n.otu.otu.ottol_name:
-                taxid = n.otu.otu.ottol_name
+            if n.isleaf and n.otu.otu and n.otu.otu.ott_node:
+                taxid = n.otu.otu.ott_node
             else:
-                taxon = db(db.ottol_name.unique_name==label).select().first()
+                taxon = db(db.ott_node.unique_name==label).select().first()
                 if taxon: taxid=taxon.id
 
             i = db.snode.insert(label=label,
@@ -668,7 +668,7 @@ def import_cached_nexml():
                                 bootstrap_support=bootstraps.get(n),
                                 posterior_support=posteriors.get(n),
                                 tree=form.vars.id,
-                                ottol_name=taxid,
+                                ott_node=taxid,
                                 pruned=False)
             n.id = i
             i2n[i] = n
@@ -695,36 +695,36 @@ def otus_within():
 
     taxon = Field("taxon", "integer", requires=IS_NOT_EMPTY())
     taxon.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
-        orderby=db.ottol_name.unique_name)
+        request, db.ott_node.unique_name, id_field=db.ott_node.id,
+        orderby=db.ott_node.unique_name)
     taxon.default = request.vars.taxon
     f = SQLFORM.factory(any_all, taxon)
 
     d = defaultdict(list)
     if f.process().accepted:
-        t = db.ottol_name
+        t = db.ott_node
         r = t[int(f.vars.taxon)]
         if f.vars.any_all == 'any OTU':
             q = ('select distinct study.id, study.citation, '
                  'stree.id, stree.type '
-                 'from stree, study, otu, ottol_name '
+                 'from stree, study, otu, ott_node '
                  'where stree.study = study.id '
                  'and otu.study = study.id '
-                 'and otu.ottol_name = ottol_name.id '
-                 'and ottol_name.next >= %d '
-                 'and ottol_name.back <= %d '
+                 'and otu.ott_node = ott_node.id '
+                 'and ott_node.next >= %d '
+                 'and ott_node.back <= %d '
                  'order by stree.id asc'
                  % (r.next, r.back))
         elif f.vars.any_all == 'all OTUs':
             q = ('select distinct stree.study, study.citation, '
                  'stree.id, stree.type '
-                 'from stree, study, otu, ottol_name '
+                 'from stree, study, otu, ott_node '
                  'where stree.study = study.id '
                  'and otu.study = study.id '
-                 'and otu.ottol_name = ottol_name.id '
+                 'and otu.ott_node = ott_node.id '
                  'group by stree.id '
-                 'having min(ottol_name.next) >= %d '
-                 'and max(ottol_name.back) <= %d '
+                 'having min(ott_node.next) >= %d '
+                 'and max(ott_node.back) <= %d '
                  'order by stree.study, stree.id asc'
                  % (r.next, r.back))
         else:
@@ -773,7 +773,7 @@ def taxon_search_results():
     return dict();
 
 def any_taxa_tree_test(taxon):
-    taxon_ottol = db.executesql("SELECT next,back FROM ottol_name WHERE (name = '%s');" % taxon,as_dict="true")
+    taxon_ottol = db.executesql("SELECT next,back FROM ott_node WHERE (name = '%s');" % taxon,as_dict="true")
     if len(taxon_ottol) == 0:
         return set()
     taxon_next = taxon_ottol[0].get('next')
@@ -782,7 +782,7 @@ def any_taxa_tree_test(taxon):
     good_study_ids = set()
     for study in studies:
         study_id = study[0]
-        otulist = db.executesql('SELECT ottol_name.next, ottol_name.back FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d AND ottol_name.next > %d AND ottol_name.back < %d);' % (study_id,taxon_next,taxon_back))
+        otulist = db.executesql('SELECT ott_node.next, ott_node.back FROM otu LEFT JOIN ott_node ON (otu.ott_node = ott_node.id) WHERE (otu.study = %d AND ott_node.next > %d AND ott_node.back < %d);' % (study_id,taxon_next,taxon_back))
         if otulist:
             good_study_ids.add(study_id) 
     good_tree_ids = set()
@@ -791,13 +791,13 @@ def any_taxa_tree_test(taxon):
         tree_list = db.executesql('SELECT id from stree WHERE stree.study = %d;' % good_id) 
         for tree in tree_list:
             tree_id = tree[0]
-            tree_nodes = db.executesql('SELECT ottol_name.next,ottol_name.back FROM snode LEFT JOIN ottol_name ON (snode.ottol_name = ottol_name.id) WHERE (snode.tree = %d AND ottol_name.next > %d AND ottol_name.back < %d);' % (tree_id,taxon_next,taxon_back))
+            tree_nodes = db.executesql('SELECT ott_node.next,ott_node.back FROM snode LEFT JOIN ott_node ON (snode.ott_node = ott_node.id) WHERE (snode.tree = %d AND ott_node.next > %d AND ott_node.back < %d);' % (tree_id,taxon_next,taxon_back))
             if tree_nodes:
                 good_tree_ids.add(tree_id)
     return good_tree_ids
     
 def all_taxa_tree_test(taxon):
-    taxon_ottol = db.executesql("SELECT next,back FROM ottol_name WHERE (name = '%s');" % taxon,as_dict="true")
+    taxon_ottol = db.executesql("SELECT next,back FROM ott_node WHERE (name = '%s');" % taxon,as_dict="true")
     if len(taxon_ottol) == 0:
         return set()
     taxon_next = taxon_ottol[0].get('next')
@@ -806,7 +806,7 @@ def all_taxa_tree_test(taxon):
     good_study_ids = set()
     for study in studies:
         study_id = study[0]
-        otulist = db.executesql('SELECT ottol_name.next, ottol_name.back FROM otu LEFT JOIN ottol_name ON (otu.ottol_name = ottol_name.id) WHERE (otu.study = %d AND ottol_name.next > %d AND ottol_name.back < %d);' % (study_id,taxon_next,taxon_back))
+        otulist = db.executesql('SELECT ott_node.next, ott_node.back FROM otu LEFT JOIN ott_node ON (otu.ott_node = ott_node.id) WHERE (otu.study = %d AND ott_node.next > %d AND ott_node.back < %d);' % (study_id,taxon_next,taxon_back))
         if otulist:
             good_study_ids.add(study_id) 
     good_tree_ids = set()
@@ -816,10 +816,10 @@ def all_taxa_tree_test(taxon):
         tree_list = db.executesql('SELECT id from stree WHERE stree.study = %d;' % good_id) 
         for tree in tree_list:
             tree_id = tree[0]
-            good_nodes = db.executesql('SELECT COUNT(*) FROM snode LEFT JOIN ottol_name ON (snode.ottol_name = ottol_name.id) WHERE (snode.tree = %d AND (ottol_name.next > %d AND ottol_name.back < %d));' % (tree_id,taxon_next,taxon_back))
+            good_nodes = db.executesql('SELECT COUNT(*) FROM snode LEFT JOIN ott_node ON (snode.ott_node = ott_node.id) WHERE (snode.tree = %d AND (ott_node.next > %d AND ott_node.back < %d));' % (tree_id,taxon_next,taxon_back))
             good_count =good_nodes[0][0]
             if good_count > 0 :
-                all_nodes = db.executesql('SELECT COUNT(*) FROM snode WHERE (snode.tree = %d AND snode.ottol_name IS NOT NULL);' % tree_id)
+                all_nodes = db.executesql('SELECT COUNT(*) FROM snode WHERE (snode.tree = %d AND snode.ott_node IS NOT NULL);' % tree_id)
                 all_count = all_nodes[0][0]
                 if all_count == good_count:
                     good_tree_ids.add(tree_id)

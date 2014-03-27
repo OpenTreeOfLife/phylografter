@@ -106,7 +106,7 @@ def study():
     study = db.study(request.args(0)) or redirect(URL("index"))
     theme = "smoothness"
     for x in (
-        'DataTables-1.8.1/media/js/jquery.js',
+        ## 'DataTables-1.8.1/media/js/jquery.js',
         'DataTables-1.8.1/media/js/jquery.dataTables.min.js',
         'DataTables-1.8.1/media/css/bootstrap_table.css',
         'DataTables-1.8.1/media/ui/css/%s/jquery-ui-1.8.5.custom.css' % theme):
@@ -137,8 +137,10 @@ def dtrecords():
     ##     print k, ":", v
     study = db.study(request.args(0)) or redirect(URL("index"))
     t = db.otu
-    left = db.ottol_name.on(db.ottol_name.id==t.ottol_name)
-    fields = [ t.label, db.ottol_name.name ]
+    t_ott_field = t.ott_node
+    ott_table = db.ott_node
+    left = ott_table.on(ott_table.id==t_ott_field)
+    fields = [ t.label, ott_table.name ]
     orderby = []
     if request.vars.iSortCol_0:
         for i in range(int(request.vars.iSortingCols or 1)):
@@ -158,16 +160,16 @@ def dtrecords():
                 
     def label(otu, uid):
         can_edit = auth.has_membership(role="contributor")
-        if (not otu.ottol_name) and can_edit:
+        if (not otu.ott_node) and can_edit:
             match, options = spellcheck.process_label(db, otu)
             if match and len(options)==1:
                 name = options[0]
-                otu.update_record(ottol_name=name.id)
-                otu.snode.update(ottol_name=name.id)
+                otu.update_record(ott_node=name.node)
+                otu.snode.update(ott_node=name.node)
                 return otu.label
             else:
                 for i, name in enumerate(options):
-                    u = URL('update_name', args=[study.id, otu.id, name.id],
+                    u = URL('update_name', args=[study.id, otu.id, name.node],
                             extension='load')
                     options[i] = A(name.unique_name, _href=u, cid=uid)
             if options:
@@ -185,9 +187,9 @@ def dtrecords():
             return (label(otu, uid), link.xml())
         else:
             return (otu.label,
-                    SPAN(otu.ottol_name.name if otu.ottol_name else ''))
+                    SPAN(otu.ott_node.name if otu.ott_name else ''))
 
-    rows = db(q).select(t.id, t.label, t.ottol_name,
+    rows = db(q).select(t.id, t.label, t.ott_node,
                         left=left, orderby=orderby, limitby=limitby)
 
     ## data = [ (label(r), tx(r).xml()) for r in rows ]
@@ -201,7 +203,7 @@ def dtrecords():
     
 def taxon_link(otu,study):
     ## print otu.keys()
-    taxon = db.ottol_name(otu.ottol_name) or Storage()
+    taxon = db.ott_node(otu.ott_node) or Storage()
     ## d = request.vars
     ## if d.otu != otu: d.otu = otu
     ## if d.taxon != taxon.id: d.taxon = taxon.id
@@ -213,17 +215,17 @@ def taxon_link(otu,study):
 def taxon_edit():
     otu = db.otu(int(request.args(0)))
     study = db.study(int(request.args(1)))
-    field = Field("taxon", "integer", default=otu.ottol_name)
+    field = Field("taxon", "integer", default=otu.ott_node)
     field.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
-        orderby=db.ottol_name.unique_name)
+        request, db.ott_name.unique_name, id_field=db.ott_name.node,
+        orderby=db.ott_name.unique_name)
     form = SQLFORM.factory(field, formstyle="divs")
     if form.accepts(request.vars, session):
         taxon = form.vars.taxon
-        if taxon != otu.ottol_name:
+        if taxon != otu.ott_node:
             ## response.flash="record updated"
-            otu.update_record(ottol_name=taxon)
-            otu.snode.update(ottol_name=taxon)
+            otu.update_record(ott_node=taxon)
+            otu.snode.update(ott_node=taxon)
             study.update_record(last_modified = datetime.datetime.now())
         uid, link = taxon_link(otu,study)
         return dict(form=None, cancel=None, a=link)
@@ -257,8 +259,8 @@ def update_name():
     ##         redirect(URL('study', args=[study]))
 
     ## otu = int(otu); name = int(name)
-    otu.update_record(ottol_name=name)
-    otu.snode.update(ottol_name=name)
+    otu.update_record(ott_node=name)
+    otu.snode.update(ott_node=name)
     study.update_record(last_modified = datetime.datetime.now())
     ## session.flash = 'OTU %s mapped to %s' % (otu, db.ottol_name[name].name)
     ## redirect(URL('study', args=[study]))

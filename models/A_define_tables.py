@@ -104,7 +104,7 @@ def define_tables(db, migrate=False):
         Field("node", db.ott_node),
         Field("name", "string"),
         Field("unique_name", "string"),
-        format="%(name)s",
+        format="%(unique_name)s",
         migrate=False
         )
     
@@ -224,6 +224,7 @@ def define_tables(db, migrate=False):
         ##       requires=IS_EMPTY_OR(IS_IN_DB(db, 'taxon.id', '%(name)s'))),
         Field("focal_clade_ottol", db.ottol_name, ondelete="NO ACTION",
               requires=IS_EMPTY_OR(IS_IN_DB(db, 'ottol_name.id', '%(name)s'))),
+        Field("focal_clade_ott", db.ott_node),
         Field("citation", "text", required=True, notnull=True),
         Field("doi", "string"),
         Field("label", "string"),
@@ -275,6 +276,7 @@ def define_tables(db, migrate=False):
         Field("label", required=True, notnull=True),
         ## Field("taxon", db.taxon, ondelete="NO ACTION"),
         Field("ottol_name", db.ottol_name, ondelete="NO ACTION"),
+        Field("ott_node", db.ott_node, ondelete="NO ACTION"),
         Field("tb_nexml_id"),
         ## Field("genus", db.taxon, ondelete="NO ACTION"),
         format="%(label)s",
@@ -348,6 +350,7 @@ def define_tables(db, migrate=False):
         Field("ottol_name", db.ottol_name, ondelete="NO ACTION",
               requires=IS_EMPTY_OR(IS_IN_DB(db, 'ottol_name.id',
                                             '%(name)s'))),
+        Field("ott_node", db.ott_node, ondelete="NO ACTION"),
         ## Field("exemplar", db.taxon, ondelete="NO ACTION"),
         Field("ingroup", "boolean", notnull=True, default=False),
         Field("isleaf", "boolean", notnull=True, default=False,
