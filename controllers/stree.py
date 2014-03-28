@@ -153,7 +153,7 @@ def dtrecords():
     end = start + int(request.vars.iDisplayLength or 10)
     limitby = (start,end)
     q = q0 = ((t.study==db.study.id)&
-              ## (db.study.focal_clade_ottol==db.ottol_name.id)&
+              ## (db.study.focal_clade_ott==db.ott_node.id)&
               (db.snode.tree==db.stree.id)&
               (db.snode.isleaf==True))
     filters = []
@@ -181,7 +181,7 @@ def dtrecords():
 
     def clade(r):
         t = db.ott_node
-        if r.study.focal_clade_ott: return t[r.study.focal_clade_ott].name
+        if r.study.focal_clade_ott: return r.study.focal_clade_ott.name
         return ''
 
     def study_url(r):

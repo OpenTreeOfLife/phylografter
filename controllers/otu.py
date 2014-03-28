@@ -187,7 +187,7 @@ def dtrecords():
             return (label(otu, uid), link.xml())
         else:
             return (otu.label,
-                    SPAN(otu.ott_node.name if otu.ott_name else ''))
+                    SPAN(otu.ott_node.name if otu.ott_node else ''))
 
     rows = db(q).select(t.id, t.label, t.ott_node,
                         left=left, orderby=orderby, limitby=limitby)
@@ -218,7 +218,7 @@ def taxon_edit():
     field = Field("taxon", "integer", default=otu.ott_node)
     field.widget = SQLFORM.widgets.autocomplete(
         request, db.ott_name.unique_name, id_field=db.ott_name.node,
-        orderby=db.ott_name.unique_name)
+        limitby=(0,20), orderby=db.ott_name.unique_name)
     form = SQLFORM.factory(field, formstyle="divs")
     if form.accepts(request.vars, session):
         taxon = form.vars.taxon
