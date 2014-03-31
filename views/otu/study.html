@@ -1,4 +1,9 @@
 {{extend 'layout.html'}}
+<style>
+.autocomplete {
+    width: 40em !important;
+}
+</style>
 
 <div style="padding-bottom:0.5em;">OTUs from {{=A(_study_rep(study), _href=URL('study','view',args=study.id))}}</div>
 

@@ -1,12 +1,175 @@
 import os, re, csv
 import graph_tool.all as gt
 from collections import defaultdict
-from itertools import imap, ifilter
-dump_name = 'taxonomy'
-dump_loc = '/home/rree/Desktop/ott2.2'
+from itertools import imap, ifilter, izip
+dump_name = 'taxonomy.tsv'
+dump_loc = '/home/rree/ott2.4/ott'
 dump_path = os.path.join(dump_loc, dump_name)
-delim = '\t|\t'
-split = lambda x: x.split(delim)[:-1]
+
+sql = []
+
+# load taxonomy.tsv into a list of rows
+data = []
+n = 0
+split = lambda s: (
+    [ x.strip() or None for x in s.split('|')][:-1] if s[-2]=='\t'
+    else [ x.strip() or None for x in s.split('|')]
+)
+c2p = dict() # map child uid to parent uid
+with open(dump_path) as f:
+    fields = split(f.readline())
+    for v in imap(split, f):
+        # convert uid and parent_uid to ints
+        for i in 0,1: v[i] = int(v[i] or 0)
+        taxid = v[0]
+        data.append(v)
+        c2p[taxid] = v[1]
+        print n, '\r',
+        n += 1
+    print 'done'
+
+deprecated = {} # maps old uid to None (if decommissioned) or a new uid
+with open(os.path.join(dump_loc,'deprecated.tsv')) as f:
+    f.next()
+    for s in f:
+        w = s.split('\t')
+        k = int(w[0])
+        v = int(w[5]) if (w[5] and w[5].strip() != '*') else None
+        if v: assert v in c2p, v
+        deprecated[k] = v
+
+# synonyms
+uid2synrows = defaultdict(list)
+with open(os.path.join(dump_loc,'synonyms.tsv')) as f:
+    fields = split(f.readline())
+    for v in imap(split, f):
+        uid = int(v[1])
+        uid2synrows[uid].append(v)
+
+uid2sqlid = {}
+uid2syn_sqlids = defaultdict(list)
+syn_sqlid2uid = {}
+# file has tab-separated id, uid, accepted_uid rows
+with open('ottol_name.csv') as f:
+    fields = f.next().strip().split('\t')
+    for s in f:
+        sqlid, uid, acuid = [ int(x or 0) for x in s.strip().split('\t') ]
+        if uid == acuid:
+            uid2sqlid[uid] = sqlid
+        else:
+            uid2syn_sqlids[acuid].append(sqlid)
+            syn_sqlid2uid[sqlid] = acuid
+
+# change otus and snodes pointing to synonym rows to point to accepted
+# taxon rows
+# sqlid, accepted_uid, unique_name of ottol_name rows used in otu and snode
+with open('used_ottol_name.csv') as f:
+    fields = f.next().strip().split('\t')
+    for s in f:
+        sqlid, uid, unique_name = s.strip().split('\t')
+        sqlid = int(sqlid)
+        uid = int(uid)
+        if uid in deprecated:
+            newuid = deprecated[uid]
+            if newuid:
+                acc_sqlid = uid2sqlid[newuid]
+                s = 'update {} set ottol_name = {} where ottol_name = {}'
+                sql.append(s.format('otu', acc_sqlid, sqlid))
+                sql.append(s.format('snode', acc_sqlid, sqlid))
+            else:
+                s = 'update {} set ottol_name = NULL where ottol_name = {}'
+                sql.append(s.format('otu', sqlid))
+                sql.append(s.format('snode', sqlid))
+            continue
+        if sqlid in syn_sqlid2uid:
+            acc_sqlid = uid2sqlid[uid]
+            s = 'update {} set ottol_name = {} where ottol_name = {}'
+            sql.append(s.format('otu', acc_sqlid, sqlid))
+            sql.append(s.format('snode', acc_sqlid, sqlid))
+
+
+def ivy_taxonomy_tree():
+    import ivy
+    Node = ivy.tree.Node
+    nodes = [ Node(**dict(izip(fields, row))) for row in data ]
+    uid2node = dict([ (n.uid, n) for n in nodes ])
+    r = nodes[0]
+    r.isroot = True
+    for n in nodes[1:]:
+        p = uid2node[n.parent_uid]
+        p.add_child(n)
+
+    for n in nodes:
+        n.suppress = 0
+        if not n.children: n.isleaf = True
+        else: n.isleaf = False
+        n.label = n.uniqname or n.name
+        if not n.flags: n.flags = ''
+        if not n.sourceinfo: n.sourceinfo = ''
+
+    def suppress(n):
+        labels = [
+            'Deltavirus',
+            'Viruses',
+            'vectors',
+            'Satellite Viruses',
+            'Tobacco leaf curl Japan beta',
+            'Viroids',
+            'artificial sequences',
+            'organismal metagenomes',
+            'eukaryotic vectors'
+            ]
+        name = n.name.lower()
+        if (('viral' in n.flags) or
+            ('unclassified' in n.flags) or
+            ('not_otu' in n.flags) or
+            ('hidden' in n.flags) or
+            ('barren' in n.flags) or
+            ('major_rank_conflict' in n.flags) or
+            ('extinct' in n.flags) or
+            ('incertae_sedis' in n.flags) or
+            ('tattered' in n.flags) or
+            ('metagenome' in name) or
+            ('artificial' in name) or
+            ('unallocated' in name) or
+            (' phage ' in name) or
+            (' vector ' in name) or
+            (('environmental' in name) and ('ncbi' not in n.sourceinfo)) or
+            (n.name in labels)):
+            n.suppress = 1
+    for n in nodes: suppress(n)
+
+    v = [ x for x in nodes if x.suppress ]
+    def prune(x):
+        try:
+            x.parent.children.remove(x)
+        except:
+            pass
+        x.parent = None
+        x.children = []
+    map(prune, v)
+
+    v = [ x for x in r if not x.isleaf and not x.children ]
+    while v:
+        print 'pruning', len(v)
+        map(prune, v)
+        v = [ x for x in r if not x.isleaf and not x.children ]
+
+    v = []
+    for n in r:
+        name = n.name.lower()
+        if (name.startswith('basal ') or
+            name.startswith('stem ') or
+            name.startswith('early diverging ')):
+            v.append(n)
+    for n in v: n.collapse()
+    assert len([ x for x in r if not x.isleaf and not x.children ])==0
+    
+    ivy.tree.index(r, n=1)
+    return r
+
+r = ivy_taxonomy_tree()
+
 
 class Traverser(gt.DFSVisitor):
     def __init__(self, pre=None, post=None):
@@ -113,9 +276,10 @@ def _filter(g):
 
         for kw in incertae_keywords:
             if kw in s:
-                rm[v] = 1
-                for c in v.out_neighbours():
-                    g.incertae_sedis[c] = 1
+                gt.dfs_search(g, v, T)
+                ## rm[v] = 1
+                ## for c in v.out_neighbours():
+                ##     g.incertae_sedis[c] = 1
                 break
 
         s = name.replace('-', ' ')
@@ -150,9 +314,11 @@ def create_taxonomy_graph():
     g.vertex_rank = get_or_create_vp(g, 'rank', 'string')
     g.vertex_ncbi = get_or_create_vp(g, 'ncbi', 'int')
     g.vertex_gbif = get_or_create_vp(g, 'gbif', 'int')
+    g.vertex_silva = get_or_create_vp(g, 'silva', 'string')
+    g.vertex_irmng = get_or_create_vp(g, 'irmng', 'int')
     g.edge_in_taxonomy = get_or_create_ep(g, 'istaxon', 'bool')
     g.vertex_in_taxonomy = get_or_create_vp(g, 'istaxon', 'bool')
-    ## g.dubious = get_or_create_vp(g, 'dubious', 'bool')
+    g.vertex_flags = get_or_create_vp(g, 'flags', 'string')
     g.incertae_sedis = get_or_create_vp(g, 'incertae_sedis', 'bool')
     g.collapsed = get_or_create_vp(g, 'collapsed', 'bool')
     g.taxid_vertex = {}
@@ -187,9 +353,12 @@ def create_taxonomy_graph():
             d = dict([ (x or '').split(':') for x in (sinfo or '').split(',') ])
             ncbi = int(d.get('ncbi') or 0)
             gbif = int(d.get('gbif') or 0)
+            silva = d.get('silva')
+            irmng = int(d.get('irmng') or 0)
         except ValueError:
-            ncbi = gbif = 0
+            ncbi = gbif = irmng = 0
         uniqname = row[5]
+        flags = row[6]
 
         v = g.vertex(i)
         g.vertex_taxid[v] = taxid
@@ -198,6 +367,9 @@ def create_taxonomy_graph():
         if rank: g.vertex_rank[v] = rank
         if ncbi: g.vertex_ncbi[v] = ncbi
         if gbif: g.vertex_gbif[v] = gbif
+        if silva: g.vertex_silva[v] = silva
+        if irmng: g.vertex_irmng[v] = irmng
+        if flags: g.vertex_flags[v] = flags
         g.vertex_in_taxonomy[v] = 1
         g.taxid_vertex[taxid] = v
 
@@ -218,7 +390,7 @@ def create_taxonomy_graph():
     return g
 
 g = create_taxonomy_graph()
-g.save('ott22.xml.gz')
+g.save('ott24.xml.gz')
 
 ## # map uids to dictionaries of row data
 ## uid2row = {}
@@ -243,24 +415,6 @@ g.save('ott22.xml.gz')
 ##         del d['sourceinfo']
 ##         uid2row[uid] = d
 
-with open(os.path.join(dump_loc,'deprecated')) as f:
-    f.next()
-    deprecated = set([ int(x.split()[0]) for x in f ])
-
-used_uid2sqlid = defaultdict(list)
-used_sqlids = set()
-with open('used_ottol_name.csv') as f:
-    fields = f.next().strip().split('\t')
-    for s in f:
-        sqlid, uid, unique_name = s.strip().split('\t')
-        sqlid = int(sqlid)
-        used_sqlids.add(sqlid)
-        try:
-            uid = int(uid)
-            used_uid2sqlid[uid].append(sqlid)
-        except ValueError:
-            pass
-            
 uname2uid = {}
 for v in g.vertices():
     n = g.vertex_unique_name[v] or g.vertex_name[v]
@@ -268,9 +422,9 @@ for v in g.vertices():
     uname2uid[n] = g.vertex_taxid[v]
 
 uid2syn = defaultdict(list)
-with open(os.path.join(dump_loc,'synonyms')) as f:
+with open(os.path.join(dump_loc,'synonyms.tsv')) as f:
     f.next()
-    for name, uid, uniqname in imap(split, f):
+    for name, uid, typ, uniqname in imap(split, f):
         uid = int(uid)
         uid2syn[uid].append((name, uniqname))
         if uniqname not in uname2uid:

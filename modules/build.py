@@ -24,14 +24,14 @@ def getCladeSqlString( nodeTable, rootRec, collapsedNodeStorage, extra = Storage
 
     if( nodeTable == 'snode' ):
 
-        joinString = 'FROM snode LEFT JOIN ottol_name on snode.ottol_name = ottol_name.id '
+        joinString = 'FROM snode LEFT JOIN ott_node on snode.ott_node = ott_node.id '
 
         pruneClause = ''
 
     elif( nodeTable == 'gnode' ):
 
         joinString = ''.join( [ 'FROM gnode LEFT JOIN snode on gnode.snode = snode.id ',
-                                'LEFT JOIN ottol_name on snode.ottol_name = ottol_name.id ' ] )
+                                'LEFT JOIN ott_node on snode.ott_node = ott_node.id ' ] )
 
         if( 'pruned' in extra and extra['pruned'] == True ):
 
@@ -48,7 +48,7 @@ def getCladeSqlString( nodeTable, rootRec, collapsedNodeStorage, extra = Storage
                    nodeTable, '.back, ',
                    nodeTable, '.length, ',
                    nodeTable, '.label, ',
-                   'ottol_name.name ',
+                   'ott_node.name ',
         joinString,
         'WHERE ', nodeTable, '.tree = ', str( rootRec.tree ), ' AND ',
         pruneClause, 

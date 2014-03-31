@@ -1,4 +1,5 @@
-from gluon.dal import Field
+from gluon import *
+import datetime
 
 ## def _sdata_rep(x):
 ##     w = x.citation.split(); nw = len(w)
@@ -86,20 +87,31 @@ def define_tables(db, migrate=False):
     ##     migrate=migrate
     ##     )
 
-    ## db.define_table(
-    ##     "ottol_node",
-    ##     Field("uid", "integer", required=True, unique=True, notnull=True),
-    ##     Field("parent", "integer"),
-    ##     Field("next", "integer"),
-    ##     Field("back", "integer"),
-    ##     Field("depth", "integer"),
-    ##     Field("name", "string", required=True, notnull=True),
-    ##     Field("mtime", "datetime", default=datetime.datetime.now(),
-    ##           readable=False, writable=False),
-    ##     format="%(name)s",
-    ##     migrate=migrate
-    ##     )
+    db.define_table(
+        "ott_node",
+        Field("parent", "integer"),
+        Field("next", "integer"),
+        Field("back", "integer"),
+        Field("depth", "integer"),
+        Field("name", "string"),
+        Field("unique_name", "string"),
+        Field("ncbi", "integer"),
+        Field("gbif", "integer"),
+        Field("irmng", "integer"),
+        Field("silva", "string"),
+        format="%(name)s",
+        migrate=False
+        )
 
+    db.define_table(
+        "ott_name",
+        Field("node", db.ott_node),
+        Field("name", "string"),
+        Field("unique_name", "string"),
+        format="%(unique_name)s",
+        migrate=False
+        )
+    
     db.define_table(
         "ottol_name",
         Field("uid", "integer"),
@@ -216,6 +228,7 @@ def define_tables(db, migrate=False):
         ##       requires=IS_EMPTY_OR(IS_IN_DB(db, 'taxon.id', '%(name)s'))),
         Field("focal_clade_ottol", db.ottol_name, ondelete="NO ACTION",
               requires=IS_EMPTY_OR(IS_IN_DB(db, 'ottol_name.id', '%(name)s'))),
+        Field("focal_clade_ott", db.ott_node),
         Field("citation", "text", required=True, notnull=True),
         Field("doi", "string"),
         Field("label", "string"),
@@ -270,6 +283,7 @@ def define_tables(db, migrate=False):
         Field("label", required=True, notnull=True),
         ## Field("taxon", db.taxon, ondelete="NO ACTION"),
         Field("ottol_name", db.ottol_name, ondelete="NO ACTION"),
+        Field("ott_node", db.ott_node, ondelete="NO ACTION"),
         Field("tb_nexml_id"),
         ## Field("genus", db.taxon, ondelete="NO ACTION"),
         Field("nexson_id", "string",writable=False),
@@ -347,6 +361,7 @@ def define_tables(db, migrate=False):
         Field("ottol_name", db.ottol_name, ondelete="NO ACTION",
               requires=IS_EMPTY_OR(IS_IN_DB(db, 'ottol_name.id',
                                             '%(name)s'))),
+        Field("ott_node", db.ott_node, ondelete="NO ACTION"),
         ## Field("exemplar", db.taxon, ondelete="NO ACTION"),
         Field("ingroup", "boolean", notnull=True, default=False),
         Field("isleaf", "boolean", notnull=True, default=False,
