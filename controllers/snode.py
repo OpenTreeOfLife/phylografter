@@ -15,9 +15,9 @@ def update_snode():
     ## t.taxon.readable = t.taxon.writable = False
 
     w = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
-        limitby=(0,20), orderby=db.ottol_name.unique_name)
-    t.ottol_name.widget = w
+        request, db.ott_node.unique_name, id_field=db.ott_node.id,
+        limitby=(0,20), orderby=db.ott_node.unique_name)
+    t.ott_node.widget = w
 
     form = SQLFORM(t, rec, showid=False, _id="updateform",
                    _action=URL(c="snode",f="update_snode.load",args=[rec.id]))
@@ -38,13 +38,13 @@ def update_snode():
 
             if( str( form.vars[attr] ) != str( rec[attr] ) ):
 
-                if( attr == 'ottol_name' ):
+                if( attr == 'ott_node' ):
 
-                    updatedValue = db( db.ottol_name.id == form.vars[attr] ).select()[0].name
+                    updatedValue = db( db.ott_node.id == form.vars[attr] ).select()[0].name
 
                     if re.match( "^[0-9]+$", str( rec[ attr ] ) ):
 
-                        previousValue = db( db.ottol_name.id == rec[ attr ] ).select()[0].name
+                        previousValue = db( db.ott_node.id == rec[ attr ] ).select()[0].name
 
                     else:
                         
@@ -68,9 +68,9 @@ def update_snode():
         ## print ' request.vars.ingroup now', request.vars.ingroup
         ## print ' rec.ingroup now', rec.ingroup
 
-        name = form.vars.ottol_name
+        name = form.vars.ott_node
         if name and rec.otu:
-            rec.otu.update_record(ottol_name=name)
+            rec.otu.update_record(ott_node=name)
     return dict(form=form)
 
 def editSnodeTaxon():
@@ -78,8 +78,8 @@ def editSnodeTaxon():
     rec = t( int(request.args(0)) )
     ## t.taxon.readable = t.taxon.writable = False
     w = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.name, id_field=db.ottol_name.id)
-    t.ottol_name.widget = w
+        request, db.ott_node.name, id_field=db.ott_node.id)
+    t.ott_node.widget = w
 
     d = dict([ (k, v) for k, v in request.vars.items()
                if k in t.fields ])
@@ -98,8 +98,8 @@ def get_label_html():
     t = db.snode
     rec = t(int(request.args(0) or 0))
     label = rec.label
-    if rec.ottol_name:
-        label = db.ottol_name[rec.ottol_name].name
+    if rec.ott_node:
+        label = db.ott_node[rec.ott_node].name
     u = URL(c="snode",f="update_snode.load", args=[rec.id])
     onclick = "hbranch_clicked(%s, '%s', 'mymodal', 'cmymodal');" % (rec.id, u)
     e = SPAN(A(label, _onclick=onclick), _style="background-color:yellow")
@@ -111,8 +111,8 @@ def get_node_html():
     rec = t(int(request.args(0) or 0))
     root = build.stree(db, rec.tree)
     node = root[rec.id]
-    if node.rec.ottol_name:
-        label = db.ottol_name[node.rec.ottol_name].name
+    if node.rec.ott_node:
+        label = db.ott_node[node.rec.ott_node].name
     node.label = label
     def onclick(nid):
         u = URL(c="snode",f="update_snode.load", args=[nid])
