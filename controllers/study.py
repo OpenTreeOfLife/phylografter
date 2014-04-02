@@ -19,7 +19,7 @@ from externalproc import get_external_proc_dir_for_upload, invoc_status, \
 track_changes()
 #import ivy
 #treebase = ivy.treebase
-from ivy import treebase
+from ivy_local import treebase
 response.subtitle = A("Studies", _href=URL('study','index'))
 
 class Virtual(object):
@@ -716,7 +716,7 @@ def tbimport_otus():
                                     if v.ncbi_taxid ]))
     rows = db(q).select()
     matches = dict([ (x.name, x.id) for x in rows ])
-    matches.update(dict([ (x.ncbi, x.id) for x in rows if x.ncbi_taxid ]))
+    matches.update(dict([ (x.ncbi, x.id) for x in rows if x.ncbi ]))
     matchv = [ bool((v.name in matches) or
                     (v.ncbi and v.ncbi in matches))
                for k,v in otus ]

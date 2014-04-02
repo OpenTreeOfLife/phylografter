@@ -1,5 +1,5 @@
 from gluon.storage import Storage
-ivy = local_import("ivy", reload=True)
+import ivy_local as ivy
 build = local_import("build", reload=True)
 treeUtil = local_import("treeUtil", reload=True)
 

@@ -3,7 +3,7 @@ viewerUtil = local_import("viewerUtil", reload=True)
 from gluon.storage import Storage
 
 #ivy = local_import("ivy", reload=True)
-import ivy
+import ivy_local as ivy
 build = local_import("build", reload=True)
 util = local_import( "plugin_treeViewer", reload = True )
 graftUtil = local_import( "plugin_treeGrafter", reload = True )
