@@ -345,7 +345,6 @@ def create():
     t = db.study
     name = "%s %s" % (auth.user.first_name, auth.user.last_name)
     t.contributor.default = name
-    ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ott.label = 'Focal clade'
     t.focal_clade_ott.comment = 'Optional. Name of ingroup clade, if any'
     t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
