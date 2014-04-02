@@ -76,9 +76,9 @@ def update_snode():
 def editSnodeTaxon():
     t = db.snode
     rec = t( int(request.args(0)) )
-    ## t.taxon.readable = t.taxon.writable = False
     w = SQLFORM.widgets.autocomplete(
-        request, db.ott_node.name, id_field=db.ott_node.id)
+        request, db.ott_name.unique_name, id_field=db.ott_name.node,
+        limitby=(0,20), orderby=db.ott_name.unique_name)
     t.ott_node.widget = w
 
     d = dict([ (k, v) for k, v in request.vars.items()

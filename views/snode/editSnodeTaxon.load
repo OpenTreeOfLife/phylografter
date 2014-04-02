@@ -1,1 +1,5 @@
+<style>
+.autocomplete { width: 40em !important; }
+input.string { width: 25em !important; }
+</style>
 {{=form}}
