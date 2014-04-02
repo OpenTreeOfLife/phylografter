@@ -933,6 +933,16 @@ def ref_from_doi():
     else:
         print resp.text
 
+@service.json
+def fetch_nexson(study_id):
+    try: study_id = int(study_id)
+    except ValueError: raise HTTP(404)
+    if not db.study(study_id): raise HTTP(404)
+    return nexson.nexmlStudy(study_id,db)
+
+def call():
+    return service()
+
 def export_NexSON():
     'Exports the otus and trees in the study specified by the argument as JSON NeXML'
     studyid = request.args(0)
