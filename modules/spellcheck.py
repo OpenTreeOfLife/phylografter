@@ -18,7 +18,7 @@ def process_label(db, otu):
     options = []
     s = otu.label.replace('_', ' ')
     if check(s):
-        options = list(db(db.ottol_name.name==s).select())
+        options = list(db(db.ott_name.name==s).select())
         return (True, options)
     v = suggest(s)
     if not v:
@@ -28,7 +28,7 @@ def process_label(db, otu):
         s = DIGITS.sub('', ' '.join(words))
         if not s: return (False, options)
         if check(s):
-            options = list(db(db.ottol_name.name==s).select())
+            options = list(db(db.ott_name.name==s).select())
             return (True, options)
 
         v = suggest(s)
@@ -46,7 +46,7 @@ def process_label(db, otu):
                     if v: break
                     else: i -= 1
     for w in v:
-        for row in db(db.ottol_name.name==w).select():
+        for row in db(db.ott_name.name==w).select():
             options.append(row)
     return (False, options)
 

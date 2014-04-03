@@ -103,7 +103,6 @@ def index():
         response.files.append(URL('static',x))
 
     t = db.study
-    fields = t.fields
     colnames = ["Id", "Focal clade", "Citation",
                 "Year", "OTUs", "Trees", "Uploaded", "By"]
     widths = ["5%", "10%", "25%", "5%", "5%", "15%","10%","7%"]
@@ -148,7 +147,7 @@ def dtrecords():
     otu_count = db.otu.id.count()
     left = db.otu.on(db.otu.study==db.study.id)
 
-    fields = [ t.id, t.focal_clade_ottol, t.citation, t.year_published,
+    fields = [ t.id, t.focal_clade_ott, t.citation, t.year_published,
                otu_count, None, t.uploaded, t.contributor ]
     orderby = []
     if request.vars.iSortCol_0:
@@ -166,13 +165,13 @@ def dtrecords():
     q = q0 = (t.id>0)
     
     for i, f in enumerate(
-        [ t.id, t.focal_clade_ottol, t.citation,
+        [ t.id, t.focal_clade_ott, t.citation,
           t.year_published, t.uploaded, t.contributor ]):
         sterm = request.vars.get("sSearch_%s" % i)
         if sterm:
-            if f is t.focal_clade_ottol:
-                q &= ((t.focal_clade_ottol==db.ottol_name.id)&
-                      (db.ottol_name.name.like('%'+sterm+'%')))
+            if f is t.focal_clade_ott:
+                q &= ((t.focal_clade_ott==db.ott_node.id)&
+                      (db.ott_node.name.like('%'+sterm+'%')))
             else:
                 q &= f.like('%'+sterm+'%')
                 
@@ -188,8 +187,7 @@ def dtrecords():
             return str(n)
 
     data = [ (r.study.id,
-              (db.ottol_name[r.study.focal_clade_ottol].name
-               if r.study.focal_clade_ottol else ''),
+              (r.study.focal_clade_ott.name if r.study.focal_clade_ott else ''),
               r.study.study_url.xml(),
               r.study.year_published,
               otus(r),
@@ -197,6 +195,7 @@ def dtrecords():
               r.study.uploaded,
               r.study.contributor)
              for r in rows ]
+
     totalrecs = db(q0).count()
     disprecs = db(q).count()
     return dict(aaData=data,
@@ -327,9 +326,10 @@ def record():
     t = db.study
     rec = t(int(request.args(0) or 0))
     ## t.focal_clade.readable = t.focal_clade.writable = False
-    t.focal_clade_ottol.label = 'Focal clade'
-    t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.name, id_field=db.ottol_name.id)
+    t.focal_clade_ott.label = 'Focal clade'
+    t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
+        request, db.ott_name.unique_name, id_field=db.ott_name.node,
+        limitby=(0,20), orderby=db.ott_name.unique_name)
     form = SQLFORM(t, rec, _id="recordform", showid=False)
     v = [ LI(A(tr.type, _target="_blank",
                _href=URL(c="stree", f="html", args=[tr.id], extension="")))
@@ -346,11 +346,11 @@ def create():
     name = "%s %s" % (auth.user.first_name, auth.user.last_name)
     t.contributor.default = name
     ## t.focal_clade.readable = t.focal_clade.writable = False
-    t.focal_clade_ottol.label = 'Focal clade'
-    t.focal_clade_ottol.comment = 'Optional. Name of ingroup clade, if any'
-    t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
-        limitby=(0,20), orderby=db.ottol_name.unique_name)
+    t.focal_clade_ott.label = 'Focal clade'
+    t.focal_clade_ott.comment = 'Optional. Name of ingroup clade, if any'
+    t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
+        request, db.ott_name.unique_name, id_field=db.ott_name.node,
+        limitby=(0,20), orderby=db.ott_name.unique_name)
     t.citation.comment = ('Author surnames and publication titles '
                           'spelled out in full, to facilitate searching')
     t.doi.comment = SPAN(INPUT(_id="populate_from_doi", _type="button", _name="populate_from_doi", _value="Populate fields from DOI"), SPAN(_id="doi_ajax_spinner", _class="qq-upload-spinner", _hidden="true"))
@@ -375,17 +375,17 @@ def view():
     if readonly:
         t.doi.represent = lambda v: A(doi2url(v), _href=doi2url(v), _target='_blank')
     ## t.focal_clade.readable = t.focal_clade.writable = False
-    t.focal_clade_ottol.label = 'Focal clade'
-    t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
-        limitby=(0,20), orderby=db.ottol_name.unique_name)
+    t.focal_clade_ott.label = 'Focal clade'
+    t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
+        request, db.ott_name.unique_name, id_field=db.ott_name.node,
+        limitby=(0,20), orderby=db.ott_name.unique_name)
     if rec.treebase_id:
         t.treebase_id.comment = A(
             "Import from TreeBASE", _class="button",
             _href=URL('study','tbimport',args=rec.treebase_id))
     form = SQLFORM(t, rec, deletable=False, readonly=readonly,
                    fields = ["citation", "year_published", "doi", "label",
-                             "focal_clade_ottol", "treebase_id",
+                             "focal_clade_ott", "treebase_id",
                              "contributor", "comment", "uploaded"],
                    showid=False, submit_button="Update record")
     ## name = "%s %s" % (auth.user.first_name, auth.user.last_name)
@@ -617,10 +617,10 @@ def tbimport2():
     tbid = request.args(0)
     t = db.study
     ## t.focal_clade.readable = t.focal_clade.writable = False
-    t.focal_clade_ottol.label = 'Focal clade'
-    t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
-        limitby=(0,20), orderby=db.ottol_name.unique_name)
+    t.focal_clade_ott.label = 'Focal clade'
+    t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
+        request, db.ott_name.unique_name, id_field=db.ott_name.node,
+        limitby=(0,20), orderby=db.ott_name.unique_name)
     t.uploaded.readable=False
     key = "uploaded_nexml_%s" % auth.user.id
     nexml = cache.ram(key, lambda:None, time_expire=10000)
@@ -672,9 +672,10 @@ def tbimport_otus():
 
     t = db.study
     ## t.focal_clade.readable = t.focal_clade.writable = False
-    t.focal_clade_ottol.label = 'Focal clade'
-    t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.name, id_field=db.ottol_name.id)
+    t.focal_clade_ott.label = 'Focal clade'
+    t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
+        request, db.ott_name.unique_name, id_field=db.ott_name.node,
+        limitby=(0,20), orderby=db.ott_name.unique_name)
     t.uploaded.readable=False
     key = "uploaded_nexml_%s" % auth.user.id
     nexml = cache.ram(key, lambda:None, time_expire=10000)
@@ -691,32 +692,34 @@ def tbimport_otus():
         redirect(URL('study','tbimport2'))
 
     # figure out if OTUs already exist for this study
-    left = db.ottol_name.on(db.otu.ottol_name==db.ottol_name.id)
-    rows = db(db.otu.study==rec.id).select(db.otu.ALL, db.ottol_name.ALL,
+    left = db.ott_node.on(db.otu.ott_node==db.ott_node.id)
+    rows = db(db.otu.study==rec.id).select(db.otu.ALL, db.ott_node.ALL,
                                            left=left)
-    d = dict([ (x.ottol_name.treebase_taxid, x.otu.id)
-               for x in rows if x.ottol_name and x.ottol_name.treebase_taxid ])
-    d.update(dict([ (x.otu.label, x.otu) for x in rows ]))
+    ## d = dict([ (x.ott_node.treebase, x.otu.id)
+    ##            for x in rows if x.ott_node and x.ott_node.treebase ])
+    ## d.update(dict([ (x.otu.label, x.otu) for x in rows ]))
+    d = dict([ (x.otu.label, x.otu) for x in rows ])
     d.update(dict([ (x.otu.tb_nexml_id, x.otu) for x in rows ]))
-    existing = [ not ((v.treebase_taxid in d) or (v.label in d) or (v.id in d))
+        
+    existing = [ not ((v.label in d) or (v.id in d))
                  for k, v in otus ]
     for k, v in otus:
         o = nexml.otus[k]
-        o.otu = d.get(v.id) or d.get(v.label) or d.get(v.treebase_taxid)
+        o.otu = d.get(v.id) or d.get(v.label)
 
     colnames = ["Nexml id", "Label", "NCBI taxid", "NameBank id",
                 "Taxon match?", "New?"]
     colwidths = [ "15%", "30%", "15%", "15%", "15%", "10%"]
     
     # figure out if uploaded OTUs have matching taxon records
-    q = (db.ottol_name.name.belongs([ v.label for k,v in otus ])|
-         db.ottol_name.ncbi_taxid.belongs([ int(v.ncbi_taxid) for k,v in otus
-                                            if v.ncbi_taxid ]))
+    q = (db.ott_node.name.belongs([ v.label for k,v in otus ])|
+         db.ott_node.ncbi.belongs([ int(v.ncbi_taxid) for k,v in otus
+                                    if v.ncbi_taxid ]))
     rows = db(q).select()
     matches = dict([ (x.name, x.id) for x in rows ])
-    matches.update(dict([ (x.ncbi_taxid, x.id) for x in rows if x.ncbi_taxid ]))
+    matches.update(dict([ (x.ncbi, x.id) for x in rows if x.ncbi_taxid ]))
     matchv = [ bool((v.name in matches) or
-                    (v.ncbi_taxid and v.ncbi_taxid in matches))
+                    (v.ncbi and v.ncbi in matches))
                for k,v in otus ]
 
     tid = "otus"
@@ -747,14 +750,14 @@ def tbimport_otus():
                 ##      new_labels.get(x.label))
                 t = matches.get(x.label) or matches.get(x.ncbi_taxid)
                 if t:
-                    r = db.ottol_name[t]
-                    if not r.treebase_taxid and x.treebase_taxid:
-                        r.update_record(treebase_taxid=x.treebase_taxid)
-                    if not r.ncbi_taxid and x.ncbi_taxid:
-                        r.update_record(ncbi_taxid=x.ncbi_taxid)
-                    if not r.namebank_taxid and x.namebank_taxid:
-                        r.update_record(namebank_taxid=x.namebank_taxid)
-                i = db.otu.insert(study=rec.id, label=x.label, ottol_name=t,
+                    r = db.ott_node[t]
+                    ## if not r.treebase and x.treebase_taxid:
+                    ##     r.update_record(treebase_taxid=x.treebase_taxid)
+                    if not r.ncbi and x.ncbi_taxid:
+                        r.update_record(ncbi=x.ncbi_taxid)
+                    ## if not r.namebank_taxid and x.namebank_taxid:
+                    ##     r.update_record(namebank_taxid=x.namebank_taxid)
+                i = db.otu.insert(study=rec.id, label=x.label, ott_node=t,
                                   tb_nexml_id=x.id)
                 if i:
                     nexml.otus[k]['otu'] = db.otu[i]
@@ -1005,13 +1008,13 @@ def delete_study():
     rec = t(request.args(0)) or redirect(URL("create"))
     readonly = not auth.has_membership(role="contributor")
     ## t.focal_clade.readable = t.focal_clade.writable = False
-    t.focal_clade_ottol.label = 'Focal clade'
-    t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
-        limitby=(0,20), orderby=db.ottol_name.unique_name)
+    t.focal_clade_ott.label = 'Focal clade'
+    t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
+        request, db.ott_name.unique_name, id_field=db.ott_name.node,
+        limitby=(0,20), orderby=db.ott_name.unique_name)
     form = SQLFORM(t, rec, deletable=False, readonly=False,
                    fields = ["citation", "year_published", "doi", "label",
-                             "focal_clade_ottol", "treebase_id",
+                             "focal_clade_ott", "treebase_id",
                              "contributor", "comment", "uploaded"],
                    showid=False, submit_button="Delete Study")
     form.add_button('Cancel', URL('study', 'view', args=rec.id))
