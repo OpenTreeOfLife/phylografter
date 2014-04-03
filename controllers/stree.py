@@ -160,7 +160,7 @@ def dtrecords():
     for i in range(6):
         sterm = request.vars.get("sSearch_%s" % i)
         if sterm and len(sterm)>1:
-            print 'sterm', i, sterm
+            ## print 'sterm', i, sterm
             if i == 0: f = db.stree.id
             elif i == 1: f = db.ott_node.name
             elif i == 2: f = db.study.citation

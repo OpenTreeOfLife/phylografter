@@ -8,7 +8,6 @@ def index():
     return dict()
 
 def update_snode():
-
     t = db.snode
     t.otu.readable = t.otu.writable = False
     rec = t(int(request.args(0) or 0))
@@ -19,58 +18,64 @@ def update_snode():
         limitby=(0,20), orderby=db.ott_node.unique_name)
     t.ott_node.widget = w
 
-    form = SQLFORM(t, rec, showid=False, _id="updateform",
+    form = SQLFORM(t, rec, showid=False, #_id="updateform",
                    _action=URL(c="snode",f="update_snode.load",args=[rec.id]))
-    
-    def valid(f):
-        ## print 'update snode', request.args(0), rec.label
-        ## print ' form.vars.ingroup then', f.vars.ingroup
-        ## print ' request.vars.ingroup then', request.vars.ingroup
-        ## print ' rec.ingroup then', rec.ingroup
-        pass
 
-    if form.process(message_onsuccess='Node updated',
-                    onvalidation=valid).accepted:
-        for ( attr, value ) in rec.as_dict().iteritems():
+    ## This form never gets submitted properly (web2py style) because
+    ## of voodoo in static/modalBox.js. Instead when it gets submitted
+    ## its vars are serialzed into request.vars. So we need to check
+    ## for request.vars and handle them specially.
 
-            if( attr not in form.vars ):
-                continue
+    # hack to check that form was submitted
+    if request.vars.id and int(request.vars.id)==rec.id:
+        fields = (('label', lambda s: s or None),
+                  ('age', lambda s: float(s) if s else None),
+                  ('age_min', lambda s: float(s) if s else None),
+                  ('age_max', lambda s: float(s) if s else None),
+                  ('length', lambda s: float(s) if s else None),
+                  ('bootstrap_support', lambda s: float(s) if s else None),
+                  ('posterior_support', lambda s: float(s) if s else None),
+                  ('other_support', lambda s: float(s) if s else None),
+                  ('other_support_type', lambda s: s or None),
+                  ('ingroup', lambda s: True if s=='on' else False),
+                  ('ott_node', lambda s: int(s) if s else None))
+        data = {}
+        for field, func in fields:
+            v = func(request.vars[field])
+            ## print field, rec[field], v
+            if str(rec[field]) != str(v): data[field] = v
+        
+        if data:
+            if data.get('ingroup'):
+                db(db.snode.tree==rec.tree).update(ingroup=False)
+            rec.update_record(**data)
+            session.flash = 'Node updated'
+            if 'ott_node' in data and rec.otu:
+                rec.otu.update_record(ott_node=data['ott_node'])
+                
+        ## for field in t.fields:
+        ##     if str(form.vars[attr]) != str(rec[attr]):
+        ##         if attr == 'ott_node':
+        ##             q = db.ott_node.id==form.vars[attr]
+        ##             updatedValue = db(q).select()[0].name
+        ##             if re.match("^[0-9]+$", str(rec[attr])):
+        ##                 previousValue = db(db.ott_node.id==rec[attr]).select()[0].name
+        ##             else:
+        ##                 previousValue = str(rec[attr])
+        ##         else:
+        ##             updatedValue = form.vars[attr]
+        ##             previousValue = str(rec[attr])
 
-            if( str( form.vars[attr] ) != str( rec[attr] ) ):
+        ##         userName=' '.join([auth.user.first_name, auth.user.last_name])
+        ##         db.userEdit.insert(userName=userName,
+        ##                            tableName='snode',
+        ##                            rowId=rec.id,
+        ##                            fieldName=attr,
+        ##                            previousValue=previousValue,
+        ##                            updatedValue=updatedValue)
+        ##         mytree = db.stree(rec.tree)
+        ##         mytree.update_record(last_modified=datetime.datetime.now())
 
-                if( attr == 'ott_node' ):
-
-                    updatedValue = db( db.ott_node.id == form.vars[attr] ).select()[0].name
-
-                    if re.match( "^[0-9]+$", str( rec[ attr ] ) ):
-
-                        previousValue = db( db.ott_node.id == rec[ attr ] ).select()[0].name
-
-                    else:
-                        
-                        previousValue = str( rec[attr] )
-
-                else:
-                    updatedValue = form.vars[ attr ]
-                    previousValue = str( rec[attr] )
-
-                db.userEdit.insert( userName = ' '.join( [ auth.user.first_name, auth.user.last_name ] ),
-                                    tableName = 'snode',
-                                    rowId = rec.id,
-                                    fieldName = attr,
-                                    previousValue = previousValue,
-                                    updatedValue = updatedValue )
-                mytree = db.stree(rec.tree)
-                mytree.update_record( last_modified = datetime.datetime.now() )
-
-
-        ## print ' form.vars.ingroup now', form.vars.ingroup
-        ## print ' request.vars.ingroup now', request.vars.ingroup
-        ## print ' rec.ingroup now', rec.ingroup
-
-        name = form.vars.ott_node
-        if name and rec.otu:
-            rec.otu.update_record(ott_node=name)
     return dict(form=form)
 
 def editSnodeTaxon():
