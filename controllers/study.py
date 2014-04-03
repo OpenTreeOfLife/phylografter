@@ -19,7 +19,7 @@ from externalproc import get_external_proc_dir_for_upload, invoc_status, \
 track_changes()
 #import ivy
 #treebase = ivy.treebase
-from ivy import treebase
+from ivy_local import treebase
 response.subtitle = A("Studies", _href=URL('study','index'))
 
 class Virtual(object):
@@ -345,7 +345,6 @@ def create():
     t = db.study
     name = "%s %s" % (auth.user.first_name, auth.user.last_name)
     t.contributor.default = name
-    ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ott.label = 'Focal clade'
     t.focal_clade_ott.comment = 'Optional. Name of ingroup clade, if any'
     t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
@@ -717,7 +716,7 @@ def tbimport_otus():
                                     if v.ncbi_taxid ]))
     rows = db(q).select()
     matches = dict([ (x.name, x.id) for x in rows ])
-    matches.update(dict([ (x.ncbi, x.id) for x in rows if x.ncbi_taxid ]))
+    matches.update(dict([ (x.ncbi, x.id) for x in rows if x.ncbi ]))
     matchv = [ bool((v.name in matches) or
                     (v.ncbi and v.ncbi in matches))
                for k,v in otus ]
@@ -932,6 +931,16 @@ def ref_from_doi():
         return d
     else:
         print resp.text
+
+@service.json
+def fetch_nexson(study_id):
+    try: study_id = int(study_id)
+    except ValueError: raise HTTP(404)
+    if not db.study(study_id): raise HTTP(404)
+    return nexson.nexmlStudy(study_id,db)
+
+def call():
+    return service()
 
 def export_NexSON():
     'Exports the otus and trees in the study specified by the argument as JSON NeXML'

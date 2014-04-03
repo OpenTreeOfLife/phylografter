@@ -152,7 +152,7 @@ def generatePathString( p ):
 
 
 def buildTree( p ):
-    import ivy
+    import ivy_local as ivy
     
     root = None
     currentNode = None

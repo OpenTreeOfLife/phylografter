@@ -6,7 +6,7 @@ from gluon.html import *
 from gluon.html import URL
 from gluon.validators import *
 import datetime
-from ivy.storage import Storage
+from ivy_local.storage import Storage
 from collections import defaultdict
 
 is_year = IS_INT_IN_RANGE(1800, datetime.date.today().year+2)

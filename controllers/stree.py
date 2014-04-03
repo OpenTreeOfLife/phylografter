@@ -6,7 +6,7 @@ import sys
 import tree
 import build
 import link
-import ivy
+import ivy_local as ivy
 import treeUtil
 import nexson
 import urllib
@@ -160,7 +160,7 @@ def dtrecords():
     for i in range(6):
         sterm = request.vars.get("sSearch_%s" % i)
         if sterm and len(sterm)>1:
-            print 'sterm', i, sterm
+            ## print 'sterm', i, sterm
             if i == 0: f = db.stree.id
             elif i == 1: f = db.ott_node.name
             elif i == 2: f = db.study.citation
@@ -678,7 +678,8 @@ def import_cached_nexml():
                 db.snode[n.id].update_record(parent=n.parent.id)
             n.label = str(n.id)
             n.length = None
-        db.stree[form.vars.id].update_record(newick_idstr=t.root.write())
+        db.stree[form.vars.id].update_record(newick_idstr=t.root.write(),
+                                             study=study.id)
 
         session.flash = 'tree %s inserted' % t.attrib.id
         redirect(URL('study','tbimport_trees'))

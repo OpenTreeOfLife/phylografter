@@ -1,7 +1,7 @@
 """
 module for building trees of ivy.tree.Nodes from database tables
 """
-from ivy.tree import Node
+from ivy_local.tree import Node
 from collections import defaultdict
 from gluon.storage import Storage
 
@@ -67,7 +67,7 @@ def getCladeSqlString( nodeTable, rootRec, collapsedNodeStorage, extra = Storage
 
     stringList.append( ''.join( [ ' ORDER BY ', nodeTable, '.next;' ] ) )
 
-    print ''.join( stringList )
+    ## print ''.join( stringList )
 
     return ''.join( stringList ) 
 

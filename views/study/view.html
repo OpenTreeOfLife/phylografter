@@ -62,7 +62,7 @@ Trees derived from this data set:
 
 {{block right_sidebar}}
 <h5>OTUs: {{=rec.otu.count()}}</h5>
-<h5>OTUs mapped to taxa: {{=rec.otu(db.otu.ottol_name!=None).count()}}</h5>
+<h5>OTUs mapped to taxa: {{=rec.otu(db.otu.ott_node!=None).count()}}</h5>
 {{=A('Map OTUs to Taxa', _class='button', _href=URL('otu','study',args=rec.id), _style="margin-top:0.5em")}}
 {{pass}}
 
