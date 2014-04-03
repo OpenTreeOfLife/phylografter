@@ -531,13 +531,8 @@ def meta_elts_for_node_elt(node_row,db):
     returns metadata elements for a node (currently ot:isLeaf,ot:ottTaxonName)
     """
     result=[]
-<<<<<<< HEAD
     node_id,label,parent,otu_id,length,isleaf = node_row
-    if isleaf:
-=======
-    node_id,parent,otu_id,length,isleaf = node_row
     if isleaf == 'T':
->>>>>>> ott24
         isLeaf_elt = createLiteralMeta("ot:isLeaf","true","xsd:boolean")
         result.append(isLeaf_elt)
     if otu_id:

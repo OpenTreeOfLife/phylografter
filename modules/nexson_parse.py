@@ -11,18 +11,24 @@ def check_nexson(u,db):
     #from json import load
     import requests
     r = requests.get(u)
-    json_tree = r.json()       #want api call that returns study identifier(s)
-    return check_json_study(json_tree,db)
+    print "Raw status code = %d" % r.status_code 
+    if r.status_code == 200:
+       json_tree = r.json()       #want api call that returns study identifier(s)
+       if u'data' in json_tree:
+           nexml_tree = json_tree[u'data']
+           return check_json_study(nexml_tree,db)
+       elif u'error' in json_tree:
+           description = json_tree[u'description']
+           return (description,None)
+    else:
+        raise HTTP(r.status_code,"Error retrieving study")
 
-def check_json_study(json_tree,db):
+def check_json_study(nexml_tree,db):
     """
     Returns True if db contains a study with matching doi (best) or
     reference citation
     """
-    if u'error' in json_tree:
-        description = json_tree[u'description']
-        return (description,None)
-    contents =json_tree[u'nexml']
+    contents = nexml_tree[u'nexml']
     metaEle = contents[u'meta']
     metafields = parse_study_meta(metaEle)
     if 'ot:studyPublication' in metafields:
@@ -30,20 +36,20 @@ def check_json_study(json_tree,db):
         q = (db.study.doi == doi)
         rows = db(q).select()
         if len(rows) > 0:
-            return (None,rows[0].id)
+            return (200,rows[0].id)
         else:
-            return (None,None)
+            return (404,None)  #bad study id is treated as resource not found
     elif 'ot:studyPublicationReference' in metafields:
         ref = metafields['ot:studyPublicationReference']
         q = (db.study.citation == ref)
         rows = db(q).select()
         if len(rows) > 0:
-            return (None,rows[0].id)
+            return (200,rows[0].id)
         else:
-            return (None,None)
+            return (404,None)
     else:
         print "No study identifier found"
-        return (None,None)
+        return (404,None)
 
 
 def ingest_nexson(u,db,id):
@@ -113,14 +119,17 @@ def parse_study_meta(metaEle):
     studytags = []
     result = {'other_metadata': []}
     for p in metaEle:
-        prop = p[u'@property']
-        if prop in [u'ot:studyId',u'ot:studyYear',u'ot:focalClade']:
-            result[prop] = int(p[u'$'])
-        elif prop in [u'ot:studyPublication',u'ot:dataDeposit']:
-            result[prop] = encode(p[u'@href'])
-        elif prop in [u'ot:studyPublicationReference',u'ot:curatorName',u'ot:contributor',u'ot:specifiedRoot']:
-            result[prop] = encode(p[u'$'])
-        elif prop in [u'ot:tag']:
+        if u'@property' in p:
+            predicate = p[u'@property']
+        elif u'@rel' in p:
+            predicate = p[u'@rel']
+        if predicate in [u'ot:studyId',u'ot:studyYear',u'ot:focalClade']:
+            result[predicate] = int(p[u'$'])
+        elif predicate in [u'ot:studyPublication',u'ot:dataDeposit']:
+            result[predicate] = encode(p[u'@href'])
+        elif predicate in [u'ot:studyPublicationReference',u'ot:curatorName',u'ot:contributor',u'ot:specifiedRoot']:
+            result[predicate] = encode(p[u'$'])
+        elif predicate in [u'ot:tag']:
             studytags.append(encode(p[u'$']))
         else:
             result['other_metadata'].append(p)

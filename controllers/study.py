@@ -1107,7 +1107,7 @@ def import_NexSON():
     from nexson_parse import ingest_nexson,check_nexson
     if not(request.post_vars):
         raise HTTP(400)  #if no post, then it's a bad request
-    ##Per Massimo Di Pierro's answer for google groups question about @request.restful    
+    ##Per Massimo Di Pierro's answer for google groups question about @request.restful
     post_text = request.body.read()
     print datetime.datetime.now()
     study_exists = check_nexson(cStringIO.StringIO(post_text),db)
@@ -1117,24 +1117,23 @@ def import_NexSON():
     print datetime.datetime.now()
     return study_id
 
-
-repository_list = ["http://dev.opentreeoflife.org/api/v1/study/10.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/11.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/12.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/13.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/17.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/24.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/25.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/28.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/36.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/37.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/38.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/39.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/40.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/41.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/42.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/43.json?output_nexml2json=0.0.0",
-                   "http://dev.opentreeoflife.org/api/v1/study/44.json?output_nexml2json=0.0.0",
+repository_list = ["http://" + test_server+"/api/v1/study/10.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/11.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/12.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/13.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/17.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/24.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/25.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/28.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/36.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/37.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/38.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/39.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/40.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/41.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/42.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/43.json?output_nexml2json=0.0.0",
+                   "http://" + test_server+"/api/v1/study/44.json?output_nexml2json=0.0.0",
                    ]
 
 def repositoryTest():
@@ -1148,10 +1147,10 @@ def repositoryTest():
         print "foo is %s" % str(foo)
         (error, study_exists) = check_nexson(study,db)
         if error:
-            print error
+            print "check nexson returned http error: %d" % error
         else:
             study_id = ingest_nexson(study,db,None)
-        print "time %s, %s" % (datetime.datetime.now(),study_id)
+            print "time %s, %s" % (datetime.datetime.now(),study_id)
        # print "check_nexson returned %s" % str(study_exists)
        # if study_exists:
        #     redirect(URL(c="study",f="overwrite_study",args=[study_exists]))

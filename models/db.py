@@ -75,6 +75,8 @@ auth.settings.login_form = RPXAccount(
     url = "http://%s/%s/default/user/login" % (host, request.application)
     )
 
+test_server = conf.get("temp","server")
+
 if request.controller=='default' and request.function=='user' and request.args(0)=='login':
     ## _next = session._next
     ## if _next and 'plugin_' in _next:
@@ -145,5 +147,3 @@ def insert_ncbi_node(taxid, email):
             if not db(q).select().first():
                 i = db.taxon.insert(name=syn, rank=rank, ncbi_taxid=taxid)
                 print "Inserted %s into taxon: %s" % (syn, i)
-    
-        
