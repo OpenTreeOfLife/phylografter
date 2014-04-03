@@ -90,7 +90,7 @@ def createResourceMeta(key, value):
     creates a dict for the @property key -> value mapping of nex:ResourceMeta type
     '''
     return {"@xsi:type": "nex:ResourceMeta",
-            "@property": key,
+            "@rel": key,
             "@href": value
            }
 
@@ -312,6 +312,8 @@ def meta_elts_for_otu_elt(otuRec):
         meta_list.append(createLiteralMeta("ot:ottId", accepted_uid))
     if tb_name:
         meta_list.append(createLiteralMeta("ot:treebaseOTUId", tb_name))
+    if name:
+        meta_list.append(createLiteralMeta("ot:ottTaxonName", name))
     if len(meta_list)>0:
        meta_list.append(orig_label_el)
        return {"meta": meta_list}
@@ -478,7 +480,7 @@ def node_elt(node_row,db):
     if parent:
         pass
     else:
-        result["@root"] = 'true'
+        result["@root"] = True
     if meta_elts:
         result["@about"] = "#node%d" % node_id
         result.update(meta_elts)
@@ -486,19 +488,15 @@ def node_elt(node_row,db):
 
 def meta_elts_for_node_elt(node_row,db):
     """
-    returns metadata elements for a node (currently ot:isLeaf,ot:ottTaxonName)
+    returns metadata elements for a node (currently ot:isLeaf)
     """
     result=[]
     node_id,parent,otu_id,length,isleaf = node_row
     if isleaf == 'T':
-        isLeaf_elt = createLiteralMeta("ot:isLeaf","true","xsd:boolean")
+        isLeaf_elt = createLiteralMeta("ot:isLeaf",True,"xsd:boolean")
         result.append(isLeaf_elt)
-    if otu_id:
-       names = db.executesql('SELECT ott_node.name FROM otu LEFT JOIN ott_node ON (otu.ott_node = ott_node.id) WHERE (otu.id = %d);' % otu_id)
-       if names:
-            name = names[0][0]
-            if name:
-                result.append(createLiteralMeta("ot:ottTaxonName",name))
+    #ottTaxonName has moved several times between nodes and otus - 
+    #currently on otus so no need to retrieve ott_node.name here
     if len(result)>0:
         return dict(meta=result)
     return
