@@ -26,9 +26,9 @@ def nexmlStudy(study_id,db):
     study_row = db.study(study_id)
     meta_elts = meta_elts_for_nexml(study_row,db)
     ## print 'meta done'
-    otus, otu_id2name = otus_elt_for_study(study_row,db)
+    otus = otus_elt_for_study(study_row,db)
     ## print 'otus done'
-    trees = trees_elt(study_row, db, otu_id2name)
+    trees = trees_elt(study_row, db)
     ## print 'trees done'
     header = nexml_header()
     body = {"@id":"study","@about":"#study"}
@@ -93,7 +93,7 @@ def createResourceMeta(key, value):
     creates a dict for the @property key -> value mapping of nex:ResourceMeta type
     '''
     return {"@xsi:type": "nex:ResourceMeta",
-            "@property": key,
+            "@rel": key,
             "@href": value
            }
 
@@ -252,13 +252,12 @@ def otus_elt_for_study(study_row,db):
     '''
     otu_rows = get_otu_rows_for_study(study_row,db)
     ## print '  otu_rows done'
-    otu_id2name = dict([ (x[0], x[4]) for x in otu_rows if x[4] ])
     meta_elts = meta_elts_for_otus(study_row,otu_rows,db)  #placeholder, no meta elements here
     otu_elements = [otu_elt(otu_row) for otu_row in otu_rows]
     ## print '  otu_elements done'
     otus_element = {"otu": otu_elements,
                     "@id": "otus%d" % study_row.id}
-    return {"otus": otus_element}, otu_id2name
+    return {"otus": otus_element}
 
 def get_otu_rows_for_study(study_row,db):
     '''
@@ -318,18 +317,20 @@ def meta_elts_for_otu_elt(otuRec):
         meta_list.append(createLiteralMeta("ot:ottId", accepted_uid))
     if tb_name:
         meta_list.append(createLiteralMeta("ot:treebaseOTUId", tb_name))
+    if name:
+        meta_list.append(createLiteralMeta("ot:ottTaxonName", name))
     if len(meta_list)>0:
        meta_list.append(orig_label_el)
        return {"meta": meta_list}
     return {"meta": orig_label_el}
 
-def trees_elt(study, db, otu_id2name):
+def trees_elt(study, db):
     '''
     generate trees element
     '''
     row_list = get_tree_rows_for_study(study,db)
     ## print '  tree_rows done'
-    tree_list = [tree_elt(tree_row, db, otu_id2name) for tree_row in row_list]
+    tree_list = [tree_elt(tree_row, db) for tree_row in row_list]
     ## print '  tree_list done'
     body={"@otus": "otus%d" % study.id,
           "@id": "trees%d" % study.id,
@@ -358,7 +359,7 @@ def get_single_tree_study_id(tree,db):
     '''
     return db.stree(tree).study
 
-def tree_elt(tree_row, db, otu_id2name):
+def tree_elt(tree_row, db):
     '''
     generates a tree element
     '''
@@ -367,7 +368,7 @@ def tree_elt(tree_row, db, otu_id2name):
     node_rows = get_snode_recs_for_tree(tree_row,db)
     ## print '    tree_snode_recs done'
     result = {"@id": 'tree%d' % tree_row.id,
-              "node": tree_nodes(node_rows, db, otu_id2name),
+              "node": tree_nodes(node_rows, db),
               "edge": tree_edges(node_rows)
              }
     ## print '    tree_nodes_and_edges done'
@@ -446,11 +447,11 @@ def get_tree_tags(tree_row,db):
     result = [row.tag for row in rows]
     return result
 
-def tree_nodes(node_rows, db, otu_id2name):
+def tree_nodes(node_rows, db):
     '''
     formats the nodes corresponding to the rows in node_rows
     '''
-    return [node_elt(node_row, db, otu_id2name) for node_row in node_rows]
+    return [node_elt(node_row, db) for node_row in node_rows]
 
 def tree_edges(node_rows):
     '''
@@ -477,35 +478,35 @@ def get_snode_recs_for_tree(tree_row,db):
     """
     return db.executesql('SELECT id,parent,otu,length,isleaf FROM snode WHERE (tree = %d);' % tree_row.id)
 
-def node_elt(node_row, db, otu_id2name):
+def node_elt(node_row, db):
     """
     returns an element for a node
     """
     node_id,parent,otu_id,length,isleaf = node_row
-    meta_elts = meta_elts_for_node_elt(node_row, db, otu_id2name)
+    meta_elts = meta_elts_for_node_elt(node_row, db)
     result = {"@id": "node%d" % node_id}
     if otu_id:
         result["@otu"] = 'otu%d' % otu_id
     if parent:
         pass
     else:
-        result["@root"] = 'true'
+        result["@root"] = True
     if meta_elts:
         result["@about"] = "#node%d" % node_id
         result.update(meta_elts)
     return result
 
-def meta_elts_for_node_elt(node_row, db, otu_id2name):
+def meta_elts_for_node_elt(node_row, db):
     """
-    returns metadata elements for a node (currently ot:isLeaf,ot:ottTaxonName)
+    returns metadata elements for a node (currently ot:isLeaf)
     """
     result=[]
     node_id,parent,otu_id,length,isleaf = node_row
     if isleaf == 'T':
-        isLeaf_elt = createLiteralMeta("ot:isLeaf","true","xsd:boolean")
+        isLeaf_elt = createLiteralMeta("ot:isLeaf",True,"xsd:boolean")
         result.append(isLeaf_elt)
-    if otu_id and otu_id in otu_id2name:
-        result.append(createLiteralMeta("ot:ottTaxonName",otu_id2name[otu_id]))
+    #ottTaxonName has moved several times between nodes and otus - 
+    #currently on otus so no need to retrieve ott_node.name here
     if result:
         return dict(meta=result)
     return
