@@ -235,12 +235,22 @@ def delete():
 
 def _lookup_taxa(nodes):
     def f(x):
-        try: float(x.label or "x"); return False
-        except: return True
-    v = [ (n.label or "").replace("_", " ") for n in filter(f, nodes) ]
-    t = db.ott_node
-    rows = db(t.unique_name.belongs(v)).select(t.unique_name, t.id)
-    return dict([ (x.unique_name, x.id) for x in rows ])
+        if not x.label:
+            return False
+        try:
+            float(x.label)
+            return False
+        except:
+            pass
+        return True
+    t = db.ott_name
+    for n in nodes:
+        n.ott_node = None
+        if not f(n):
+            continue
+        sq = db(t.name==n.label.replace("_", " "))
+        if sq.count()==1:
+            n.ott_node = sq.select().first().node
 
 def _study_otus(study):
     q = ((db.otu.study==db.study.id)&(db.study.id==study))
@@ -254,19 +264,19 @@ def _insert_stree(study, data):
     assert root, data.newick
     ivy.tree.index(root)
     nodes = list(root)
-    lab2tax = _lookup_taxa(nodes)
+    _lookup_taxa(nodes)
     lab2otu = dict([ (x.label, x) for x in _study_otus(study) ])
+    data['study'] = study.id
     stree = db.stree.insert(**data)
-    db.stree[stree].update_record(study=study)
-    db.stree[stree].update_record(last_modified = datetime.datetime.now())
     i2n = {}
     for n in nodes:
         label = (n.label or "").replace("_", " ")
-        taxid = lab2tax.get(label)
+        taxid = n.ott_node
         otu = None
         if n.isleaf:
             otu = lab2otu.get(label)
-            if otu and otu.ott_node: taxid = otu.ott_node
+            if otu and otu.ott_node:
+                taxid = otu.ott_node
             if not otu:
                 otu = db.otu.insert(study=study, label=label, ott_node=taxid)
 
@@ -887,8 +897,11 @@ def newick():
     assert treeid
     root = build.stree(db, treeid)
     lfmt = [ x.split('.') for x in
-             (request.vars['lfmt'] or 'snode.id,otu.label').split(',') ]
-    ifmt = [ x.split('.') for x in (request.vars['ifmt'] or '').split(',') ]
+             (request.vars['lfmt'] or 'snode.id,otu.label').split(',')
+             if x ]
+    ifmt = [ x.split('.') for x in
+             (request.vars['ifmt'] or '').split(',')
+             if x ]
     def proc(node, table, field):
         try: s = str(getattr(getattr(node.rec, table), field))
         except AttributeError: s = ''
