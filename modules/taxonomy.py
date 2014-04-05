@@ -1,4 +1,4 @@
-import ivy
+import ivy_local as ivy
 
 def mrca(t, tids):
     db = t._db
