@@ -52,6 +52,8 @@ def update_snode():
             session.flash = 'Node updated'
             if 'ott_node' in data and rec.otu:
                 rec.otu.update_record(ott_node=data['ott_node'])
+            mytree = db.stree(rec.tree)
+            mytree.update_record(last_modified=datetime.datetime.now())
                 
         ## for field in t.fields:
         ##     if str(form.vars[attr]) != str(rec[attr]):
@@ -73,8 +75,6 @@ def update_snode():
         ##                            fieldName=attr,
         ##                            previousValue=previousValue,
         ##                            updatedValue=updatedValue)
-        ##         mytree = db.stree(rec.tree)
-        ##         mytree.update_record(last_modified=datetime.datetime.now())
 
     return dict(form=form)
 
