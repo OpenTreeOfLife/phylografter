@@ -406,7 +406,8 @@ def view():
                                     previousValue = str( rec[attr] ),
                                     updatedValue = str( form.vars[attr] ) )
 
-        rec.update_record( last_modified = datetime.datetime.now() )
+        ## not needed; mysql field is updated automatically
+        ## rec.update_record( last_modified = datetime.datetime.now() )
 
         response.flash = "record updated"
 
@@ -636,6 +637,7 @@ def tbimport2():
     d = dict(citation = get('dcterms:bibliographicCitation'),
              year_published = year if year else None,
              label = get('tb:title.study'),
+             doi = get('prism:doi'),
              treebase_id = treebase_id,
              contributor = get('contributor'))
 
