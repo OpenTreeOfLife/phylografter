@@ -49,7 +49,7 @@ def update_snode():
             if data.get('ingroup'):
                 db(db.snode.tree==rec.tree).update(ingroup=False)
 
-            userName=' '.join([auth.user.first_name, auth.user.last_name]
+            userName=' '.join([auth.user.first_name, auth.user.last_name])
             for k,v in data.items():
                 db.userEdit.insert(userName=userName,
                                    tableName='snode',
