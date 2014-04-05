@@ -214,13 +214,13 @@ def define_tables(db, migrate=False):
     ##     )
     ## db.sdata.citation.requires = [IS_NOT_EMPTY()]
 
-    db.define_table(
-        "gene",
-        Field("name", unique=True, required=True, notnull=True),
-        Field("genome"),
-        format="%(name)s",
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     "gene",
+    ##     Field("name", unique=True, required=True, notnull=True),
+    ##     Field("genome"),
+    ##     format="%(name)s",
+    ##     migrate=migrate
+    ##     )
 
     db.define_table(
         "study", # study data
@@ -287,16 +287,16 @@ def define_tables(db, migrate=False):
         migrate=migrate
         )
 
-    db.define_table(
-        "sequence",
-        Field("otu", db.otu, ondelete="NO ACTION"),
-        Field("gene", db.gene, ondelete="NO ACTION"),
-        Field("gi", "integer"),
-        Field("ac", "string"),
-        Field("data", "text"),
-        format="%(ac)s",
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     "sequence",
+    ##     Field("otu", db.otu, ondelete="NO ACTION"),
+    ##     Field("gene", db.gene, ondelete="NO ACTION"),
+    ##     Field("gi", "integer"),
+    ##     Field("ac", "string"),
+    ##     Field("data", "text"),
+    ##     format="%(ac)s",
+    ##     migrate=migrate
+    ##     )
 
     db.define_table(
         "stree",
@@ -383,138 +383,138 @@ def define_tables(db, migrate=False):
         migrate=migrate
         )
 
-    db.define_table(
-        "gtree",
-        Field("contributor", "string", length=128),
-        Field("mtime", "datetime", default=datetime.datetime.now()),
-        Field("title", "string", length=255),
-        Field("comment", "text"),
-        Field("date", "datetime"),
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     "gtree",
+    ##     Field("contributor", "string", length=128),
+    ##     Field("mtime", "datetime", default=datetime.datetime.now()),
+    ##     Field("title", "string", length=255),
+    ##     Field("comment", "text"),
+    ##     Field("date", "datetime"),
+    ##     migrate=migrate
+    ##     )
 
-    db.define_table(
-        "gnode",
-        Field("label", "string", length=128),
-        Field("isleaf", "boolean", default=False),
-        Field("ntips", "integer", required=False),
-        Field("pruned", "boolean", default=False, required=True, notnull=True,
-              readable=False, writable=False),
-        Field("parent", "reference gnode", readable=False, writable=False,ondelete="NO ACTION"),
-        Field("next", "integer"),
-        Field("back", "integer"),
-        Field("length", "double", required=False),
-        Field("age", "double", required=False),
-        Field("age_min", "double", required=False),
-        Field("age_max", "double", required=False),
-        Field("tree", db.gtree, required=True, ondelete="NO ACTION"),
-        Field("snode", db.snode, required=True, ondelete="NO ACTION"),
-        Field("stree", db.stree, required=False, ondelete="NO ACTION"),
-        Field("viewWeight", "double", required=False),
-        Field("mtime", "datetime", default=datetime.datetime.now()),
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     "gnode",
+    ##     Field("label", "string", length=128),
+    ##     Field("isleaf", "boolean", default=False),
+    ##     Field("ntips", "integer", required=False),
+    ##     Field("pruned", "boolean", default=False, required=True, notnull=True,
+    ##           readable=False, writable=False),
+    ##     Field("parent", "reference gnode", readable=False, writable=False,ondelete="NO ACTION"),
+    ##     Field("next", "integer"),
+    ##     Field("back", "integer"),
+    ##     Field("length", "double", required=False),
+    ##     Field("age", "double", required=False),
+    ##     Field("age_min", "double", required=False),
+    ##     Field("age_max", "double", required=False),
+    ##     Field("tree", db.gtree, required=True, ondelete="NO ACTION"),
+    ##     Field("snode", db.snode, required=True, ondelete="NO ACTION"),
+    ##     Field("stree", db.stree, required=False, ondelete="NO ACTION"),
+    ##     Field("viewWeight", "double", required=False),
+    ##     Field("mtime", "datetime", default=datetime.datetime.now()),
+    ##     migrate=migrate
+    ##     )
 
-    db.define_table(
-        'gtree_edit',
-        Field( 'gtree', db.gtree ),
-        Field( 'action', 'string',requires=IS_IN_SET(["prune","graft","replace"]), required=True ),
-        Field( 'target_gnode', db.gnode ),
-        Field( 'affected_clade_id', "integer" ),
-        Field( 'affected_node_id', "integer" ),
-        Field( 'comment', 'text' ),
-        Field( 'user', db.auth_user ),
-        Field( 'originalTreeType', 'string', requires=IS_IN_SET( [ "grafted", "source" ] ) ),
-        Field( 'mtime', "datetime", default=datetime.datetime.now() ),
-        Field( 'newNodeOriginId', 'integer' ),
-        Field( 'newNodeOriginType', 'integer' ),
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     'gtree_edit',
+    ##     Field( 'gtree', db.gtree ),
+    ##     Field( 'action', 'string',requires=IS_IN_SET(["prune","graft","replace"]), required=True ),
+    ##     Field( 'target_gnode', db.gnode ),
+    ##     Field( 'affected_clade_id', "integer" ),
+    ##     Field( 'affected_node_id', "integer" ),
+    ##     Field( 'comment', 'text' ),
+    ##     Field( 'user', db.auth_user ),
+    ##     Field( 'originalTreeType', 'string', requires=IS_IN_SET( [ "grafted", "source" ] ) ),
+    ##     Field( 'mtime', "datetime", default=datetime.datetime.now() ),
+    ##     Field( 'newNodeOriginId', 'integer' ),
+    ##     Field( 'newNodeOriginType', 'integer' ),
+    ##     migrate=migrate
+    ##     )
 
-    db.define_table(
-        'prune_detail',
-        Field( 'pruned_gnode', db.gnode ),
-        Field( 'gtree_edit', db.gtree_edit ),
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     'prune_detail',
+    ##     Field( 'pruned_gnode', db.gnode ),
+    ##     Field( 'gtree_edit', db.gtree_edit ),
+    ##     migrate=migrate
+    ##     )
 
-    db.define_table(
-        'unique_user',
-        Field( 'first_name', 'string' ), 
-        Field( 'last_name', 'string' ),
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     'unique_user',
+    ##     Field( 'first_name', 'string' ), 
+    ##     Field( 'last_name', 'string' ),
+    ##     migrate=migrate
+    ##     )
 
 
-    db.define_table(
-        'user_map',
-        Field( 'auth_user_id', db.auth_user ),
-        Field( 'unique_user_id', db.unique_user ),
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     'user_map',
+    ##     Field( 'auth_user_id', db.auth_user ),
+    ##     Field( 'unique_user_id', db.unique_user ),
+    ##     migrate=migrate
+    ##     )
 
-    db.define_table(
-        'gtree_share',
-        Field( 'user', db.auth_user ),
-        Field( 'gtree', db.gtree ),
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     'gtree_share',
+    ##     Field( 'user', db.auth_user ),
+    ##     Field( 'gtree', db.gtree ),
+    ##     migrate=migrate
+    ##     )
 
-    db.define_table(
-        'treebase_matrix',
-        Field('study', db.study,
-              required=True, notnull=True, ondelete="NO ACTION"),
-        Field('label', 'string'),
-        Field('type', 'string'),
-        Field('nchar', 'integer'),
-        Field('ntax', 'integer'),
-        Field('tb_matrix_id', 'integer',
-              unique=True, required=True, notnull=True),
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     'treebase_matrix',
+    ##     Field('study', db.study,
+    ##           required=True, notnull=True, ondelete="NO ACTION"),
+    ##     Field('label', 'string'),
+    ##     Field('type', 'string'),
+    ##     Field('nchar', 'integer'),
+    ##     Field('ntax', 'integer'),
+    ##     Field('tb_matrix_id', 'integer',
+    ##           unique=True, required=True, notnull=True),
+    ##     migrate=migrate
+    ##     )
 
-    db.define_table(
-        'treebase_matrix_row',
-        Field('otu', db.otu,
-              required=True, notnull=True, ondelete="NO ACTION"),
-        Field('data', 'text',
-              required=True, notnull=True, ondelete="NO ACTION"),
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     'treebase_matrix_row',
+    ##     Field('otu', db.otu,
+    ##           required=True, notnull=True, ondelete="NO ACTION"),
+    ##     Field('data', 'text',
+    ##           required=True, notnull=True, ondelete="NO ACTION"),
+    ##     migrate=migrate
+    ##     )
 
-    db.define_table(
-        'treeMeta',
-        Field('tree', 'integer' ),
-        Field('treeType', 'string' ),
-        Field('depth', 'integer' ),
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     'treeMeta',
+    ##     Field('tree', 'integer' ),
+    ##     Field('treeType', 'string' ),
+    ##     Field('depth', 'integer' ),
+    ##     migrate=migrate
+    ##     )
 
-    db.define_table(
-        'treeMetaDepthDetail',
-        Field('treeMeta', db.treeMeta ),
-        Field('depth', 'integer' ),
-        Field('nodeCount', 'double' ),
-        Field('tipCount', 'double' ),
-        Field('longestLabel', 'integer' ),
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     'treeMetaDepthDetail',
+    ##     Field('treeMeta', db.treeMeta ),
+    ##     Field('depth', 'integer' ),
+    ##     Field('nodeCount', 'double' ),
+    ##     Field('tipCount', 'double' ),
+    ##     Field('longestLabel', 'integer' ),
+    ##     migrate=migrate
+    ##     )
 
-    db.define_table(
-        'phylogramNodeMeta',
-        Field('tree', 'integer' ),
-        Field('treeType', 'string' ),
-        Field('nodeId', 'integer' ),
-        Field('text', 'string' ),
-        Field('weight', 'double' ),
-        Field('longestTraversal', 'double' ),
-        Field('descendantTipCount', 'integer' ),
-        Field('closestDescendantLabel', 'string' ),
-        Field('next', 'integer' ),
-        Field('back', 'integer' ),
-        Field('descendantLabelCount', 'integer' ),
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     'phylogramNodeMeta',
+    ##     Field('tree', 'integer' ),
+    ##     Field('treeType', 'string' ),
+    ##     Field('nodeId', 'integer' ),
+    ##     Field('text', 'string' ),
+    ##     Field('weight', 'double' ),
+    ##     Field('longestTraversal', 'double' ),
+    ##     Field('descendantTipCount', 'integer' ),
+    ##     Field('closestDescendantLabel', 'string' ),
+    ##     Field('next', 'integer' ),
+    ##     Field('back', 'integer' ),
+    ##     Field('descendantLabelCount', 'integer' ),
+    ##     migrate=migrate
+    ##     )
 
     db.define_table(
         'userEdit',
