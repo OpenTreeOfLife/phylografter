@@ -48,33 +48,22 @@ def update_snode():
         if data:
             if data.get('ingroup'):
                 db(db.snode.tree==rec.tree).update(ingroup=False)
+
+            userName=' '.join([auth.user.first_name, auth.user.last_name]
+            for k,v in data.items():
+                db.userEdit.insert(userName=userName,
+                                   tableName='snode',
+                                   rowId=rec.id,
+                                   fieldName=k,
+                                   previousValue=str(rec[k]),
+                                   updatedValue=str(v))
+
             rec.update_record(**data)
             session.flash = 'Node updated'
             if 'ott_node' in data and rec.otu:
                 rec.otu.update_record(ott_node=data['ott_node'])
             mytree = db.stree(rec.tree)
             mytree.update_record(last_modified=datetime.datetime.now())
-                
-        ## for field in t.fields:
-        ##     if str(form.vars[attr]) != str(rec[attr]):
-        ##         if attr == 'ott_node':
-        ##             q = db.ott_node.id==form.vars[attr]
-        ##             updatedValue = db(q).select()[0].name
-        ##             if re.match("^[0-9]+$", str(rec[attr])):
-        ##                 previousValue = db(db.ott_node.id==rec[attr]).select()[0].name
-        ##             else:
-        ##                 previousValue = str(rec[attr])
-        ##         else:
-        ##             updatedValue = form.vars[attr]
-        ##             previousValue = str(rec[attr])
-
-        ##         userName=' '.join([auth.user.first_name, auth.user.last_name])
-        ##         db.userEdit.insert(userName=userName,
-        ##                            tableName='snode',
-        ##                            rowId=rec.id,
-        ##                            fieldName=attr,
-        ##                            previousValue=previousValue,
-        ##                            updatedValue=updatedValue)
 
     return dict(form=form)
 
