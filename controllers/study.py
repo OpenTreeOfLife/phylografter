@@ -636,6 +636,7 @@ def tbimport2():
     d = dict(citation = get('dcterms:bibliographicCitation'),
              year_published = year if year else None,
              label = get('tb:title.study'),
+             doi = get('prism:doi'),
              treebase_id = treebase_id,
              contributor = get('contributor'))
 
