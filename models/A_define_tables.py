@@ -29,8 +29,8 @@ def _study_rep(x):
         s = (" ".join(w[:n]))+"..."
     if x.year_published:
         s = s+"[%s]" % x.year_published
-    if x.focal_clade_ottol:
-        s = s+". %s" % x.focal_clade_ottol.name
+    if x.focal_clade_ott:
+        s = s+". %s" % x.focal_clade_ott.name
     if x.label:
         s = s+". %s" % x.label
     return s
@@ -112,39 +112,39 @@ def define_tables(db, migrate=False):
         migrate=False
         )
     
-    db.define_table(
-        "ottol_name",
-        Field("uid", "integer"),
-        Field("parent_uid", "integer"),
-        Field("accepted_uid", "integer"),
-        ## Field("opentree_uid", "string", length=32,
-        ##       required=True, notnull=True, unique=True),
-        ## Field("opentree_parent_uid", "string", length=32),
-        Field("preottol_taxid", "integer", unique=True),
-        Field("preottol_parent_taxid", "integer", unique=True),
-        Field("preottol_source", "string"),
-        Field("preottol_source_taxid", "string"),
-        Field("ncbi_taxid", "integer"),
-        Field("gbif_taxid", "integer"),
-        Field("namebank_taxid", "integer"),
-        Field("treebase_taxid", "integer"),
-        ## Field("node", db.ottol_node, ondelete="NO ACTION"),
-        Field("name", "string", required=True, notnull=True),
-        Field("unique_name", "string", unique=True,
-              required=True, notnull=True),
-        ## Field("preottol_authority", "string"),
-        ## Field("preottol_code", "string"),
-        Field("rank", "string"),
-        ## Field("preottol_date", "string"),
-        Field("comments", "string"),
-        ## Field("preottol_homonym_flag", "boolean"),
-        ## Field("preottol_pdb_flag", "boolean"),
-        Field("mtime", "datetime", readable=False, writable=False),
-        Field("next", "integer", readable=False, writable=False),
-        Field("back", "integer", readable=False, writable=False),
-        format="%(name)s",
-        migrate=migrate
-        )
+    ## db.define_table(
+    ##     "ottol_name",
+    ##     Field("uid", "integer"),
+    ##     Field("parent_uid", "integer"),
+    ##     Field("accepted_uid", "integer"),
+    ##     ## Field("opentree_uid", "string", length=32,
+    ##     ##       required=True, notnull=True, unique=True),
+    ##     ## Field("opentree_parent_uid", "string", length=32),
+    ##     Field("preottol_taxid", "integer", unique=True),
+    ##     Field("preottol_parent_taxid", "integer", unique=True),
+    ##     Field("preottol_source", "string"),
+    ##     Field("preottol_source_taxid", "string"),
+    ##     Field("ncbi_taxid", "integer"),
+    ##     Field("gbif_taxid", "integer"),
+    ##     Field("namebank_taxid", "integer"),
+    ##     Field("treebase_taxid", "integer"),
+    ##     ## Field("node", db.ottol_node, ondelete="NO ACTION"),
+    ##     Field("name", "string", required=True, notnull=True),
+    ##     Field("unique_name", "string", unique=True,
+    ##           required=True, notnull=True),
+    ##     ## Field("preottol_authority", "string"),
+    ##     ## Field("preottol_code", "string"),
+    ##     Field("rank", "string"),
+    ##     ## Field("preottol_date", "string"),
+    ##     Field("comments", "string"),
+    ##     ## Field("preottol_homonym_flag", "boolean"),
+    ##     ## Field("preottol_pdb_flag", "boolean"),
+    ##     Field("mtime", "datetime", readable=False, writable=False),
+    ##     Field("next", "integer", readable=False, writable=False),
+    ##     Field("back", "integer", readable=False, writable=False),
+    ##     format="%(name)s",
+    ##     migrate=migrate
+    ##     )
 
     ## # The taxon table is not a hierarchy.  Nodes refer to it
     ## # (one-to-one).  Each taxon record may or may not refer to an
@@ -226,8 +226,8 @@ def define_tables(db, migrate=False):
         "study", # study data
         ## Field("focal_clade", db.taxon, ondelete="NO ACTION",
         ##       requires=IS_EMPTY_OR(IS_IN_DB(db, 'taxon.id', '%(name)s'))),
-        Field("focal_clade_ottol", db.ottol_name, ondelete="NO ACTION",
-              requires=IS_EMPTY_OR(IS_IN_DB(db, 'ottol_name.id', '%(name)s'))),
+        ## Field("focal_clade_ottol", db.ottol_name, ondelete="NO ACTION",
+        ##       requires=IS_EMPTY_OR(IS_IN_DB(db, 'ottol_name.id', '%(name)s'))),
         Field("focal_clade_ott", db.ott_node),
         Field("citation", "text", required=True, notnull=True),
         Field("doi", "string"),
@@ -282,7 +282,7 @@ def define_tables(db, migrate=False):
         Field("study", db.study, ondelete="NO ACTION"),
         Field("label", required=True, notnull=True),
         ## Field("taxon", db.taxon, ondelete="NO ACTION"),
-        Field("ottol_name", db.ottol_name, ondelete="NO ACTION"),
+        ## Field("ottol_name", db.ottol_name, ondelete="NO ACTION"),
         Field("ott_node", db.ott_node, ondelete="NO ACTION"),
         Field("tb_nexml_id"),
         ## Field("genus", db.taxon, ondelete="NO ACTION"),
@@ -358,9 +358,9 @@ def define_tables(db, migrate=False):
         Field("label", "string", length=128),
         Field("otu", db.otu, ondelete="NO ACTION"),
         ## Field("taxon", db.taxon, ondelete="NO ACTION"),
-        Field("ottol_name", db.ottol_name, ondelete="NO ACTION",
-              requires=IS_EMPTY_OR(IS_IN_DB(db, 'ottol_name.id',
-                                            '%(name)s'))),
+        ## Field("ottol_name", db.ottol_name, ondelete="NO ACTION",
+        ##       requires=IS_EMPTY_OR(IS_IN_DB(db, 'ottol_name.id',
+        ##                                     '%(name)s'))),
         Field("ott_node", db.ott_node, ondelete="NO ACTION"),
         ## Field("exemplar", db.taxon, ondelete="NO ACTION"),
         Field("ingroup", "boolean", notnull=True, default=False),

@@ -19,7 +19,7 @@ from externalproc import get_external_proc_dir_for_upload, invoc_status, \
 track_changes()
 #import ivy
 #treebase = ivy.treebase
-from ivy import treebase
+from ivy_local import treebase
 response.subtitle = A("Studies", _href=URL('study','index'))
 
 class Virtual(object):
@@ -345,7 +345,6 @@ def create():
     t = db.study
     name = "%s %s" % (auth.user.first_name, auth.user.last_name)
     t.contributor.default = name
-    ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ott.label = 'Focal clade'
     t.focal_clade_ott.comment = 'Optional. Name of ingroup clade, if any'
     t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
@@ -717,7 +716,7 @@ def tbimport_otus():
                                     if v.ncbi_taxid ]))
     rows = db(q).select()
     matches = dict([ (x.name, x.id) for x in rows ])
-    matches.update(dict([ (x.ncbi, x.id) for x in rows if x.ncbi_taxid ]))
+    matches.update(dict([ (x.ncbi, x.id) for x in rows if x.ncbi ]))
     matchv = [ bool((v.name in matches) or
                     (v.ncbi and v.ncbi in matches))
                for k,v in otus ]
@@ -933,6 +932,7 @@ def ref_from_doi():
     else:
         print resp.text
 
+
 @auth.requires_membership('contributor')
 def tolfetch():
     t = db.study
@@ -1030,54 +1030,82 @@ def tolfetch2():
 
     return dict(form=form, rec=rec, diffs=diffs)
         
+
+@service.json
+def fetch_nexson(study_id):
+    try: study_id = int(study_id)
+    except ValueError: raise HTTP(404)
+    if not db.study(study_id): raise HTTP(404)
+    return nexson.nexmlStudy(study_id,db)
+
+
+def call():
+    return service()
+
+
 def export_NexSON():
-    'Exports the otus and trees in the study specified by the argument as JSON NeXML'
+    """
+    Exports the otus and trees in the study specified by the argument
+    as JSON NeXML
+    """
     studyid = request.args(0)
     if (db.study(studyid) is None):
         raise HTTP(404)
     else:
-        return nexson.nexmlStudy(studyid,db)
+        return nexson.nexmlStudy(studyid, db)
 
-#some overlap with corresponding function in stree.py    
+
+# some overlap with corresponding function in stree.py
 def modified_list():
-    'This reports a json formatted list of ids of modified studies'
+    """
+    This reports a json formatted list of ids of modified studies
+    """
     dtimeFormat = '%Y-%m-%dT%H:%M:%S'
     fromString = request.vars['from']
     if fromString is None:
         fromTime = datetime.datetime.now() - datetime.timedelta(1)
     else:
-       fromTime = datetime.datetime.strptime(fromString,dtimeFormat)
+        fromTime = datetime.datetime.strptime(fromString, dtimeFormat)
     toString = request.vars['to']
     if toString is None:
         toTime = datetime.datetime.now()
     else:
-        toTime = datetime.datetime.strptime(toString,dtimeFormat)
-    #look for studies with uploaded in the interval
-    upLoadQuery = (db.study.uploaded > fromTime) & (db.study.uploaded <= toTime) 
+        toTime = datetime.datetime.strptime(toString, dtimeFormat)
+    # look for studies with uploaded in the interval
+    upLoadQuery = (db.study.uploaded > fromTime) & (
+        db.study.uploaded <= toTime) 
     studies = set()
     for s in db(upLoadQuery).select():
         studies.add(s.id)
-    #as well as studies modified within the interval
-    timeQuery = (db.study.last_modified > fromTime) & (db.study.last_modified <= toTime)
+    # as well as studies modified within the interval
+    timeQuery = (db.study.last_modified > fromTime) & (
+        db.study.last_modified <= toTime)
     for s in db(timeQuery).select():
         studies.add(s.id)
-    #assuming that a tree can't be uploaded independently of a study, it might still be modified
-    #so this checks for strees modified in the interval and adds their study ids to the list
-    treeQuery = (db.stree.last_modified > fromTime) & (db.stree.last_modified <= toTime)
+    # assuming that a tree can't be uploaded independently of a study, it might still 
+    # be modified so this checks for strees modified in the interval and adds their study
+    # ids to the list
+    treeQuery = (db.stree.last_modified > fromTime) & (
+        db.stree.last_modified <= toTime)
     for t in db(treeQuery).select():
-        studies.add(t.study)        
+        studies.add(t.study)
     studyList = list(studies)
     wrapper = dict(studies = studyList)
     wrapper['from']=fromTime.strftime(dtimeFormat)
     wrapper['to']=toTime.strftime(dtimeFormat)
     return wrapper
 
+
 def export_csv():
     studies = db().select(db.study.ALL)
     return dict(studies=studies)
 
+
 def export_gzipNexSON():
-    'Exports the otus and trees in the study specified by the argument as gzipped JSON NeXML'
+    """
+    Exports the otus and trees in the study specified by the argument as 
+    gzipped JSON NeXML
+    """
     studyid = request.args(0)
     if (db.study(studyid) is None):
         raise HTTP(404)
@@ -1085,33 +1113,34 @@ def export_gzipNexSON():
         from gluon.serializers import json
         import cStringIO
         stream = cStringIO.StringIO()
-        jsondict = nexson.nexmlStudy(studyid,db)
+        jsondict = nexson.nexmlStudy(studyid, db)
         jsonText = json(jsondict)
         zipfilename = "study%s.json.gz" % studyid
         gzfile = gzip.GzipFile(filename=zipfilename, mode="wb", fileobj=stream)
         gzfile.write(jsonText)
         gzfile.write("\n")
-        gzfile.close() 
+        gzfile.close()
         response.headers['Content-Type'] = "application/gzip"
-        response.headers['Content-Disposition'] = "attachment;filename=%s"%zipfilename
-        return stream.getvalue()              
-    return
+        response.headers['Content-Disposition'] = "attachment;filename=%s" % zipfilename
+        return stream.getvalue()
 
-#@auth.requires_membership('contributor')
+
+# @auth.requires_membership('contributor')
 def import_NexSON():
     """
-    Imports a Nexson (JSON Nexml) file, updating an existing study record or creating a new one as needed
+    Imports a Nexson (JSON Nexml) file, updating an existing study record or
+    creating a new one as needed
     """
     import datetime
     import cStringIO
     from nexson_parse import ingest_nexson,check_nexson
     if not(request.post_vars):
-        raise HTTP(400)  #if no post, then it's a bad request
-    ##Per Massimo Di Pierro's answer for google groups question about @request.restful
+        raise HTTP(400)  # if no post, then it's a bad request
+    # Per Massimo Di Pierro's answer for google groups question about @request.restful
     post_text = request.body.read()
     print datetime.datetime.now()
     study_exists = check_nexson(cStringIO.StringIO(post_text),db)
-    if study_exists: #will contain study id; go delete it and replace
+    if study_exists: # will contain study id; go delete it and replace
         print "Study exists returns: " + str(study_exists)
     study_id = ingest_nexson(cStringIO.StringIO(post_text),db)
     print datetime.datetime.now()
@@ -1136,26 +1165,28 @@ repository_list = ["http://" + test_server+"/api/v1/study/10.json?output_nexml2j
                    "http://" + test_server+"/api/v1/study/44.json?output_nexml2json=0.0.0",
                    ]
 
+
 def repositoryTest():
     """
     just for testing
     """
-    from nexson_parse import check_nexson,ingest_nexson
+    from nexson_parse import check_nexson, ingest_nexson
     for study in repository_list:
-        print "Processing %s at %s" % (study,datetime.datetime.now())
-        foo = check_nexson(study,db)
+        print "Processing %s at %s" % (study, datetime.datetime.now())
+        foo = check_nexson(study, db)
         print "foo is %s" % str(foo)
-        (error, study_exists) = check_nexson(study,db)
+        (error, study_exists) = check_nexson(study, db)
         if error:
             print "check nexson returned http error: %d" % error
         else:
-            study_id = ingest_nexson(study,db,None)
-            print "time %s, %s" % (datetime.datetime.now(),study_id)
-       # print "check_nexson returned %s" % str(study_exists)
-       # if study_exists:
-       #     redirect(URL(c="study",f="overwrite_study",args=[study_exists]))
-       # else:
-       #redirect(URL(c="study",f="load_nexson_study"))
+            study_id = ingest_nexson(study, db, None)
+            print "time %s, %s" % (datetime.datetime.now(), study_id)
+        # print "check_nexson returned %s" % str(study_exists)
+        # if study_exists:
+        #     redirect(URL(c="study",f="overwrite_study",args=[study_exists]))
+        # else:
+        #     redirect(URL(c="study",f="load_nexson_study"))
+
 
 def load_nexson_study():
     import datetime
@@ -1165,9 +1196,10 @@ def load_nexson_study():
         recycle_id = int(recycle_id)
         print "recycle_id = %d" % recycle_id
     print datetime.datetime.now()
-    study_id = ingest_nexson(repository_list[0],db,recycle_id)
+    study_id = ingest_nexson(repository_list[0], db, recycle_id)
     print datetime.datetime.now()
-    redirect(URL(c="study",f="view",args=[study_id]))
+    redirect(URL(c="study", f="view", args=[study_id]))
+
 
 def overwrite_study():
     """
@@ -1189,9 +1221,10 @@ def overwrite_study():
                    showid=False, submit_button="Overwrite study")
     form.add_button('Cancel', URL('study', 'view', args=rec.id))
     if form.accepts(request.vars, session):
-	## Deletes the study from the database using the DAL. 
+	# Deletes the study from the database using the DAL. 
         del db.study[rec.id]
-        session.flash = "The Study will be overwritten" #Alerts the user the study gone; replacement about to loaded
+        # Alerts the user the study gone; replacement about to loaded
+        session.flash = "The Study will be overwritten"
         redirect(URL('study', 'load_nexson_study',args=[overwrite_id]))
     return dict(form=form, rec = rec)
 

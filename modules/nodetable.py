@@ -1,7 +1,7 @@
 """
 module for building trees of ivy.tree.Nodes from database tables
 """
-from ivy.tree import Node, index
+from ivy_local.tree import Node, index
 from collections import defaultdict
 
 ## def root_taxon(db):
