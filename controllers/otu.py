@@ -162,17 +162,18 @@ def dtrecords():
         can_edit = auth.has_membership(role="contributor")
         if (not otu.ott_node) and can_edit:
             match, options = spellcheck.process_label(db, otu)
-            if match and len(options)==1:
-                name = options[0]
-                otu.update_record(ott_node=name.node)
-                otu.snode.update(ott_node=name.node)
-                return otu.label
-            else:
+            ## if match and len(options)==1:
+            ##     name = options[0]
+            ##     otu.update_record(ott_node=name.node)
+            ##     otu.snode.update(ott_node=name.node)
+            ##     return otu.label
+            ## else:
+            if options:
                 for i, name in enumerate(options):
                     u = URL('update_name', args=[study.id, otu.id, name.node],
                             extension='load')
                     options[i] = A(name.unique_name, _href=u, cid=uid)
-            if options:
+            ## if options:
                 return DIV(otu.label,
                            DIV('Did you mean:',
                                UL(*[ LI(u,'?') for u in options ]))).xml()
