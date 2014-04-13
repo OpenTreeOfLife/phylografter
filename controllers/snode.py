@@ -61,7 +61,7 @@ def update_snode():
             rec.update_record(**data)
             session.flash = 'Node updated'
             if 'ott_node' in data and rec.otu:
-                rec.otu.update_record(ott_node=data['ott_node'])
+                db.otu[rec.otu].update_record(ott_node=data['ott_node'])
             mytree = db.stree(rec.tree)
             mytree.update_record(last_modified=datetime.datetime.now())
 
