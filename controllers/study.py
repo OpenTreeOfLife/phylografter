@@ -1124,6 +1124,31 @@ def export_gzipNexSON():
         response.headers['Content-Disposition'] = "attachment;filename=%s" % zipfilename
         return stream.getvalue()
 
+# @auth.requires_membership('contributor')
+def import_NexSON():
+    """
+    Imports a Nexson (JSON Nexml) file, updating an existing study record or
+    creating a new one as needed
+    """
+    import datetime
+    import cStringIO
+    from nexson_parse import ingest_nexson,check_nexson
+    if not(request.post_vars):
+        raise HTTP(400)  # if no post, then it's a bad request
+    # Per Massimo Di Pierro's answer for google groups question about @request.restful
+    post_text = request.body.read()
+    print datetime.datetime.now()
+    try:
+        study_exists = check_nexson(cStringIO.StringIO(post_text),db)
+    except RuntimeError as e:
+        print e
+        redirect(URL('study','default'))
+    if study_exists: # will contain study id; go delete it and replace
+        print "Study exists returns: " + str(study_exists)
+        redirect(URL('study','overwrite_from_opentree'))
+    study_id = ingest_nexson(cStringIO.StringIO(post_text),db)
+    print datetime.datetime.now()
+    return study_id
 
 # @auth.requires_membership('contributor')
 def import_NexSON():
@@ -1139,31 +1164,48 @@ def import_NexSON():
     # Per Massimo Di Pierro's answer for google groups question about @request.restful
     post_text = request.body.read()
     print datetime.datetime.now()
-    study_exists = check_nexson(cStringIO.StringIO(post_text),db)
+    try:
+        study_exists = check_nexson(cStringIO.StringIO(post_text),db)
+    except RuntimeError as e:
+        print e
+        redirect(URL('study','default'))
     if study_exists: # will contain study id; go delete it and replace
         print "Study exists returns: " + str(study_exists)
+        redirect(URL('study','overwrite_from_opentree'))
     study_id = ingest_nexson(cStringIO.StringIO(post_text),db)
     print datetime.datetime.now()
     return study_id
 
-repository_list = ["http://" + test_server+"/api/v1/study/10.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/11.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/12.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/13.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/17.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/24.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/25.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/28.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/36.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/37.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/38.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/39.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/40.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/41.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/42.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/43.json?output_nexml2json=0.0.0",
-                   "http://" + test_server+"/api/v1/study/44.json?output_nexml2json=0.0.0",
-                   ]
+def load_NexSON_from_OpenTree():
+    """
+    """
+    from nexson_parse import check_nexson, ingest_nexson
+    opentree_id = request.args(0) or redirect(URL("create"))
+    opentree_url = make_opentree_fetch_url(opentree_id)
+    try:
+        #does this url refer to a study that matches something already loaded?
+        study_match_id = check_nexson(opentree_url,db)
+    except RuntimeError as e:
+        print "URL was %s" % opentree_url
+        print "Error was %s" % str(e)
+        session.flash = "URL was %s; Error was %s" % (opentree_url,str(e))
+        redirect(URL('study','index'))
+    print "match_id was %s" % str(study_match_id)
+    if study_match_id:
+        overwrite_study(opentree_url,study_match_id)
+    else:
+        study_id = ingest_nexson(opentree_url, db, None)
+        redirect(URL(c="study", f="view", args=[study_id]))
+
+repository_list = [10,11,12,13,17,24,25,28,36,37,38,39,40,42,43,44]
+
+
+def make_opentree_fetch_url(study_id):
+    return "".join(("http://",
+                   test_server,
+                   "/api/v1/study/",
+                   str(study_id),
+                   ".json?output_nexml2json=0.0.0"))
 
 
 def repositoryTest():
@@ -1172,63 +1214,49 @@ def repositoryTest():
     """
     from nexson_parse import check_nexson, ingest_nexson
     for study in repository_list:
-        print "Processing %s at %s" % (study, datetime.datetime.now())
+        fetch_url = make_opentree_fetch_url(study)
+        print "Processing %s at %s" % (fetch_url, datetime.datetime.now())
         foo = check_nexson(study, db)
         print "foo is %s" % str(foo)
-        (error, study_exists) = check_nexson(study, db)
-        if error:
-            print "check nexson returned http error: %d" % error
-        else:
-            study_id = ingest_nexson(study, db, None)
-            print "time %s, %s" % (datetime.datetime.now(), study_id)
-        # print "check_nexson returned %s" % str(study_exists)
-        # if study_exists:
-        #     redirect(URL(c="study",f="overwrite_study",args=[study_exists]))
-        # else:
-        #     redirect(URL(c="study",f="load_nexson_study"))
+        try:
+            study_exists = check_nexson(study,db)
+        except RuntimeError as e:
+            print e
+            continue
+        study_id = ingest_nexson(study, db, None)
+        print "time %s, %s" % (datetime.datetime.now(), study_id)
 
 
-def load_nexson_study():
-    import datetime
-    from nexson_parse import ingest_nexson
-    recycle_id = request.args(0)
-    if recycle_id:
-        recycle_id = int(recycle_id)
-        print "recycle_id = %d" % recycle_id
-    print datetime.datetime.now()
-    study_id = ingest_nexson(repository_list[0], db, recycle_id)
-    print datetime.datetime.now()
-    redirect(URL(c="study", f="view", args=[study_id]))
-
-
-def overwrite_study():
+def overwrite_study(opentree_url,overwrite_id):
     """
     Displays a page to ask for verification before deleting and replacing a study
     """
+    print "Overwrite id is %s" % overwrite_id
     t = db.study
-    overwrite_id = request.args(0)
     rec = t(overwrite_id)
-    readonly = not auth.has_membership(role="contributor")
+    ##readonly = not auth.has_membership(role="contributor")
     ## t.focal_clade.readable = t.focal_clade.writable = False
-    t.focal_clade_ottol.label = 'Focal clade'
-    t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
-        limitby=(0,20), orderby=db.ottol_name.unique_name)
+    t.focal_clade_ott.label = 'Focal clade'
+    t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
+        request, db.ott_name.unique_name, id_field=db.ott_name.node,
+        limitby=(0,20), orderby=db.ott_name.unique_name)
     form = SQLFORM(t, rec, deletable=False, readonly=False,
                    fields = ["citation", "year_published", "doi", "label",
-                             "focal_clade_ottol", "treebase_id",
+                             "focal_clade_ott", "treebase_id",
                              "contributor", "comment", "uploaded"],
                    showid=False, submit_button="Overwrite study")
     form.add_button('Cancel', URL('study', 'view', args=rec.id))
+    print "form is %s" % str(form)
     if form.accepts(request.vars, session):
 	# Deletes the study from the database using the DAL. 
         del db.study[rec.id]
         # Alerts the user the study gone; replacement about to loaded
         session.flash = "The Study will be overwritten"
-        redirect(URL('study', 'load_nexson_study',args=[overwrite_id]))
+        study_id = ingest_nexson(opentree_url, db, overwrite_id)
+        redirect(URL(c="study", f="view", args=[rec.id]))
     return dict(form=form, rec = rec)
 
- 
+
 ### Function to allow the deletion of a study and all of its corresponding nodes, trees and otus
     
 def delete_study():

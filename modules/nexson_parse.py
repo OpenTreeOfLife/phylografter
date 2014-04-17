@@ -11,7 +11,7 @@ def check_nexson(u,db):
     #from json import load
     import requests
     r = requests.get(u)
-    print "Raw status code = %d" % r.status_code 
+    print "Raw status code = %d" % r.status_code
     if r.status_code == 200:
        json_tree = r.json()       #want api call that returns study identifier(s)
        if u'data' in json_tree:
@@ -19,7 +19,7 @@ def check_nexson(u,db):
            return check_json_study(nexml_tree,db)
        elif u'error' in json_tree:
            description = json_tree[u'description']
-           return (description,None)
+           raise RuntimeException(description)
     else:
         raise HTTP(r.status_code,"Error retrieving study")
 
@@ -36,20 +36,20 @@ def check_json_study(nexml_tree,db):
         q = (db.study.doi == doi)
         rows = db(q).select()
         if len(rows) > 0:
-            return (200,rows[0].id)
+            return rows[0].id
         else:
-            return (404,None)  #bad study id is treated as resource not found
+            return False  #bad study id is treated as resource not found
     elif 'ot:studyPublicationReference' in metafields:
         ref = metafields['ot:studyPublicationReference']
         q = (db.study.citation == ref)
         rows = db(q).select()
         if len(rows) > 0:
-            return (200,rows[0].id)
+            return rows[0].id
         else:
-            return (404,None)
+            return False
     else:
         print "No study identifier found"
-        return (404,None)
+        return False
 
 
 def ingest_nexson(u,db,id):
