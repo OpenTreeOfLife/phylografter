@@ -63,8 +63,13 @@ def ingest_nexson(u,db,id):
     import requests
     r = requests.get(u)
     json_tree = r.json()
-    print "(ingest_nexson)recycle_id = %s" % id
-    return ingest_json_study(json_tree,db,id)
+    if id:
+        print "Recycled id is %d" % id
+    if u'data' in json_tree:
+        nexml_tree = json_tree[u'data']
+        return ingest_json_study(nexml_tree,db,id)
+    else:
+        return ingest_json_study(json_tree,db,id)
 
 #put this in one place so it can be turned off easily when the time comes
 def encode(str):
@@ -74,7 +79,7 @@ SQLFIELDS = {'ot:studyPublication': 'doi',
              'ot:studyPublicationReference': 'citation',
              'ot:studyYear': 'year_published',
              'ot:curatorName': 'contributor',
-             'ot:focalClade': 'focal_clade_ottol',
+             'ot:focalClade': 'focal_clade_ott',
              'ot:dataDeposit': 'dataDeposit'}
 
 def process_meta_element_sql(contents, results, db):
@@ -377,7 +382,7 @@ def ingest_json_study(study,db,id):
     """
     from nexson_sql_update import sql_process
     if not u'nexml' in study:
-        raise SyntaxError
+        raise SyntaxError('nexml element not found')
     target = sql_parse_methods
     target_parser_set = sql_parse_methods
     contents = study[u'nexml']
