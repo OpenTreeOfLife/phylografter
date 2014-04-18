@@ -314,7 +314,7 @@ def get_otu_rows_for_study(study_row,db):
     '''
     returns a tuple of list of otu ids for otu records that link to this study
     '''
-    return db.executesql('SELECT otu.id, otu.label, otu.ott_node, ott_node.id, ott_node.name, otu.tb_nexml_id FROM otu LEFT JOIN ott_node ON (otu.ott_node = ott_node.id) WHERE (otu.study = %d);' % study_row.id)
+    return db.executesql('SELECT otu.id, otu.label, otu.ott_node, ott_node.id, ott_node.name, otu.tb_nexml_id, otu.other_metadata FROM otu LEFT JOIN ott_node ON (otu.ott_node = ott_node.id) WHERE (otu.study = %d);' % study_row.id)
 
 
 def meta_elts_for_otus(study_row,otuRows,db):
@@ -347,7 +347,7 @@ def otu_elt(otuRec):
     generates an otu element
     '''
     meta_elts = meta_elts_for_otu_elt(otuRec)
-    otu_id,label,ott_node,accepted_uid,name,tb_name = otuRec
+    otu_id,label,ott_node,accepted_uid,name,tb_name,other_meta = otuRec
     result = {"@id": "otu%d" % otu_id}
     if (name):
         result["@label"] = name

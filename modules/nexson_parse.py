@@ -52,24 +52,41 @@ def check_json_study(nexml_tree,db):
         return False
 
 
-def ingest_nexson(u,db,id):
+def ingest_nexson(u,db,recycled_id):
     """
     Entry point - nexson is parsed and dispatched to the appropriate updater
     f - file like object (generally a CStringIO, retrieved from a post)
     db - web2py database object
-    id - if a number, specifies a study id to use.
+    recycled_id - if a number, specifies the available id of a (now deleted) study
     """
     #from json import load
     import requests
     r = requests.get(u)
     json_tree = r.json()
-    if id:
-        print "Recycled id is %d" % id
     if u'data' in json_tree:
         nexml_tree = json_tree[u'data']
-        return ingest_json_study(nexml_tree,db,id)
     else:
-        return ingest_json_study(json_tree,db,id)
+        nexml_tree = json_tree
+    if recycled_id:
+        study_id = recycled_id
+    else:
+        study_id = get_study_id(nexml_tree)
+    return ingest_json_study(nexml_tree,db,study_id)
+
+
+def get_study_id(nexml_tree):
+    """
+    extracts the previous study id if available
+    """
+    contents = nexml_tree[u'nexml']
+    metaEle = contents[u'meta']
+    metafields = parse_study_meta(metaEle)
+    if 'ot:studyId' in metafields:
+        return int(metafields['ot:studyId'])
+    else:
+        print "No study id found";
+        return None  #no id, nothing to do
+
 
 #put this in one place so it can be turned off easily when the time comes
 def encode(str):
@@ -381,8 +398,6 @@ def ingest_json_study(study,db,id):
        id if numeric is value to force for study id
     """
     from nexson_sql_update import sql_process
-    if not u'nexml' in study:
-        raise SyntaxError('nexml element not found')
     target = sql_parse_methods
     target_parser_set = sql_parse_methods
     contents = study[u'nexml']
