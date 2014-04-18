@@ -1192,6 +1192,7 @@ def load_NexSON_from_OpenTree():
         redirect(URL('study','index'))
     print "match_id was %s" % str(study_match_id)
     if study_match_id:
+        redirect(URL(c="study",f="overwrite_study",args=[study_match_id,opentree_id]))
         overwrite_study(opentree_url,study_match_id)
     else:
         study_id = ingest_nexson(opentree_url, db, None)
@@ -1227,14 +1228,44 @@ def repositoryTest():
         print "time %s, %s" % (datetime.datetime.now(), study_id)
 
 
-def overwrite_study(opentree_url,overwrite_id):
-    """
-    Displays a page to ask for verification before deleting and replacing a study
-    """
-    print "Overwrite id is %s" % overwrite_id
+#def overwrite_study(opentree_url,overwrite_id):
+#    """
+#    Displays a page to ask for verification before deleting and replacing a study
+#    """
+#    print "Overwrite id is %s" % overwrite_id
+#    t = db.study
+#    rec = t(overwrite_id)
+#    ##readonly = not auth.has_membership(role="contributor")
+#    ## t.focal_clade.readable = t.focal_clade.writable = False
+#    t.focal_clade_ott.label = 'Focal clade'
+#    t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
+#        request, db.ott_name.unique_name, id_field=db.ott_name.node,
+#        limitby=(0,20), orderby=db.ott_name.unique_name)
+#    form = SQLFORM(t, rec, deletable=False, readonly=False,
+#                   fields = ["citation", "year_published", "doi", "label",
+#                             "focal_clade_ott", "treebase_id",
+#                             "contributor", "comment", "uploaded"],
+#                   showid=False, submit_button="Overwrite study")
+#    form.add_button('Cancel', URL('study', 'view', args=rec.id))
+#    print "form is %s" % str(form)
+#    if form.accepts(request.vars, session):
+	# Deletes the study from the database using the DAL. 
+#        del db.study[rec.id]
+        # Alerts the user the study gone; replacement about to loaded
+#        session.flash = "The Study will be overwritten"
+#        study_id = ingest_nexson(opentree_url, db, overwrite_id)
+#        redirect(URL(c="study", f="view", args=[rec.id]))
+#    return dict(form=form, rec = rec)
+
+def overwrite_study():
+    'Displays a page to ask for validation before deleting a study that is actively being viewed'
+    from nexson_parse import check_nexson, ingest_nexson
+    overwrite_id = request.args(0)
+    opentree_id = request.args(1)
+    opentree_url = make_opentree_fetch_url(opentree_id)
     t = db.study
-    rec = t(overwrite_id)
-    ##readonly = not auth.has_membership(role="contributor")
+    rec = t(overwrite_id) or redirect(URL("create"))
+    readonly = not auth.has_membership(role="contributor")
     ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ott.label = 'Focal clade'
     t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
@@ -1244,18 +1275,20 @@ def overwrite_study(opentree_url,overwrite_id):
                    fields = ["citation", "year_published", "doi", "label",
                              "focal_clade_ott", "treebase_id",
                              "contributor", "comment", "uploaded"],
-                   showid=False, submit_button="Overwrite study")
+                   showid=False, submit_button="Overwrite Study")
     form.add_button('Cancel', URL('study', 'view', args=rec.id))
-    print "form is %s" % str(form)
+                       
+    
     if form.accepts(request.vars, session):
 	# Deletes the study from the database using the DAL. 
         del db.study[rec.id]
         # Alerts the user the study gone; replacement about to loaded
         session.flash = "The Study will be overwritten"
-        study_id = ingest_nexson(opentree_url, db, overwrite_id)
+        study_id = ingest_nexson(opentree_url, db, int(overwrite_id))
         redirect(URL(c="study", f="view", args=[rec.id]))
+        session.flash = "The Study Has Been Deleted" #Alerts the user the study has been deleted.	
+        redirect(URL('study', 'index'))
     return dict(form=form, rec = rec)
-
 
 ### Function to allow the deletion of a study and all of its corresponding nodes, trees and otus
     
