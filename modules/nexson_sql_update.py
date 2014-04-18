@@ -39,6 +39,9 @@ def sql_process(actions, db, recycle_id):
                     finish_row(db,current_table,sql_id,current_row,new_tags)
             if (table == 'study' and recycle_id): #id of study previously deleted
                 sql_id = recycle_id
+            elif (table == 'study'):
+                print "Want to set sql_id to %s" % value
+                sql_id = int(value)
             else:
                 sql_id = get_sql_id(db,table,value)
             current_row = dict();
