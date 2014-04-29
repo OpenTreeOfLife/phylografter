@@ -129,7 +129,7 @@ def ottol_names_report():
     (with a non-empty ottol uid) along with the study uid.  This report is useful in maintaining
     the taxonomy.
     """
-    o = db.otu;
-    report = db((db.ottol_name.id==db.otu.ottol_name) & (db.ottol_name.uid != None)).select(db.ottol_name.uid,db.otu.study,orderby=db.otu.study)
+    o = db.otu
+    report = db(o.ott_node!=None).select(o.ott_node, o.study, orderby=o.study)
     return dict(report = report)
 
