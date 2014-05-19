@@ -1176,6 +1176,12 @@ def import_NexSON():
     print datetime.datetime.now()
     return study_id
 
+def load_study_from_opentree():
+    form = FORM()
+    return {'form': form}
+
+
+
 def load_NexSON_from_OpenTree():
     """
     """
@@ -1228,34 +1234,6 @@ def repositoryTest():
         print "time %s, %s" % (datetime.datetime.now(), study_id)
 
 
-#def overwrite_study(opentree_url,overwrite_id):
-#    """
-#    Displays a page to ask for verification before deleting and replacing a study
-#    """
-#    print "Overwrite id is %s" % overwrite_id
-#    t = db.study
-#    rec = t(overwrite_id)
-#    ##readonly = not auth.has_membership(role="contributor")
-#    ## t.focal_clade.readable = t.focal_clade.writable = False
-#    t.focal_clade_ott.label = 'Focal clade'
-#    t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
-#        request, db.ott_name.unique_name, id_field=db.ott_name.node,
-#        limitby=(0,20), orderby=db.ott_name.unique_name)
-#    form = SQLFORM(t, rec, deletable=False, readonly=False,
-#                   fields = ["citation", "year_published", "doi", "label",
-#                             "focal_clade_ott", "treebase_id",
-#                             "contributor", "comment", "uploaded"],
-#                   showid=False, submit_button="Overwrite study")
-#    form.add_button('Cancel', URL('study', 'view', args=rec.id))
-#    print "form is %s" % str(form)
-#    if form.accepts(request.vars, session):
-	# Deletes the study from the database using the DAL. 
-#        del db.study[rec.id]
-        # Alerts the user the study gone; replacement about to loaded
-#        session.flash = "The Study will be overwritten"
-#        study_id = ingest_nexson(opentree_url, db, overwrite_id)
-#        redirect(URL(c="study", f="view", args=[rec.id]))
-#    return dict(form=form, rec = rec)
 
 def overwrite_study():
     'Displays a page to ask for validation before deleting a study that is actively being viewed'
