@@ -1223,16 +1223,15 @@ def repositoryTest():
     for study in repository_list:
         fetch_url = make_opentree_fetch_url(study)
         print "Processing %s at %s" % (fetch_url, datetime.datetime.now())
-        foo = check_nexson(study, db)
-        print "foo is %s" % str(foo)
+        check = check_nexson(fetch_url, db)
+        print "check is %s" % str(check)
         try:
-            study_exists = check_nexson(study,db)
+            study_exists = check_nexson(fetch_url,db)
         except RuntimeError as e:
             print e
             continue
-        study_id = ingest_nexson(study, db, None)
+        study_id = ingest_nexson(fetch_url, db, None)
         print "time %s, %s" % (datetime.datetime.now(), study_id)
-
 
 
 def overwrite_study():
