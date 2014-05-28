@@ -88,7 +88,7 @@ README file.
 
 
 (8) Bootstrap the DB tables for phylografter. Download new mysql dump from
-http://reelab.net/~rree/phylografter.sql.gz
+http://reelab.net/~rree/phylografter.sql.bz2
 To load a SQL dump: launch the mysql daemon with large packet sizes:
 
 <pre>
