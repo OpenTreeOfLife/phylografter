@@ -30,7 +30,13 @@ def _study_rep(x):
     if x.year_published:
         s = s+"[%s]" % x.year_published
     if x.focal_clade_ott:
-        s = s+". %s" % x.focal_clade_ott.name
+        # FIXME: this raises a runtime error if x.focal_clade_ott is a
+        # broken reference to the ott_node table; solution is to fix
+        # the database
+        try:
+            s = s+". %s" % x.focal_clade_ott.name
+        except RuntimeError:
+            pass
     if x.label:
         s = s+". %s" % x.label
     return s
