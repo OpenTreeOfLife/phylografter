@@ -186,8 +186,14 @@ def dtrecords():
         else:
             return str(n)
 
+    def focal_clade(r):
+        try:
+            return r.study.focal_clade_ott.name
+        except:
+            return r.study.focal_clade_ott or ''
+
     data = [ (r.study.id,
-              (r.study.focal_clade_ott.name if r.study.focal_clade_ott else ''),
+              focal_clade(r),
               r.study.study_url.xml(),
               r.study.year_published,
               otus(r),
