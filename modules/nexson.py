@@ -364,25 +364,38 @@ def tree_elt(tree_row, db):
     generates a tree element
     '''
     meta_elts = meta_elts_for_tree_elt(tree_row,db)
-    ## print '    tree_meta_elts done'
     node_rows = get_snode_recs_for_tree(tree_row,db)
-    ## print '    tree_snode_recs done'
+    node_label_mode = tree_row.clade_labels_represent
     result = {"@id": 'tree%d' % tree_row.id,
-              "node": tree_nodes(node_rows, db),
+              "node": tree_nodes(node_rows, db, node_label_mode),
               "edge": tree_edges(node_rows)
              }
-    ## print '    tree_nodes_and_edges done'
     if meta_elts:
         result["@about"] = "#tree%d" % tree_row.id
         result.update(meta_elts)
     return result
 
+
+# These vocabularies are documented here: 
+# https://github.com/OpenTreeOfLife/phylesystem-api/wiki/NexSON
 bltypes = {"substitutions per site": "ot:substitutionCount",
            "character changes": "ot:changesCount",
            "time (Myr)": "ot:time",
            "bootstrap values": "ot:bootstrapValues",
            "posterior support": "ot:posteriorSupport"
            }
+
+
+# Note the last three are defined in the NexSON specification
+# but not in the table definition of stree (models/A_define_tables.py)
+NODE_LABEL_TYPES = {"taxon Names": "ot:taxonNames",
+                    "bootstrap values": "ot:bootstrapValues",
+                    "posterior support": "ot:posteriorSupport",
+                    "other": "ot:other",
+                    "undefined": "ot:undefined",
+                    "root node id": "ot:rootNodeId"
+                    }
+
 
 def meta_elts_for_tree_elt(tree_row,db):
     """
@@ -391,6 +404,7 @@ def meta_elts_for_tree_elt(tree_row,db):
     result = []
     ingroup_node = tree_ingroup_node(tree_row,db)
     blRep = tree_row.branch_lengths_represent
+    node_label_rep = tree_row.clade_labels_represent
     tree_tags = get_tree_tags(tree_row,db)
     tree_type = tree_row.type
     if blRep in bltypes:
@@ -399,6 +413,9 @@ def meta_elts_for_tree_elt(tree_row,db):
         if blRep == "time (Myr)":
             timeUnitElt = createLiteralMeta("ot:branchLengthTimeUnit", "Myr")
             result.append(timeUnitElt)
+    if node_label_rep in NODE_LABEL_TYPES:
+        nlabelElt = createLiteralMeta("ot:nodeLabelMode",NODE_LABEL_TYPES[node_label_rep])
+        result.append(nlabelElt)
     if ingroup_node:
         ingroup_elt = createLiteralMeta("ot:inGroupClade",'node%d' % ingroup_node.id)
         result.append(ingroup_elt)
@@ -447,11 +464,11 @@ def get_tree_tags(tree_row,db):
     result = [row.tag for row in rows]
     return result
 
-def tree_nodes(node_rows, db):
+def tree_nodes(node_rows, db, tree_label_mode):
     '''
     formats the nodes corresponding to the rows in node_rows
     '''
-    return [node_elt(node_row, db) for node_row in node_rows]
+    return [node_elt(node_row, db, tree_label_mode) for node_row in node_rows]
 
 def tree_edges(node_rows):
     '''
@@ -478,7 +495,7 @@ def get_snode_recs_for_tree(tree_row,db):
     """
     return db.executesql('SELECT id,parent,otu,length,isleaf FROM snode WHERE (tree = %d);' % tree_row.id)
 
-def node_elt(node_row, db):
+def node_elt(node_row, db, node_label_mode):
     """
     returns an element for a node
     """
