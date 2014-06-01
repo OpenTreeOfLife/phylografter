@@ -104,7 +104,7 @@ NAMETABLEMAP = {'study': 'study',
 
 
 def get_sql_id(db, table, nexson_id):
-    query = ('SELECT id FROM %s WHERE nexson_id = "%s" ' % 
+    query = ('SELECT id FROM %s WHERE nexson_id = "%s" ' %
              (NAMETABLEMAP[table], nexson_id))
     id_results = db.executesql(query)
     if id_results:
@@ -163,25 +163,31 @@ def insert_new_rows(actions, db, recycle_id):
                     action = action_gen.next()
                     table, field, value = action
                 table, field, value = action  # update for next record
-                if (update_table== 'study' and (update_id == recycle_id)):
+                if (update_table == 'study' and (update_id == recycle_id)): # this will change
                     print "updating: %s" % value
-                    insert_reusing_id(db, update_obj, recycle_id)
+                    insert_reusing_id(db, update_obj, recycle_id, update_id)
                 else:
+                    print "update without recycling: t: %s up: %s recycle: %s" % (update_table, update_id, recycle_id)
                     finish_update(db, update_table, update_obj, update_id)
             else:
                 table, field, value = action_gen.next()
     except StopIteration:
-        if update_table:
+        print "hit stop iteration exception"
+        # this check is seems to be necessary to handle empty studies (no trees, no otus)
+        if (update_table == 'study' and (update_id == recycle_id)):  # this will change
+            print "updating: %s" % value
+            insert_reusing_id(db, update_obj, recycle_id, update_id)
+        elif update_table:
             finish_update(db, update_table, update_obj, update_id)
         return fixup_table
 
 
-def usable_id(table,field):
+def usable_id(table, field):
     return (field == 'nexson_id')
 
 
 def finish_update(db, update_table, update_obj, update_id):
-    print ("About to insert new: table= %s, update_obj = %s, update_id = %s" % 
+    print ("About to insert new: table= %s, update_obj = %s, update_id = %s" %
            (str(update_table), str(update_obj), update_id))
     insert_new(db, update_table, update_obj)
 
@@ -191,53 +197,58 @@ def generate_actions(actions):
         yield action
 
 
-# wish could do this with a lookup, but some tables need to be placated with dummy values
+# this would be better with a lookup, but some tables need to be
+# placated with dummy values
 def insert_new(db, table, values):
-    if table=='study':
-        insert_new_study(db, values)
+    """
+    """
+    nexson_id = values['nexson_id']
+    if table == 'study':
+        print "about to call insert new study: values = %s" % str(values)
+        insert_new_study(db, nexson_id)
     # maybe this should be 'interned', rather than generate - no id is saved
-    if table=='study_tag':  
+    if table == 'study_tag':
         db.study_tag.insert()
-    if table=='otu':
-        insert_new_otu(db, values)
-    if table=='tree':
-        insert_new_tree(db, values)
-    if table=='node':
-        insert_new_node(db, values)
-    if table=='annotation':
+    if table == 'otu':
+        insert_new_otu(db, nexson_id)
+    if table == 'tree':
+        insert_new_tree(db, nexson_id)
+    if table == 'node':
+        insert_new_node(db, nexson_id)
+    if table == 'annotation':
         insert_new_annotation(db, values)
 
 
-def insert_reusing_id(db, values, reused_id):
-    sqlstr = ('INSERT INTO study (id,nexson_id) VALUES (%d,"%s")' % 
-              (reused_id, values['nexson_id']))
+def insert_reusing_id(db, values, reused_id, nexson_id):
+    sqlstr = ('INSERT INTO study (id,nexson_id) VALUES (%d,"%s")' %
+              (reused_id, nexson_id))
     print sqlstr
     db.executesql(sqlstr)
     db.commit()
-    
 
-def insert_new_study(db,values):
-    print "In insert new study: values = %s" % str(values)
-    sqlstr = 'INSERT INTO study (nexson_id) VALUES ("%s")' % values['nexson_id']
+
+def insert_new_study(db, nexson_id):
+    sqlstr = 'INSERT INTO study (nexson_id) VALUES ("%s")' % nexson_id
+    db.executesql(sqlstr)
+    db.commit()
+
+
+def insert_new_otu(db, nexson_id):
+    sqlstr = 'INSERT INTO otu (nexson_id) VALUES ("%s")' % nexson_id
     db.executesql(sqlstr)
 
 
-def insert_new_otu(db,values):
-    sqlstr = 'INSERT INTO otu (nexson_id) VALUES ("%s")' % values['nexson_id']
+def insert_new_tree(db, nexson_id):
+    sqlstr = 'INSERT INTO stree (nexson_id) VALUES ("%s")' % nexson_id
     db.executesql(sqlstr)
 
 
-def insert_new_tree(db,values):
-    sqlstr = 'INSERT INTO stree (nexson_id) VALUES ("%s")' % values['nexson_id']
+def insert_new_node(db, nexson_id):
+    sqlstr = 'INSERT INTO snode (nexson_id,tree) VALUES ("%s",NULL)' % nexson_id
     db.executesql(sqlstr)
 
 
-def insert_new_node(db,values):
-    sqlstr = 'INSERT INTO snode (nexson_id,tree) VALUES ("%s",NULL)' % values['nexson_id']
-    db.executesql(sqlstr)
-
-
-def insert_new_annotation(db,values):
+def insert_new_annotation(db, values):
     sqlstr = 'INSERT INTO nexson_annotation (study) VALUES (%s)' % values['nexson_id']
     db.executesql(sqlstr)
 
@@ -259,27 +270,37 @@ def update_inserted_row(db, table, sql_id, row_data):
         if field == 'nexson_id':
             pass
         elif field == 'other_metadata':
-            #token = row_data['other_metadata']
-            token = {'test': 1}
-            print "testing conversion: %s" % json.dumps(token)
-            #print "Updating other metadata of %s (%s) \n %s" % (str(db(q)),str(db(q).select()),str(token)) #,str(row_data['other_metadata']))
-            q = db(db.study.id == sql_id)
-            ret= q.validate_and_update(other_metadata=json.dumps(row_data['other_metadata'])) #row_data['other_metadata'])
+            token = row_data['other_metadata']
+
+            ret = db(db.study.id == sql_id).validate_and_update(other_metadata=json.dumps(row_data['other_metadata']))
             print "Error was %s\n" % str(ret)
         else:
             resolved_data = row_data[field]
             if (table == "node"):
-                print "Field check; field = %s; resolved_data = %s" % (field,str(resolved_data))
+                print "Field check; field = %s; resolved_data = %s" % (field, str(resolved_data))
             if (table in LOOKUP_SQL_FIELDS):
                 if LOOKUP_SQL_FIELDS[table] and field in LOOKUP_SQL_FIELDS[table]:
                     resolved_data = get_sql_id(db,FIELD_TO_TABLE[(table,field)],resolved_data)
             if (table == "node"):
                 print "Field check2; field = %s; resolved_data = %s" % (field,str(resolved_data))
             if resolved_data:
-                sqlstr = 'UPDATE %s SET %s = "%s" WHERE id = %d' % (NAMETABLEMAP[table],field,resolved_data,sql_id)
-                print sqlstr
-                #"updating %s field in table %s with id %d" % (field,NAMETABLEMAP[table],sql_id)
-                db.executesql(sqlstr)
+                if isinstance(resolved_data,basestring):
+                    print "resolved data is basestring"
+                    if resolved_data.find('"') == -1:
+                        sqlstr = 'UPDATE %s SET %s = "%s" WHERE id = %d' % (NAMETABLEMAP[table],field,resolved_data,sql_id)
+                        print sqlstr
+                        #"updating %s field in table %s with id %d" % (field,NAMETABLEMAP[table],sql_id)
+                        db.executesql(sqlstr)
+                    else:   # need to use slower DAL methods
+                        #tb = db[NAMETABLEMAP[table]]
+                        print "Updated field %s of table %s to %s using DAL" % (field,NAMETABLEMAP[table],sql_id)
+                        db(db[NAMETABLEMAP[table]]._id==sql_id).update(**{field:resolved_data}) 
+                else:
+                    sqlstr = 'UPDATE %s SET %s = "%s" WHERE id = %d' % (NAMETABLEMAP[table],field,resolved_data,sql_id)
+                    print sqlstr
+                    #"updating %s field in table %s with id %d" % (field,NAMETABLEMAP[table],sql_id)
+                    db.executesql(sqlstr)
+
     return sql_id
 
 
@@ -303,7 +324,7 @@ def update_tags(db, table, tags, id):
                  'SELECT id FROM study_tag WHERE study = %d AND tag = "%s"' % (id, tag))
             #rows = db((db.study_tag.study == id) & (db.study_tag.tag == tag)).select()
             if not rows:  #only need to add new tags
-                #print 'inserting study tag %s to study %d' % (tag,id)
+                print 'inserting study tag %s to study %d' % (tag,id)
                 db.study_tag.insert(study=id, tag=tag)
     elif table == 'tree':
         for tag in tags:
@@ -342,17 +363,20 @@ def restore_otu_mapping(db, study_id):
     """
     restores mapping from otus to their mapped ot_names
     """
-    otus = db.executesql("SELECT id FROM otu WHERE study = %d" % study_id)
+    otus_query = "SELECT id FROM otu WHERE study = %d" % study_id
+    otus = db.executesql(otus_query)
     print "retrieved %d otus" % len(otus)
     for otu_result in otus:
         assert len(otu_result) == 1
         otu = otu_result[0]
-        ot_name_results = db.executesql("SELECT ottol_name FROM otu WHERE id = %d " % otu)
+        otu_name_query = "SELECT ottol_name FROM otu WHERE id = %d " % otu
+        ot_name_results = db.executesql(otu_name_query)
         assert len(ot_name_results) == 1
         ot_name = ot_name_results[0][0]
         print "otu: %s;  ot_name: %s" % (otu, ot_name)
         if ot_name:
-            accepted_uid_results = db.executesql("SELECT accepted_uid FROM ottol_name WHERE id = %d" % ot_name)
+            accepted_uid_query = "SELECT accepted_uid FROM ottol_name WHERE id = %d" % ot_name
+            accepted_uid_results = db.executesql(accepted_uid_query)
             print "accepted_uid_results: %s" % accepted_uid_results
             if len(accepted_uid_results) == 1:
                 accepted_uid = accepted_uid_results[0][0]
@@ -361,7 +385,7 @@ def restore_otu_mapping(db, study_id):
                     db.executesql("UPDATE otu SET ott_node = %d WHERE id = %d" % (accepted_uid, otu))
 
         
-def finish_trees(db,study_id):
+def finish_trees(db, study_id):
     """
     recomputes the binary indexing, retrieves ottol-based labels and regenerates
     the newick string for each tree in the study
@@ -382,11 +406,12 @@ def index_nodes(db, tree_id):
     Reconstructs the next, back, and isleaf fields for each snode in the
     tree specified by tree_id
     """
-    root_nodes = db.executesql("SELECT id FROM snode WHERE (tree = %d) AND (parent IS NULL)" % tree_id)
+    root_query = "SELECT id FROM snode WHERE (tree = %d) AND (parent IS NULL)"
+    root_nodes = db.executesql(root_query % tree_id)
     assert len(root_nodes) == 1
     root = root_nodes[0]
     node_id = root[0]
-    index_children(db,node_id,0)
+    index_children(db, node_id, 0)
 
 
 def index_children(db, id, n):
@@ -411,17 +436,17 @@ def index_children(db, id, n):
         is_leaf = 'T'
     else:
         is_leaf = 'F'
-    sqlstr = ("UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;" % 
-              (primary_next, primary_back, is_leaf, id))
-    db.executesql(sqlstr)
+    update = "UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;"
+    db.executesql(update % (primary_next, primary_back, is_leaf, id))
     return next_back
 
 
 def restore_labels(db, tree):
     """
-    restores labels from otu taxa (maybe should check for existing label first?)
+    restores labels from otu taxa 
     """
-    nodes = db.executesql("SELECT id,otu FROM snode WHERE tree = %s AND otu IS NOT NULL" % tree)
+    nodes_query = "SELECT id,otu FROM snode WHERE tree = %s AND otu IS NOT NULL"
+    nodes = db.executesql(nodes_query % tree)
     for (id, otu) in nodes:
         ((olabel, ), ) = db.executesql("SELECT label FROM otu WHERE otu.id = %d" % otu)
         if olabel.find("'") != -1:
@@ -439,17 +464,21 @@ def restore_newick(db, tree):
     import build
     treeid = tree
     root = build.stree(db, treeid)
-    lfmt = [ x.split('.') for x in 'snode.id,otu.label'.split(',') ]
+    lfmt = [x.split('.') for x in 'snode.id,otu.label'.split(',')]
+
     def proc(node, table, field):
-        try: s = str(getattr(getattr(node.rec, table), field))
-        except AttributeError: s = ''
+        try: 
+            s = str(getattr(getattr(node.rec, table), field))
+        except AttributeError: 
+            s = ''
         return "".join('_'.join(s.split()).split("'"))
     for n in root:
         n.label = ''
-        if n.isleaf: n.label = '_'.join([ proc(n, t, f) for t, f in lfmt ])
+        if n.isleaf:
+            n.label = '_'.join([proc(n, t, f) for t, f in lfmt])
         else:
             pass
-        n.label = n.label.replace('(','--').replace(')','--')
+        n.label = n.label.replace('(', '--').replace(')', '--')
     newick_str = root.write()
     db.executesql("UPDATE stree SET newick = '%s' WHERE id = %d" %
                   (newick_str, tree))

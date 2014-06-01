@@ -1204,7 +1204,7 @@ def load_NexSON_from_OpenTree():
         study_id = ingest_nexson(opentree_url, db, None)
         redirect(URL(c="study", f="view", args=[study_id]))
 
-repository_list = [10,11,12,13,17,24,25,28,36,37,38,39,40,42,43,44]
+repository_list = [10,11,12,13,17,24,25,28,36,37,38,39,40,42,43,44,45,46,47,48,49,50,438,460]
 
 
 def make_opentree_fetch_url(study_id):
@@ -1219,19 +1219,23 @@ def repositoryTest():
     """
     just for testing
     """
-    from nexson_parse import check_nexson, ingest_nexson
-    for study in repository_list:
-        fetch_url = make_opentree_fetch_url(study)
+    from nexson_parse import nexson_available, check_nexson, ingest_nexson
+    for raw_id in xrange(2526):
+        study_id = raw_id + 1
+        fetch_url = make_opentree_fetch_url(study_id)
         print "Processing %s at %s" % (fetch_url, datetime.datetime.now())
-        check = check_nexson(fetch_url, db)
-        print "check is %s" % str(check)
-        try:
-            study_exists = check_nexson(fetch_url,db)
-        except RuntimeError as e:
-            print e
-            continue
-        study_id = ingest_nexson(fetch_url, db, None)
-        print "time %s, %s" % (datetime.datetime.now(), study_id)
+        study_exists = nexson_available(fetch_url)
+        if not study_exists:
+            print "study %s not found" % fetch_url
+        else:
+            overwrite = check_nexson(fetch_url, db, study_id)
+            if overwrite:
+                print "Will overwrite existing study from %s" % fetch_url
+                del db.study[overwrite]
+            study_id = ingest_nexson(fetch_url, db, None)
+            print "time %s, %s" % (datetime.datetime.now(), study_id)
+
+
 
 
 def overwrite_study():

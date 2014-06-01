@@ -3,7 +3,16 @@
 from gluon import *
 from sys import maxsize
 
-def check_nexson(u,db):
+def nexson_available(u):
+    """
+    """
+    import requests
+    r = requests.get(u)
+    result = (r.status_code == 200)
+    r.close()
+    return result
+
+def check_nexson(u, db, study_id):
     """
     checks if study with a matching identifier (doi or citation if no doi) is
     already present so user can be warned
@@ -11,19 +20,18 @@ def check_nexson(u,db):
     #from json import load
     import requests
     r = requests.get(u)
-    print "Raw status code = %d" % r.status_code
     if r.status_code == 200:
        json_tree = r.json()       #want api call that returns study identifier(s)
        if u'data' in json_tree:
            nexml_tree = json_tree[u'data']
-           return check_json_study(nexml_tree,db)
+           return check_json_study(nexml_tree, db, study_id)
        elif u'error' in json_tree:
            description = json_tree[u'description']
            raise RuntimeException(description)
     else:
         raise HTTP(r.status_code,"Error retrieving study")
 
-def check_json_study(nexml_tree,db):
+def check_json_study(nexml_tree, db, study_id):
     """
     Returns True if db contains a study with matching doi (best) or
     reference citation
@@ -36,7 +44,19 @@ def check_json_study(nexml_tree,db):
         q = (db.study.doi == doi)
         rows = db(q).select()
         if len(rows) > 0:
-            return rows[0].id
+            match = rows[0].id
+            print "matching on %s" % doi
+            if not (match == study_id) :
+                if worthless_study(nexml_tree):
+                    print "study is worthless"
+                    if len(db(db.study.id == study_id).select()) > 0:
+                        return study_id
+                    else:
+                        return False
+                else:
+                    return match
+            else:
+                return match
         else:
             return False  #bad study id is treated as resource not found
     elif 'ot:studyPublicationReference' in metafields:
@@ -44,12 +64,41 @@ def check_json_study(nexml_tree,db):
         q = (db.study.citation == ref)
         rows = db(q).select()
         if len(rows) > 0:
-            return rows[0].id
+            match = rows[0].id
+            print "matching on %s" % ref
+            print "match %d, study %d" % (match, study_id)
+            if not (match == study_id) :
+                if worthless_study(nexml_tree):
+                    print "study is worthless"
+                    if len(db(db.study.id == study_id).select()) > 0:
+                        return study_id
+                    else:
+                        return False
+                else:
+                    return match
+            else:
+                return match
         else:
             return False
     else:
         print "No study identifier found"
         return False
+
+def worthless_study(tree):
+    """
+    """
+    contents = tree[u'nexml']
+    otus_ele = contents[u'otus']
+    otu_ele = otus_ele[u'otu']
+    if otu_ele is None or len(otu_ele) == 0:
+        return True
+    print "otus is %s" % otu_ele 
+    trees_ele = contents[u'trees']
+    tree_ele = trees_ele[u'tree']
+    if tree_ele is None or len(tree_ele) == 0:
+        return True
+    print "trees is %s" % tree_ele 
+    return False
 
 
 def ingest_nexson(u,db,recycled_id):
