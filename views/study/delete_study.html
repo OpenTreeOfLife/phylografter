@@ -2,8 +2,22 @@
 
 
 <div style="padding:0.5em;font-weight:bold;font-family:sans-serif;color:red;font-size:135%">
-    Warning:</div> <div style="padding:0.5em;font-weight:bold;font-family:sans-serif;color:black;font-size:125%">You are about to delete the following study:
+    Warning:</div> <div style="padding:0.5em;font-weight:bold;font-family:sans-serif;color:black;font-size:125%">You are about to delete study <font color='red'>{{=rec.id}}</font> with the following content:
 </div>
-
+<div style="padding:0.5em; font-family:sans-serif; color:black;font-size:110%">
+<table border=0 cellpadding=5>
+<tr>
+<td valign=top><b>Citation:</b> <td valign=top>{{=rec.citation}}
+<tr>
+<td valign=top><b>DOI:</b> <td valign=top>{{=rec.doi}}
+<tr>
+<td valign=top><b>Published:</b> <td valign=top>{{=rec.year_published}}
+<tr>
+<td valign=top><b>Uploaded:</b> <td valign=top>{{=rec.uploaded}}
+<tr>
+<td valign=top width=125><b>Contributed By:</b> <td valign=top>{{=rec.contributor}}
+</tr>
+</table>
+</div>
 <div id="study_form" style="padding-bottom:0.5em">{{=form}}
 </div>
