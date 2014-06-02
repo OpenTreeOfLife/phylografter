@@ -1024,17 +1024,22 @@ def export_gzipNexSON():
 def delete_study():
     'Displays a page to ask for validation before deleting a study that is actively being viewed'
     t = db.study
-    rec = t(request.args(0)) or redirect(URL("create"))
+    rec = t(request.args(0))
     readonly = not auth.has_membership(role="contributor")
-    ## t.focal_clade.readable = t.focal_clade.writable = False
     t.focal_clade_ott.label = 'Focal clade'
     t.focal_clade_ott.widget = SQLFORM.widgets.autocomplete(
         request, db.ott_name.unique_name, id_field=db.ott_name.node,
         limitby=(0,20), orderby=db.ott_name.unique_name)
-    form = SQLFORM(t, rec, deletable=False, readonly=False,
-                   fields = ["citation", "year_published", "doi", "label",
-                             "focal_clade_ott", "treebase_id",
-                             "contributor", "comment", "uploaded"],
+    t.citation.readable = t.citation.writable = False
+    t.focal_clade_ott.readable = t.focal_clade_ott.writable = False
+    t.doi.readable = t.doi.writable = False
+    t.treebase_id.readable = t.treebase_id.writable = False
+    t.contributor.readable = t.contributor.writable = False
+    t.label.readable = t.label.writable = False
+    t.comment.readable = t.comment.writable = False
+    t.uploaded.readable = t.uploaded.writable = False
+    t.year_published.readable = t.year_published.writable = False 
+    form = SQLFORM(t, rec, deletable=False, writable=False,
                    showid=False, submit_button="Delete Study")
     form.add_button('Cancel', URL('study', 'view', args=rec.id))
                        
