@@ -437,8 +437,10 @@ def view():
     working_dir = str(working_dir)
     working_dir_ncbi = working_dir + "static/taxonomy-stree-json/ncbi/"
     working_dir_ott = working_dir + "static/taxonomy-stree-json/ott/"
-    dirlist_ncbi = os.listdir(working_dir_ncbi)# get list of files in working_directory
-    dirlist_ott = os.listdir(working_dir_ott)# get list of files in working_directory
+    if os.path.isdir(working_dir_ncbi):
+        dirlist_ncbi = os.listdir(working_dir_ncbi)# get list of files in working_directory
+    if os.path.isdir(working_dir_ott):
+        dirlist_ott = os.listdir(working_dir_ott)# get list of files in working_directory
     graphlist_ncbi = []
     graphlist_ott = []
     for t in trees:
