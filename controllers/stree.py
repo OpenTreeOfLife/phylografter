@@ -918,21 +918,30 @@ def newick():
 ## Function to delete a tree from a study
 
 def delete():
+    t = db.stree
     rec = db.stree(request.args(0))
     def w(f,v):
         u = URL(c="study",f="view",args=[v])
         return A(_study_rep(db.study(v)), _href=u)
     db.stree.study.widget = w
     response.subtitle = "Delete source tree %s" % rec.id
-    fields = ["study", "contributor", "newick", "type",
-              "clade_labels_represent", "clade_labels_comment",
-              "branch_lengths_represent", "branch_lengths_comment",
-              "comment"]
+    t.study.readable = t.study.writable = False
+    t.contributor.readable = t.contributor.writable = False
+    t.newick.readable = t.newick.writable = False
+    t.comment.readable = t.comment.writable = False
+    t.clade_labels_represent.readable = t.clade_labels_represent.writable = False
+    t.clade_labels_comment.readable = t.clade_labels_comment.writable = False
+    t.author_contributed.readable = t.author_contributed.writable = False
+    t.tb_tree_id.readable = t.tb_tree_id.writable = False
+    t.branch_lengths_represent.readable = t.branch_lengths_represent.writable = False
+    t.branch_lengths_comment.readable = t.branch_lengths_comment.writable = False
+    t.uploaded.readable = t.uploaded.writable = False
+    t.type.readable = t.type.writable = False 
     readonly = not auth.has_membership(role="contributor")
-    form = SQLFORM(db.stree, int(rec), fields=fields, showid=False,
+    form = SQLFORM(db.stree, int(rec), showid=False,
                    deletable=False, submit_button="Delete Tree",
                    readonly=readonly)
-    form.add_button('Cancel', URL('study', 'view', args=rec.id))              
+    form.add_button('Cancel', URL('study', 'view', args=rec.study))              
     form.vars.study = rec.study
                               
          
