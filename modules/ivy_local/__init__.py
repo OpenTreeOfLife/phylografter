@@ -21,15 +21,14 @@ Useful: dendropy, biopython, etc.
 ## along with this program. If not, see
 ## <http://www.gnu.org/licenses/>.
 
-from . import ages
-from . import bipart
-from . import chars
-from . import contrasts
-from . import genbank
+## from . import ages
+## from . import bipart
+## from . import contrasts
+## from . import genbank
 from . import layout
 from . import nexus
 from . import newick
-from . import sequtil
+## from . import sequtil
 from . import storage
 from . import tree
 from . import treebase
