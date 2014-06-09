@@ -1,80 +1,99 @@
 #!/usr/bin/env python
 # coding: utf8
 
-#This module implements the export of nexml in JSON syntax.  The json follows the badgerfish 
-#(http://badgerfish.ning.com - original site?) rules for mapping xml to json
+# This module implements the export of nexml in JSON syntax.  The json follows
+# the badgerfish (http://badgerfish.ning.com - original site?) rules for
+# mapping xml to json
 
-#There are two entry points to this module: nexmlStudy (generate nexml for all the trees and otus for a study) and nexmlTree
-#(complete nexml but just including a single tree - but currently all the otus for its containing study)
+# There are two entry points to this module: nexmlStudy (generate nexml for all 
+# the trees and otus for a study) and nexmlTree (complete nexml but just 
+# including a single tree - but currently all the otus for its containing study)
 
-#local naming convention: get_XXX are DAL queries, generally returning an id or list of ids', everything else is generating
-#dicts or lists that correspond to BadgerFish  mappings of Elements
+# local naming convention: get_XXX are database queries (either high level web2py
+# DAL calls or SQL passed through the DAL's executeSQL which is substantially
+# faster.  These generally return an id or list of ids.
+# Everything else is generating dicts or lists that correspond to BadgerFish  
+# mappings of XML elements 
 
-#Output has been tested using the translator on http://dropbox.ashlock.us/open311/json-xml/ and validating the resulting
-#xml with the validator at nexml.org
+# Output has historically been tested using the translator on 
+# http://dropbox.ashlock.us/open311/json-xml/ and validating the resulting
+# xml with the validator at nexml.org.  Currently these files are tested 
+# with the peyotl package (https://github.com/OpenTreeOfLife/peyotl)
 
 from gluon.storage import Storage
 
-# Note - the nexml root element can have meta elements as direct children; unlike everywhere else, there are no id or about
-# attributes as seem to be required for other element types (e.g., otu, node) when they have meta children
-def nexmlStudy(study_id,db):
+
+# Note - the nexml root element can have meta elements as direct children;
+# unlike everywhere else, there are no id or about
+# attributes as seem to be required for other element types 
+# (e.g., otu, node) when they have meta children
+def nexmlStudy(study_id, db):
     """
     Exports the set of trees associated with a study as JSON Nexml
     study - the study to export
     db - database connection
     """
     study_row = db.study(study_id)
-    meta_elts = meta_elts_for_nexml(study_row,db)
-    ## print 'meta done'
-    otus = otus_elt_for_study(study_row,db)
-    ## print 'otus done'
+    meta_elts = meta_elts_for_nexml(study_row, db)
+    study_label = study_row.label
+    otus = otus_elt_for_study(study_row, db)
     trees = trees_elt(study_row, db)
-    ## print 'trees done'
     header = nexml_header()
-    body = {"@id":"study","@about":"#study"}
+    if study_label:
+        body = {"@id": "study", "@about": "#study", "@label": study_label}
+    else:
+        body = {"@id": "study", "@about": "#study"}
     body.update(header)
     body.update(meta_elts)
     body.update(otus)
     body.update(trees)
-    return {"nexml":body}
+    return {"nexml": body}
 
-def nexmlTree(tree,db):
-    '''
+
+def nexmlTree(tree, db):
+    """
     Exports one tree from a study (still a complete JSON NeXML with
     headers, otus, and trees blocks)
-    '''
+    """
     study_row = db.study(get_single_tree_study_id(tree,db))
-    meta_elts = meta_elts_for_nexml(study_row,db)
+    meta_elts = meta_elts_for_nexml(study_row, db)
+    study_label = study_row.label
     tree_row = db.stree(tree)
     otus = otus_elt_for_tree(tree_row,study_row,db)
     trees = singleton_trees_elt(tree_row,study_row,db)
     header = nexml_header()
-    body = {"@id":"study","@about":"#study"}
+    if study_label:
+        body = {"@id": "study", "@about": "#study", "@label": study_label}
+    else:
+        body = {"@id": "study", "@about": "#study"}
     body.update(otus)
     body.update(trees)
     body.update(header)
     body.update(meta_elts)
     return dict(nexml = body)
 
+
 def nexml_header():
-    '''
+    """
     Header for nexml - includes namespaces and version tag (see nexml.org)
-    '''
-    return {"@xmlns":xmlNameSpace(),
-            "@version":'0.9',
-            "@nexmljson":"http://purl.org/opentree/nexson",
-            "@generator":"Phylografter nexml-json exporter"}
+    """
+    return {"@xmlns": xmlNameSpace(),
+            "@version": '0.9',
+            "@nexmljson": "http://purl.org/opentree/nexson",
+            "@generator": "Phylografter nexml-json exporter"}
+
 
 def xmlNameSpace():
-    '''
+    """
     namespace definitions for nexml; will be value of xmlns attribute in header (per badgerfish 
     treatment of namespaces)
-    '''
-    return {"$":"http://www.nexml.org/2009",
-            "nex":"http://www.nexml.org/2009",
-            "xsi":"http://www.w3.org/2001/XMLSchema-instance",
-            "ot":"http://purl.org/opentree-terms#",
-            "xsd":"http://www.w3.org/2001/XMLSchema#"}
+    """
+    return {"$": "http://www.nexml.org/2009",
+            "nex": "http://www.nexml.org/2009",
+            "xsi": "http://www.w3.org/2001/XMLSchema-instance",
+            "ot": "http://purl.org/opentree-terms#",
+            "xsd": "http://www.w3.org/2001/XMLSchema#"}
+
 
 def createLiteralMeta(key, value, datatype=None):
     """
@@ -88,19 +107,20 @@ def createLiteralMeta(key, value, datatype=None):
         meta["@datatype"] =  datatype
     return meta
 
+
 def createResourceMeta(key, value):
-    '''
+    """
     creates a dict for the @property key -> value mapping of nex:ResourceMeta type
-    '''
+    """
     return {"@xsi:type": "nex:ResourceMeta",
             "@rel": key,
             "@href": value
            }
 
 def meta_elts_for_nexml(study_row,db):
-    '''
+    """
     generates nexml meta elements that are children of the root nexml element
-    '''
+    """
     meta_array = []
     study_publication_meta = study_publication_meta_elt(study_row)
     if study_publication_meta:
@@ -126,6 +146,20 @@ def meta_elts_for_nexml(study_row,db):
     focal_clade_name_meta = focal_clade_name_meta_for_study(study_row,db)
     if focal_clade_name_meta:
         meta_array.append(focal_clade_name_meta)
+    specified_root_meta = specified_root_meta_for_study(study_row, db)
+    if specified_root_meta:
+        meta_array.append(specified_root_meta)
+    comment_meta = comment_meta_for_study(study_row, db)
+    if comment_meta:
+        meta_array.append(comment_meta)
+    # these next two are primarily to support phylografter round tripping
+    # they should be coverted ti annotation elements and deprecated ASAP
+    last_modified_meta = last_modified_meta_for_study(study_row, db)
+    if last_modified_meta:
+        meta_array.append(last_modified_meta)
+    uploaded_date_meta = uploaded_date_meta_for_study(study_row, db)
+    if uploaded_date_meta:
+        meta_array.append(uploaded_date_meta)
     study_tags = get_study_tags(study_row,db)
     if study_tags:
         for tag in study_tags:
@@ -223,7 +257,7 @@ def focal_clade_name_meta_for_study(study_row,db):
             return createLiteralMeta("ot:focalCladeOTTTaxonName",name)
 
 
-def specified_root_meta_for_study(study_row):
+def specified_root_meta_for_study(study_row, db):
     """
     generates a specified root element for a study (if available)
     """
@@ -235,6 +269,29 @@ def specified_root_meta_for_study(study_row):
            return
     else:
         return
+
+
+def comment_meta_for_study(study_row, db):
+    """
+    generates a comment element for a study
+    """
+    return createLiteralMeta("ot:comment",str(study_row.comment))
+
+
+def last_modified_meta_for_study(study_row, db):
+    """
+    generates an element capturing phylografter's last modified date for a study.
+    this should be deprecated when phylografter properly handles annotations
+    """
+    return createLiteralMeta("ot:last_modified",str(study_row.last_modified))
+
+
+def uploaded_date_meta_for_study(study_row, db):
+    """
+    generates an element capturing when a study was uploaded to phylografter
+    this should be deprecated when phylografter properly handles annotations
+    """
+    return createLiteralMeta("ot:uploaded",str(study_row.uploaded))
 
 def get_study_tags(study_row,db):
     '''
@@ -407,6 +464,13 @@ def meta_elts_for_tree_elt(tree_row,db):
     node_label_rep = tree_row.clade_labels_represent
     tree_tags = get_tree_tags(tree_row,db)
     tree_type = tree_row.type
+    tb_tree_id = tree_row.tb_tree_id
+    contributor = tree_row.contributor
+    uploaded = tree_row.uploaded
+    blComment = tree_row.branch_lengths_comment
+    clComment = tree_row.clade_labels_comment
+    author_contributed = tree_row.author_contributed
+    comment = tree_row.comment
     if blRep in bltypes:
         lengthsElt = createLiteralMeta("ot:branchLengthMode",bltypes[blRep])
         result.append(lengthsElt)
@@ -419,6 +483,20 @@ def meta_elts_for_tree_elt(tree_row,db):
     if ingroup_node:
         ingroup_elt = createLiteralMeta("ot:inGroupClade",'node%d' % ingroup_node.id)
         result.append(ingroup_elt)
+    if tb_tree_id:
+        result.append(createLiteralMeta("ot:tb_tree_id", tb_tree_id))
+    if contributor:
+        result.append(createLiteralMeta("ot:contributor", contributor))
+    if uploaded:
+        result.append(createLiteralMeta("ot:uploaded", uploaded))
+    if blComment:
+        result.append(createLiteralMeta("ot:branch_lengths_comment", blComment))
+    if clComment:
+        result.append(createLiteralMeta("ot:clade_labels_comment", clComment))
+    if comment:
+        result.append(createLiteralMeta("ot:comment", comment))
+    if author_contributed:
+        result.append(createLiteralMeta("ot:author_contributed", True, "xsd:boolean"))
     if tree_tags:
        for tag in tree_tags:
            tag_elt = createLiteralMeta("ot:tag",tag)
