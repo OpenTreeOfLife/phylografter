@@ -459,8 +459,6 @@ def meta_elts_for_tree_elt(tree_row,db):
     returns meta elements for a tree element
     """
     result = []
-    ingroup_node = tree_ingroup_node(tree_row,db)
-    blRep = tree_row.branch_lengths_represent
     node_label_rep = tree_row.clade_labels_represent
     tree_tags = get_tree_tags(tree_row,db)
     tree_type = tree_row.type
@@ -471,6 +469,7 @@ def meta_elts_for_tree_elt(tree_row,db):
     clComment = tree_row.clade_labels_comment
     author_contributed = tree_row.author_contributed
     comment = tree_row.comment
+    blRep = tree_row.branch_lengths_represent
     if blRep in bltypes:
         lengthsElt = createLiteralMeta("ot:branchLengthMode",bltypes[blRep])
         result.append(lengthsElt)
@@ -480,6 +479,7 @@ def meta_elts_for_tree_elt(tree_row,db):
     if node_label_rep in NODE_LABEL_TYPES:
         nlabelElt = createLiteralMeta("ot:nodeLabelMode",NODE_LABEL_TYPES[node_label_rep])
         result.append(nlabelElt)
+    ingroup_node = tree_ingroup_node(tree_row,db)
     if ingroup_node:
         ingroup_elt = createLiteralMeta("ot:inGroupClade",'node%d' % ingroup_node.id)
         result.append(ingroup_elt)
@@ -505,9 +505,8 @@ def meta_elts_for_tree_elt(tree_row,db):
         curatedType_elt = createLiteralMeta("ot:curatedType",tree_type)
         result.append(curatedType_elt)
     if result:
-        return dict(meta=result)
-    else:
-        return       #this is a silent fail, maybe better to return 'unknown'?
+        return {"meta": result}
+
 
 def tree_ingroup_node(tree_row,db):
     '''
@@ -532,15 +531,15 @@ def deepest_ingroup(nodes):
             best = node
     return best
 
-def get_tree_tags(tree_row,db):
+def get_tree_tags(tree_row, db):
     '''
     returns a list of tag strings associated with the stree
     '''
     ta = db.stree_tag
     q = (ta.stree == tree_row.id)
     rows = db(q).select()
-    result = [row.tag for row in rows]
-    return result
+    return [row.tag for row in rows]
+
 
 def tree_nodes(node_rows, db, tree_label_mode):
     '''
@@ -555,29 +554,51 @@ def tree_edges(node_rows):
     #node_row[1] is parent - test excludes root node
     return [edge_elt(node_row) for node_row in node_rows if node_row[1]]
 
-def edge_elt(child_row):
-    '''
-    returns an element for a node - note that the information for this comes from the child node
-    '''
-    child_id,parent,otu_id,length,ignore = child_row
-    result ={"@id": "edge%d" % child_id}
-    result["@source"]='node%d' % parent
-    result["@target"]='node%d' % child_id
-    if (length):
+def edge_elt(node_row):
+    """
+    returns an edge element for a node - note that the information for this comes from the child node
+    """
+    (child_id,parent,_,length,_,_,_,_,_,_,_,_) = node_row
+    meta_elts = meta_elts_for_edge_support(node_row)
+    edge_id = "edge%d" % child_id
+    result ={"@id": edge_id,
+             "@source": 'node%d' % parent,
+             "@target":'node%d' % child_id}
+    if length:
         result["@length"]=length
+    if meta_elts:
+        result["@about"] = '#' + edge_id
+        result.update(meta_elts)        
     return result
+
+def meta_elts_for_edge_support(edge):
+    (child,parent,_,length,_,_,_,_,bootstrap_support,posterior_support,other_support,other_support_type) = edge
+    result = []
+    if bootstrap_support:
+        result.append(createLiteralMeta("ot:bootstrap_support", bootstrap_support, "xsd:double"))
+    if posterior_support:
+        result.append(createLiteralMeta("ot:posterior_support", posterior_support, "xsd:double"))
+    if other_support:
+        result.append(createLiteralMeta("ot:other_support", other_support, "xsd:double"))
+    if other_support_type:
+        result.append(createLiteralMeta("ot:other_support_type", othersupport_type))
+    if result:
+        return {'meta': result}
 
 def get_snode_recs_for_tree(tree_row,db):
     """
     returns a list of the nodes associated with the specified study - now represented as tuples
     """
-    return db.executesql('SELECT id,parent,otu,length,isleaf FROM snode WHERE (tree = %d);' % tree_row.id)
+    query = ''.join(['SELECT id,parent,otu,length,isleaf,age,age_min,age_max,bootstrap_support,',
+                    'posterior_support,other_support,other_support_type FROM snode WHERE (tree = %d);'])
+    return db.executesql(query % tree_row.id)
+
 
 def node_elt(node_row, db, node_label_mode):
     """
     returns an element for a node
     """
-    node_id,parent,otu_id,length,isleaf = node_row
+    (node_id,parent,otu_id,length,isleaf,_,_,_,_,_,_,_) = node_row
     meta_elts = meta_elts_for_node_elt(node_row, db)
     result = {"@id": "node%d" % node_id}
     if otu_id:
@@ -596,7 +617,7 @@ def meta_elts_for_node_elt(node_row, db):
     returns metadata elements for a node (currently ot:isLeaf)
     """
     result=[]
-    node_id,parent,otu_id,length,isleaf = node_row
+    (_,_,_,_,isleaf,age,age_min,age_max,_,_,_,_) = node_row
     if isleaf == 'T':
         isLeaf_elt = createLiteralMeta("ot:isLeaf",True,"xsd:boolean")
         result.append(isLeaf_elt)
