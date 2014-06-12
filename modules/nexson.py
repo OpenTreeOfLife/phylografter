@@ -275,7 +275,8 @@ def comment_meta_for_study(study_row, db):
     """
     generates a comment element for a study
     """
-    return createLiteralMeta("ot:comment",str(study_row.comment))
+    if study_row.comment:
+        return createLiteralMeta("ot:comment",str(study_row.comment))
 
 
 def last_modified_meta_for_study(study_row, db):
@@ -283,7 +284,7 @@ def last_modified_meta_for_study(study_row, db):
     generates an element capturing phylografter's last modified date for a study.
     this should be deprecated when phylografter properly handles annotations
     """
-    return createLiteralMeta("ot:last_modified",str(study_row.last_modified))
+    return createLiteralMeta("ot:lastModified",str(study_row.last_modified))
 
 
 def uploaded_date_meta_for_study(study_row, db):
@@ -308,25 +309,20 @@ def otus_elt_for_study(study_row,db):
     Generates an otus block
     '''
     otu_rows = get_otu_rows_for_study(study_row,db)
-    ## print '  otu_rows done'
-    meta_elts = meta_elts_for_otus(study_row,otu_rows,db)  #placeholder, no meta elements here
     otu_elements = [otu_elt(otu_row) for otu_row in otu_rows]
-    ## print '  otu_elements done'
     otus_element = {"otu": otu_elements,
                     "@id": "otus%d" % study_row.id}
     return {"otus": otus_element}
 
 def get_otu_rows_for_study(study_row,db):
-    '''
+    """
     returns a tuple of list of otu ids for otu records that link to this study
-    '''
-    return db.executesql('SELECT otu.id, otu.label, otu.ott_node, ott_node.id, ott_node.name, otu.tb_nexml_id FROM otu LEFT JOIN ott_node ON (otu.ott_node = ott_node.id) WHERE (otu.study = %d);' % study_row.id)
+    """
+    query = ''.join(['SELECT otu.id, otu.label, otu.ott_node, ott_node.id, ott_node.name, ',
+                     'otu.tb_nexml_id FROM otu LEFT JOIN ott_node ON ',
+                     '(otu.ott_node = ott_node.id) WHERE (otu.study = %d);'])
+    return db.executesql(query % study_row.id)
 
-def meta_elts_for_otus(study_row,otuRows,db):
-    '''
-    generates nexml meta elements that are children of an otus element (currently none)
-    '''
-    return {}
 
 def get_tree_rows_for_study(study_row,db):
     '''
@@ -386,9 +382,7 @@ def trees_elt(study, db):
     generate trees element
     '''
     row_list = get_tree_rows_for_study(study,db)
-    ## print '  tree_rows done'
     tree_list = [tree_elt(tree_row, db) for tree_row in row_list]
-    ## print '  tree_list done'
     body={"@otus": "otus%d" % study.id,
           "@id": "trees%d" % study.id,
           "tree": tree_list}
@@ -484,19 +478,19 @@ def meta_elts_for_tree_elt(tree_row,db):
         ingroup_elt = createLiteralMeta("ot:inGroupClade",'node%d' % ingroup_node.id)
         result.append(ingroup_elt)
     if tb_tree_id:
-        result.append(createLiteralMeta("ot:tb_tree_id", tb_tree_id))
+        result.append(createLiteralMeta("ot:tbTreeId", tb_tree_id))
     if contributor:
         result.append(createLiteralMeta("ot:contributor", contributor))
     if uploaded:
         result.append(createLiteralMeta("ot:uploaded", uploaded))
     if blComment:
-        result.append(createLiteralMeta("ot:branch_lengths_comment", blComment))
+        result.append(createLiteralMeta("ot:branchLengthsComment", blComment))
     if clComment:
-        result.append(createLiteralMeta("ot:clade_labels_comment", clComment))
+        result.append(createLiteralMeta("ot:cladeLabelsComment", clComment))
     if comment:
         result.append(createLiteralMeta("ot:comment", comment))
-    if author_contributed:
-        result.append(createLiteralMeta("ot:author_contributed", True, "xsd:boolean"))
+    if author_contributed  == True:
+        result.append(createLiteralMeta("ot:authorContributed", True, "xsd:boolean"))
     if tree_tags:
        for tag in tree_tags:
            tag_elt = createLiteralMeta("ot:tag",tag)
@@ -572,16 +566,16 @@ def edge_elt(node_row):
     return result
 
 def meta_elts_for_edge_support(edge):
-    (child,parent,_,length,_,_,_,_,bootstrap_support,posterior_support,other_support,other_support_type) = edge
+    (_,_,_,_,_,_,_,_,bootstrap_support,posterior_support,other_support,other_support_type) = edge
     result = []
     if bootstrap_support:
-        result.append(createLiteralMeta("ot:bootstrap_support", bootstrap_support, "xsd:double"))
+        result.append(createLiteralMeta("ot:bootstrapSupport", bootstrap_support, "xsd:double"))
     if posterior_support:
-        result.append(createLiteralMeta("ot:posterior_support", posterior_support, "xsd:double"))
+        result.append(createLiteralMeta("ot:posteriorSupport", posterior_support, "xsd:double"))
     if other_support:
-        result.append(createLiteralMeta("ot:other_support", other_support, "xsd:double"))
+        result.append(createLiteralMeta("ot:otherSupport", other_support, "xsd:double"))
     if other_support_type:
-        result.append(createLiteralMeta("ot:other_support_type", othersupport_type))
+        result.append(createLiteralMeta("ot:otherSupportType", other_support_type))
     if result:
         return {'meta': result}
 
@@ -623,6 +617,12 @@ def meta_elts_for_node_elt(node_row, db):
         result.append(isLeaf_elt)
     #ottTaxonName has moved several times between nodes and otus - 
     #currently on otus so no need to retrieve ott_node.name here
+    if age:
+        result.append(createLiteralMeta("ot:age", age, "xsd:double"))
+    if age_min:
+        result.append(createLiteralMeta("ot:age_min", age_min, "xsd:double"))
+    if age_max:
+        result.append(createLiteralMeta("ot:age_max", age_max, "xsd:double"))
     if result:
         return dict(meta=result)
-    return
+
