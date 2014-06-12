@@ -1,80 +1,99 @@
 #!/usr/bin/env python
 # coding: utf8
 
-#This module implements the export of nexml in JSON syntax.  The json follows the badgerfish 
-#(http://badgerfish.ning.com - original site?) rules for mapping xml to json
+# This module implements the export of nexml in JSON syntax.  The json follows
+# the badgerfish (http://badgerfish.ning.com - original site?) rules for
+# mapping xml to json
 
-#There are two entry points to this module: nexmlStudy (generate nexml for all the trees and otus for a study) and nexmlTree
-#(complete nexml but just including a single tree - but currently all the otus for its containing study)
+# There are two entry points to this module: nexmlStudy (generate nexml for all 
+# the trees and otus for a study) and nexmlTree (complete nexml but just 
+# including a single tree - but currently all the otus for its containing study)
 
-#local naming convention: get_XXX are DAL queries, generally returning an id or list of ids', everything else is generating
-#dicts or lists that correspond to BadgerFish  mappings of Elements
+# local naming convention: get_XXX are database queries (either high level web2py
+# DAL calls or SQL passed through the DAL's executeSQL which is substantially
+# faster.  These generally return an id or list of ids.
+# Everything else is generating dicts or lists that correspond to BadgerFish  
+# mappings of XML elements 
 
-#Output has been tested using the translator on http://dropbox.ashlock.us/open311/json-xml/ and validating the resulting
-#xml with the validator at nexml.org
+# Output has historically been tested using the translator on 
+# http://dropbox.ashlock.us/open311/json-xml/ and validating the resulting
+# xml with the validator at nexml.org.  Currently these files are tested 
+# with the peyotl package (https://github.com/OpenTreeOfLife/peyotl)
 
 from gluon.storage import Storage
 
-# Note - the nexml root element can have meta elements as direct children; unlike everywhere else, there are no id or about
-# attributes as seem to be required for other element types (e.g., otu, node) when they have meta children
-def nexmlStudy(study_id,db):
+
+# Note - the nexml root element can have meta elements as direct children;
+# unlike everywhere else, there are no id or about
+# attributes as seem to be required for other element types 
+# (e.g., otu, node) when they have meta children
+def nexmlStudy(study_id, db):
     """
     Exports the set of trees associated with a study as JSON Nexml
     study - the study to export
     db - database connection
     """
     study_row = db.study(study_id)
-    meta_elts = meta_elts_for_nexml(study_row,db)
-    ## print 'meta done'
-    otus = otus_elt_for_study(study_row,db)
-    ## print 'otus done'
+    meta_elts = meta_elts_for_nexml(study_row, db)
+    study_label = study_row.label
+    otus = otus_elt_for_study(study_row, db)
     trees = trees_elt(study_row, db)
-    ## print 'trees done'
     header = nexml_header()
-    body = {"@id":"study","@about":"#study"}
+    if study_label:
+        body = {"@id": "study", "@about": "#study", "@label": study_label}
+    else:
+        body = {"@id": "study", "@about": "#study"}
     body.update(header)
     body.update(meta_elts)
     body.update(otus)
     body.update(trees)
-    return {"nexml":body}
+    return {"nexml": body}
 
-def nexmlTree(tree,db):
-    '''
+
+def nexmlTree(tree, db):
+    """
     Exports one tree from a study (still a complete JSON NeXML with
     headers, otus, and trees blocks)
-    '''
+    """
     study_row = db.study(get_single_tree_study_id(tree,db))
-    meta_elts = meta_elts_for_nexml(study_row,db)
+    meta_elts = meta_elts_for_nexml(study_row, db)
+    study_label = study_row.label
     tree_row = db.stree(tree)
     otus = otus_elt_for_tree(tree_row,study_row,db)
     trees = singleton_trees_elt(tree_row,study_row,db)
     header = nexml_header()
-    body = {"@id":"study","@about":"#study"}
+    if study_label:
+        body = {"@id": "study", "@about": "#study", "@label": study_label}
+    else:
+        body = {"@id": "study", "@about": "#study"}
     body.update(otus)
     body.update(trees)
     body.update(header)
     body.update(meta_elts)
     return dict(nexml = body)
 
+
 def nexml_header():
-    '''
+    """
     Header for nexml - includes namespaces and version tag (see nexml.org)
-    '''
-    return {"@xmlns":xmlNameSpace(),
-            "@version":'0.9',
-            "@nexmljson":"http://purl.org/opentree/nexson",
-            "@generator":"Phylografter nexml-json exporter"}
+    """
+    return {"@xmlns": xmlNameSpace(),
+            "@version": '0.9',
+            "@nexmljson": "http://purl.org/opentree/nexson",
+            "@generator": "Phylografter nexml-json exporter"}
+
 
 def xmlNameSpace():
-    '''
+    """
     namespace definitions for nexml; will be value of xmlns attribute in header (per badgerfish 
     treatment of namespaces)
-    '''
-    return {"$":"http://www.nexml.org/2009",
-            "nex":"http://www.nexml.org/2009",
-            "xsi":"http://www.w3.org/2001/XMLSchema-instance",
-            "ot":"http://purl.org/opentree-terms#",
-            "xsd":"http://www.w3.org/2001/XMLSchema#"}
+    """
+    return {"$": "http://www.nexml.org/2009",
+            "nex": "http://www.nexml.org/2009",
+            "xsi": "http://www.w3.org/2001/XMLSchema-instance",
+            "ot": "http://purl.org/opentree-terms#",
+            "xsd": "http://www.w3.org/2001/XMLSchema#"}
+
 
 def createLiteralMeta(key, value, datatype=None):
     """
@@ -88,19 +107,20 @@ def createLiteralMeta(key, value, datatype=None):
         meta["@datatype"] =  datatype
     return meta
 
+
 def createResourceMeta(key, value):
-    '''
+    """
     creates a dict for the @property key -> value mapping of nex:ResourceMeta type
-    '''
+    """
     return {"@xsi:type": "nex:ResourceMeta",
             "@rel": key,
             "@href": value
            }
 
 def meta_elts_for_nexml(study_row,db):
-    '''
+    """
     generates nexml meta elements that are children of the root nexml element
-    '''
+    """
     meta_array = []
     study_publication_meta = study_publication_meta_elt(study_row)
     if study_publication_meta:
@@ -126,6 +146,20 @@ def meta_elts_for_nexml(study_row,db):
     focal_clade_name_meta = focal_clade_name_meta_for_study(study_row,db)
     if focal_clade_name_meta:
         meta_array.append(focal_clade_name_meta)
+    specified_root_meta = specified_root_meta_for_study(study_row, db)
+    if specified_root_meta:
+        meta_array.append(specified_root_meta)
+    comment_meta = comment_meta_for_study(study_row, db)
+    if comment_meta:
+        meta_array.append(comment_meta)
+    # these next two are primarily to support phylografter round tripping
+    # they should be coverted ti annotation elements and deprecated ASAP
+    last_modified_meta = last_modified_meta_for_study(study_row, db)
+    if last_modified_meta:
+        meta_array.append(last_modified_meta)
+    uploaded_date_meta = uploaded_date_meta_for_study(study_row, db)
+    if uploaded_date_meta:
+        meta_array.append(uploaded_date_meta)
     study_tags = get_study_tags(study_row,db)
     if study_tags:
         for tag in study_tags:
@@ -223,7 +257,7 @@ def focal_clade_name_meta_for_study(study_row,db):
             return createLiteralMeta("ot:focalCladeOTTTaxonName",name)
 
 
-def specified_root_meta_for_study(study_row):
+def specified_root_meta_for_study(study_row, db):
     """
     generates a specified root element for a study (if available)
     """
@@ -235,6 +269,30 @@ def specified_root_meta_for_study(study_row):
            return
     else:
         return
+
+
+def comment_meta_for_study(study_row, db):
+    """
+    generates a comment element for a study
+    """
+    if study_row.comment:
+        return createLiteralMeta("ot:comment",str(study_row.comment))
+
+
+def last_modified_meta_for_study(study_row, db):
+    """
+    generates an element capturing phylografter's last modified date for a study.
+    this should be deprecated when phylografter properly handles annotations
+    """
+    return createLiteralMeta("ot:lastModified",str(study_row.last_modified))
+
+
+def uploaded_date_meta_for_study(study_row, db):
+    """
+    generates an element capturing when a study was uploaded to phylografter
+    this should be deprecated when phylografter properly handles annotations
+    """
+    return createLiteralMeta("ot:uploaded",str(study_row.uploaded))
 
 def get_study_tags(study_row,db):
     '''
@@ -251,25 +309,20 @@ def otus_elt_for_study(study_row,db):
     Generates an otus block
     '''
     otu_rows = get_otu_rows_for_study(study_row,db)
-    ## print '  otu_rows done'
-    meta_elts = meta_elts_for_otus(study_row,otu_rows,db)  #placeholder, no meta elements here
     otu_elements = [otu_elt(otu_row) for otu_row in otu_rows]
-    ## print '  otu_elements done'
     otus_element = {"otu": otu_elements,
                     "@id": "otus%d" % study_row.id}
     return {"otus": otus_element}
 
 def get_otu_rows_for_study(study_row,db):
-    '''
+    """
     returns a tuple of list of otu ids for otu records that link to this study
-    '''
-    return db.executesql('SELECT otu.id, otu.label, otu.ott_node, ott_node.id, ott_node.name, otu.tb_nexml_id FROM otu LEFT JOIN ott_node ON (otu.ott_node = ott_node.id) WHERE (otu.study = %d);' % study_row.id)
+    """
+    query = ''.join(['SELECT otu.id, otu.label, otu.ott_node, ott_node.id, ott_node.name, ',
+                     'otu.tb_nexml_id FROM otu LEFT JOIN ott_node ON ',
+                     '(otu.ott_node = ott_node.id) WHERE (otu.study = %d);'])
+    return db.executesql(query % study_row.id)
 
-def meta_elts_for_otus(study_row,otuRows,db):
-    '''
-    generates nexml meta elements that are children of an otus element (currently none)
-    '''
-    return {}
 
 def get_tree_rows_for_study(study_row,db):
     '''
@@ -329,9 +382,7 @@ def trees_elt(study, db):
     generate trees element
     '''
     row_list = get_tree_rows_for_study(study,db)
-    ## print '  tree_rows done'
     tree_list = [tree_elt(tree_row, db) for tree_row in row_list]
-    ## print '  tree_list done'
     body={"@otus": "otus%d" % study.id,
           "@id": "trees%d" % study.id,
           "tree": tree_list}
@@ -364,19 +415,20 @@ def tree_elt(tree_row, db):
     generates a tree element
     '''
     meta_elts = meta_elts_for_tree_elt(tree_row,db)
-    ## print '    tree_meta_elts done'
     node_rows = get_snode_recs_for_tree(tree_row,db)
-    ## print '    tree_snode_recs done'
+    node_label_mode = tree_row.clade_labels_represent
     result = {"@id": 'tree%d' % tree_row.id,
-              "node": tree_nodes(node_rows, db),
+              "node": tree_nodes(node_rows, db, node_label_mode),
               "edge": tree_edges(node_rows)
              }
-    ## print '    tree_nodes_and_edges done'
     if meta_elts:
         result["@about"] = "#tree%d" % tree_row.id
         result.update(meta_elts)
     return result
 
+
+# These vocabularies are documented here: 
+# https://github.com/OpenTreeOfLife/phylesystem-api/wiki/NexSON
 bltypes = {"substitutions per site": "ot:substitutionCount",
            "character changes": "ot:changesCount",
            "time (Myr)": "ot:time",
@@ -384,24 +436,61 @@ bltypes = {"substitutions per site": "ot:substitutionCount",
            "posterior support": "ot:posteriorSupport"
            }
 
+
+# Note the last three are defined in the NexSON specification
+# but not in the table definition of stree (models/A_define_tables.py)
+NODE_LABEL_TYPES = {"taxon Names": "ot:taxonNames",
+                    "bootstrap values": "ot:bootstrapValues",
+                    "posterior support": "ot:posteriorSupport",
+                    "other": "ot:other",
+                    "undefined": "ot:undefined",
+                    "root node id": "ot:rootNodeId"
+                    }
+
+
 def meta_elts_for_tree_elt(tree_row,db):
     """
     returns meta elements for a tree element
     """
     result = []
-    ingroup_node = tree_ingroup_node(tree_row,db)
-    blRep = tree_row.branch_lengths_represent
+    node_label_rep = tree_row.clade_labels_represent
     tree_tags = get_tree_tags(tree_row,db)
     tree_type = tree_row.type
+    tb_tree_id = tree_row.tb_tree_id
+    contributor = tree_row.contributor
+    uploaded = tree_row.uploaded
+    blComment = tree_row.branch_lengths_comment
+    clComment = tree_row.clade_labels_comment
+    author_contributed = tree_row.author_contributed
+    comment = tree_row.comment
+    blRep = tree_row.branch_lengths_represent
     if blRep in bltypes:
         lengthsElt = createLiteralMeta("ot:branchLengthMode",bltypes[blRep])
         result.append(lengthsElt)
         if blRep == "time (Myr)":
             timeUnitElt = createLiteralMeta("ot:branchLengthTimeUnit", "Myr")
             result.append(timeUnitElt)
+    if node_label_rep in NODE_LABEL_TYPES:
+        nlabelElt = createLiteralMeta("ot:nodeLabelMode",NODE_LABEL_TYPES[node_label_rep])
+        result.append(nlabelElt)
+    ingroup_node = tree_ingroup_node(tree_row,db)
     if ingroup_node:
         ingroup_elt = createLiteralMeta("ot:inGroupClade",'node%d' % ingroup_node.id)
         result.append(ingroup_elt)
+    if tb_tree_id:
+        result.append(createLiteralMeta("ot:tbTreeId", tb_tree_id))
+    if contributor:
+        result.append(createLiteralMeta("ot:contributor", contributor))
+    if uploaded:
+        result.append(createLiteralMeta("ot:uploaded", uploaded))
+    if blComment:
+        result.append(createLiteralMeta("ot:branchLengthsComment", blComment))
+    if clComment:
+        result.append(createLiteralMeta("ot:cladeLabelsComment", clComment))
+    if comment:
+        result.append(createLiteralMeta("ot:comment", comment))
+    if author_contributed  == True:
+        result.append(createLiteralMeta("ot:authorContributed", True, "xsd:boolean"))
     if tree_tags:
        for tag in tree_tags:
            tag_elt = createLiteralMeta("ot:tag",tag)
@@ -410,9 +499,8 @@ def meta_elts_for_tree_elt(tree_row,db):
         curatedType_elt = createLiteralMeta("ot:curatedType",tree_type)
         result.append(curatedType_elt)
     if result:
-        return dict(meta=result)
-    else:
-        return       #this is a silent fail, maybe better to return 'unknown'?
+        return {"meta": result}
+
 
 def tree_ingroup_node(tree_row,db):
     '''
@@ -437,21 +525,21 @@ def deepest_ingroup(nodes):
             best = node
     return best
 
-def get_tree_tags(tree_row,db):
+def get_tree_tags(tree_row, db):
     '''
     returns a list of tag strings associated with the stree
     '''
     ta = db.stree_tag
     q = (ta.stree == tree_row.id)
     rows = db(q).select()
-    result = [row.tag for row in rows]
-    return result
+    return [row.tag for row in rows]
 
-def tree_nodes(node_rows, db):
+
+def tree_nodes(node_rows, db, tree_label_mode):
     '''
     formats the nodes corresponding to the rows in node_rows
     '''
-    return [node_elt(node_row, db) for node_row in node_rows]
+    return [node_elt(node_row, db, tree_label_mode) for node_row in node_rows]
 
 def tree_edges(node_rows):
     '''
@@ -460,29 +548,51 @@ def tree_edges(node_rows):
     #node_row[1] is parent - test excludes root node
     return [edge_elt(node_row) for node_row in node_rows if node_row[1]]
 
-def edge_elt(child_row):
-    '''
-    returns an element for a node - note that the information for this comes from the child node
-    '''
-    child_id,parent,otu_id,length,ignore = child_row
-    result ={"@id": "edge%d" % child_id}
-    result["@source"]='node%d' % parent
-    result["@target"]='node%d' % child_id
-    if (length):
+def edge_elt(node_row):
+    """
+    returns an edge element for a node - note that the information for this comes from the child node
+    """
+    (child_id,parent,_,length,_,_,_,_,_,_,_,_) = node_row
+    meta_elts = meta_elts_for_edge_support(node_row)
+    edge_id = "edge%d" % child_id
+    result ={"@id": edge_id,
+             "@source": 'node%d' % parent,
+             "@target":'node%d' % child_id}
+    if length:
         result["@length"]=length
+    if meta_elts:
+        result["@about"] = '#' + edge_id
+        result.update(meta_elts)        
     return result
+
+def meta_elts_for_edge_support(edge):
+    (_,_,_,_,_,_,_,_,bootstrap_support,posterior_support,other_support,other_support_type) = edge
+    result = []
+    if bootstrap_support:
+        result.append(createLiteralMeta("ot:bootstrapSupport", bootstrap_support, "xsd:double"))
+    if posterior_support:
+        result.append(createLiteralMeta("ot:posteriorSupport", posterior_support, "xsd:double"))
+    if other_support:
+        result.append(createLiteralMeta("ot:otherSupport", other_support, "xsd:double"))
+    if other_support_type:
+        result.append(createLiteralMeta("ot:otherSupportType", other_support_type))
+    if result:
+        return {'meta': result}
 
 def get_snode_recs_for_tree(tree_row,db):
     """
     returns a list of the nodes associated with the specified study - now represented as tuples
     """
-    return db.executesql('SELECT id,parent,otu,length,isleaf FROM snode WHERE (tree = %d);' % tree_row.id)
+    query = ''.join(['SELECT id,parent,otu,length,isleaf,age,age_min,age_max,bootstrap_support,',
+                    'posterior_support,other_support,other_support_type FROM snode WHERE (tree = %d);'])
+    return db.executesql(query % tree_row.id)
 
-def node_elt(node_row, db):
+
+def node_elt(node_row, db, node_label_mode):
     """
     returns an element for a node
     """
-    node_id,parent,otu_id,length,isleaf = node_row
+    (node_id,parent,otu_id,length,isleaf,_,_,_,_,_,_,_) = node_row
     meta_elts = meta_elts_for_node_elt(node_row, db)
     result = {"@id": "node%d" % node_id}
     if otu_id:
@@ -501,12 +611,18 @@ def meta_elts_for_node_elt(node_row, db):
     returns metadata elements for a node (currently ot:isLeaf)
     """
     result=[]
-    node_id,parent,otu_id,length,isleaf = node_row
+    (_,_,_,_,isleaf,age,age_min,age_max,_,_,_,_) = node_row
     if isleaf == 'T':
         isLeaf_elt = createLiteralMeta("ot:isLeaf",True,"xsd:boolean")
         result.append(isLeaf_elt)
     #ottTaxonName has moved several times between nodes and otus - 
     #currently on otus so no need to retrieve ott_node.name here
+    if age:
+        result.append(createLiteralMeta("ot:age", age, "xsd:double"))
+    if age_min:
+        result.append(createLiteralMeta("ot:age_min", age_min, "xsd:double"))
+    if age_max:
+        result.append(createLiteralMeta("ot:age_max", age_max, "xsd:double"))
     if result:
         return dict(meta=result)
-    return
+
