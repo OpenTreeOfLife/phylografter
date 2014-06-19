@@ -1214,28 +1214,40 @@ def make_opentree_fetch_url(study_id):
                    str(study_id),
                    ".json?output_nexml2json=0.0.0"))
 
+def make_opentree_study_list_url():
+    return "http://api.opentreeoflife.org/phylesystem/v1/study_list"
+
 
 def repositoryTest():
     """
     just for testing
     """
+    import cProfile
     from nexson_parse import nexson_available, check_nexson, ingest_nexson
-    for raw_id in xrange(2526):
-        study_id = raw_id + 1
+    phylesystem_studies = get_available_studies()
+    # first delete everything (testing only)
+    for study in db().select(db.study.ALL):
+        del db.study[study.id]
+    for study_id in phylesystem_studies:
         fetch_url = make_opentree_fetch_url(study_id)
         print "Processing %s at %s" % (fetch_url, datetime.datetime.now())
         study_exists = nexson_available(fetch_url)
         if not study_exists:
             print "study %s not found" % fetch_url
         else:
-            overwrite = check_nexson(fetch_url, db, study_id)
-            if overwrite:
-                print "Will overwrite existing study from %s" % fetch_url
-                del db.study[overwrite]
             study_id = ingest_nexson(fetch_url, db, None)
             print "time %s, %s" % (datetime.datetime.now(), study_id)
 
-
+def get_available_studies():
+    """
+    """
+    import requests
+    r = requests.get(make_opentree_study_list_url())
+    #json_list = r.json()
+    #json_list.sort()
+    json_list = [u'ot_12', u'ot_13', u'ot_14',u'ot_16',u'ot_17',u'ot_18',u'ot_19',u'ot_20']
+    print json_list
+    return json_list
 
 
 def overwrite_study():

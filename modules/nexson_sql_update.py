@@ -7,8 +7,8 @@ def sql_process(actions, db, recycle_id):
     validate_actions(actions)
     study_id = -1
     tree_id = -1
-    print " (sql_process) recycle_id = %s" % recycle_id
-    fixup_table = insert_new_rows(actions, db, recycle_id)
+    # print " (sql_process) recycle_id = %s" % recycle_id
+    nexson_map = insert_new_rows(actions, db, recycle_id)
     db.commit()  # think this is necessary
     special_clades = collect_special_clades(actions)
     current_table = None
@@ -17,17 +17,17 @@ def sql_process(actions, db, recycle_id):
     new_tags = None
     for action in actions:
         table, field, value = action
-        print "Action is %s %s %s" % action
-        print "current row = %s" % str(current_row)
+        # print "Action is %s %s %s" % action
+        # print "current row = %s" % str(current_row)
         if (field == 'nexson_id'):  # time to update the previous element
-            print "Only if current field is nexson_id"
+            # print "Only if current field is nexson_id"
             if current_table:
-                print "Need to be filling in a row here"
+                # print "Need to be filling in a row here"
                 if current_table in ['otu', 'tree']:
                     current_row['study'] = study_id
                 elif current_table == 'node':
                     current_row['tree'] = tree_id
-                print "About to update: %s" % str(current_row)
+                # print "About to update: %s" % str(current_row)
                 if sql_id is None:
                     assert current_table == 'annotation'
                     # hack to 'capture' study fields after an annotation
@@ -38,20 +38,22 @@ def sql_process(actions, db, recycle_id):
                                sql_id,
                                current_row,
                                new_tags)
-            if (table == 'study' and recycle_id):
+           # if (table == 'study' and recycle_id):
                 # id of study previously deleted
-                sql_id = recycle_id
-            elif (table == 'study'):
-                print "Want to set sql_id to %s" % value
+           #     sql_id = recycle_id
+            if (table == 'study'):
+                # print "Want to set sql_id to %s" % value
                 sql_id = int(value)
             else:
-                sql_id = get_sql_id(db, table, value)
+                sql_id = nexson_map[value]
+                if (table == "node"):
+                    print "caught get_sql_id for node; id = %s, value = %s" % (sql_id, value)
             current_row = dict()
             current_id = sql_id
             current_table = table
             new_tags = set()
             if (current_table == 'study'):
-                study_id = sql_id
+                study_id = int(nexson_map[sql_id])
             elif (current_table == 'tree'):
                 tree_id = sql_id
         elif (field == 'tag'):
@@ -61,11 +63,13 @@ def sql_process(actions, db, recycle_id):
         elif (field == 'dataDeposit'):
             if (table == 'study'):
                 current_row['data_deposit'] = value
-            print "Got to fall through"
+            #print "Got to fall through"
         else:
-            print "Got to fall through"
+            #print "Got to fall through"
             current_row[field] = value
     # catch last record (probably node)
+    if (current_table == "node"):
+        print "Upstream check for caught recordfor node; id = %s" % (sql_id)
     finish_row(db,
                current_table,
                sql_id,
@@ -108,7 +112,7 @@ def get_sql_id(db, table, nexson_id):
              (NAMETABLEMAP[table], nexson_id))
     id_results = db.executesql(query)
     if id_results:
-        print id_results[0][0]
+        # print id_results[0][0]
         return id_results[0][0]
 
 
@@ -141,19 +145,20 @@ def special_clade_test(action):
 def insert_new_rows(actions, db, recycle_id):
     action_gen = generate_actions(actions)
     update_obj = {}
-    fixup_table = {}
+    nexson_map = {}
     update_table = None
     dummy_counter = 0
-    print "recycle_id = %s" % recycle_id
-    print "Entering insert new rows"
+    # print "recycle_id = %s" % recycle_id
+    # print "Entering insert new rows"
     try:
         table, field, value = action_gen.next()
         while True:
             if usable_id(table, field):
                 if ((table == 'study') and recycle_id):
-                    print "recycle_id detected: %d" % recycle_id
-                    value = recycle_id
-                print "table: %s, field %s, value %s" % (table, field, value)
+                    pass
+                    # print "recycle_id detected: %d" % recycle_id
+                    # value = recycle_id  may put this back later
+                # print "table: %s, field %s, value %s" % (table, field, value)
                 update_table = table
                 update_id = value
                 update_obj = {field: update_id}
@@ -163,33 +168,29 @@ def insert_new_rows(actions, db, recycle_id):
                     action = action_gen.next()
                     table, field, value = action
                 table, field, value = action  # update for next record
-                if (update_table == 'study' and (update_id == recycle_id)): # this will change
-                    print "updating: %s" % value
-                    insert_reusing_id(db, update_obj, recycle_id, update_id)
-                else:
-                    print "update without recycling: t: %s up: %s recycle: %s" % (update_table, update_id, recycle_id)
-                    finish_update(db, update_table, update_obj, update_id)
+                finish_update(db, update_table, update_id, nexson_map)
             else:
                 table, field, value = action_gen.next()
     except StopIteration:
-        print "hit stop iteration exception"
+        # print "hit stop iteration exception"
         # this check is seems to be necessary to handle empty studies (no trees, no otus)
-        if (update_table == 'study' and (update_id == recycle_id)):  # this will change
-            print "updating: %s" % value
-            insert_reusing_id(db, update_obj, recycle_id, update_id)
-        elif update_table:
-            finish_update(db, update_table, update_obj, update_id)
-        return fixup_table
+        #if (update_table == 'study' and (update_id == recycle_id)):  # this will change
+            # print "updating: %s" % value
+        #    sql_id = insert_reusing_id(db, update_obj, recycle_id, nexson_map)
+        # elif
+        if update_table:
+            sql_id = finish_update(db, update_table, update_id, nexson_map)
+        return nexson_map
 
 
 def usable_id(table, field):
     return (field == 'nexson_id')
 
 
-def finish_update(db, update_table, update_obj, update_id):
-    print ("About to insert new: table= %s, update_obj = %s, update_id = %s" %
-           (str(update_table), str(update_obj), update_id))
-    insert_new(db, update_table, update_obj)
+def finish_update(db, table, nexson_id, nexson_map):
+    # print ("About to insert new: table= %s, update_obj = %s, update_id = %s" %
+    #       (str(update_table), str(update_obj), update_id))
+    insert_new(db, table, nexson_id, nexson_map)
 
 
 def generate_actions(actions):
@@ -199,58 +200,50 @@ def generate_actions(actions):
 
 # this would be better with a lookup, but some tables need to be
 # placated with dummy values
-def insert_new(db, table, values):
+def insert_new(db, table, nexson_id, nexson_map):
     """
     """
-    nexson_id = values['nexson_id']
-    if table == 'study':
-        print "about to call insert new study: values = %s" % str(values)
-        insert_new_study(db, nexson_id)
+    new_id = ''
     # maybe this should be 'interned', rather than generate - no id is saved
     if table == 'study_tag':
-        db.study_tag.insert()
+        return db.study_tag.insert()
+    if table == 'study':
+        # print "about to call insert new study: values = %s" % str(values)
+        new_id = insert_new_study(db, nexson_id)
     if table == 'otu':
-        insert_new_otu(db, nexson_id)
+        new_id = insert_new_otu(db, nexson_id)
     if table == 'tree':
-        insert_new_tree(db, nexson_id)
+        new_id = insert_new_tree(db, nexson_id)
     if table == 'node':
-        insert_new_node(db, nexson_id)
+        new_id = insert_new_node(db, nexson_id)
     if table == 'annotation':
-        insert_new_annotation(db, values)
+        new_id = insert_new_annotation(db, nexson_id)
+    nexson_map[nexson_id]=new_id 
+    return 
 
-
-def insert_reusing_id(db, values, reused_id, nexson_id):
-    sqlstr = ('INSERT INTO study (id,nexson_id) VALUES (%d,"%s")' %
-              (reused_id, nexson_id))
-    print sqlstr
-    db.executesql(sqlstr)
-    db.commit()
 
 
 def insert_new_study(db, nexson_id):
-    sqlstr = 'INSERT INTO study (nexson_id) VALUES ("%s")' % nexson_id
-    db.executesql(sqlstr)
+    result = db.study.insert(nexson_id=nexson_id,
+                             doi='',
+                             citation='xxx',
+                             contributor="AAA")  
     db.commit()
-
+    return result
 
 def insert_new_otu(db, nexson_id):
-    sqlstr = 'INSERT INTO otu (nexson_id) VALUES ("%s")' % nexson_id
-    db.executesql(sqlstr)
+    return  db.otu.insert(nexson_id=nexson_id,label='')
 
 
 def insert_new_tree(db, nexson_id):
-    sqlstr = 'INSERT INTO stree (nexson_id) VALUES ("%s")' % nexson_id
-    db.executesql(sqlstr)
-
+    return db.stree.insert(nexson_id=nexson_id,contributor='',newick="(a,b):c",type="undefined")
 
 def insert_new_node(db, nexson_id):
-    sqlstr = 'INSERT INTO snode (nexson_id,tree) VALUES ("%s",NULL)' % nexson_id
-    db.executesql(sqlstr)
+    return db.snode.insert(nexson_id=nexson_id,tree=None)
 
 
-def insert_new_annotation(db, values):
-    sqlstr = 'INSERT INTO nexson_annotation (study) VALUES (%s)' % values['nexson_id']
-    db.executesql(sqlstr)
+def insert_new_annotation(db, nexson_id):
+    return db.nexson_annotation.insert(study=nexson_id)
 
 
 LOOKUP_SQL_FIELDS = {"study": None,
@@ -271,36 +264,34 @@ def update_inserted_row(db, table, sql_id, row_data):
             pass
         elif field == 'other_metadata':
             token = row_data['other_metadata']
-
             ret = db(db.study.id == sql_id).validate_and_update(other_metadata=json.dumps(row_data['other_metadata']))
-            print "Error was %s\n" % str(ret)
+            # print "Error was %s\n" % str(ret)
         else:
             resolved_data = row_data[field]
             if (table == "node"):
-                print "Field check; field = %s; resolved_data = %s" % (field, str(resolved_data))
+                print "Field check; id = %s; field = %s; resolved_data = %s" % (sql_id, field, str(resolved_data))
             if (table in LOOKUP_SQL_FIELDS):
                 if LOOKUP_SQL_FIELDS[table] and field in LOOKUP_SQL_FIELDS[table]:
                     resolved_data = get_sql_id(db,FIELD_TO_TABLE[(table,field)],resolved_data)
-            if (table == "node"):
-                print "Field check2; field = %s; resolved_data = %s" % (field,str(resolved_data))
+            # if (table == "node"):
+            #    print "Field check2; field = %s; resolved_data = %s" % (field,str(resolved_data))
             if resolved_data:
                 if isinstance(resolved_data,basestring):
-                    print "resolved data is basestring"
+                    # print "resolved data is basestring"
                     if resolved_data.find('"') == -1:
                         sqlstr = 'UPDATE %s SET %s = "%s" WHERE id = %d' % (NAMETABLEMAP[table],field,resolved_data,sql_id)
-                        print sqlstr
+                        # print sqlstr
                         #"updating %s field in table %s with id %d" % (field,NAMETABLEMAP[table],sql_id)
                         db.executesql(sqlstr)
                     else:   # need to use slower DAL methods
                         #tb = db[NAMETABLEMAP[table]]
-                        print "Updated field %s of table %s to %s using DAL" % (field,NAMETABLEMAP[table],sql_id)
+                        #print "Updated field %s of table %s to %s using DAL" % (field,NAMETABLEMAP[table],sql_id)
                         db(db[NAMETABLEMAP[table]]._id==sql_id).update(**{field:resolved_data}) 
                 else:
                     sqlstr = 'UPDATE %s SET %s = "%s" WHERE id = %d' % (NAMETABLEMAP[table],field,resolved_data,sql_id)
                     print sqlstr
-                    #"updating %s field in table %s with id %d" % (field,NAMETABLEMAP[table],sql_id)
+                    print "updating %s field in table %s with id %d" % (field,NAMETABLEMAP[table],sql_id)
                     db.executesql(sqlstr)
-
     return sql_id
 
 
@@ -324,7 +315,7 @@ def update_tags(db, table, tags, id):
                  'SELECT id FROM study_tag WHERE study = %d AND tag = "%s"' % (id, tag))
             #rows = db((db.study_tag.study == id) & (db.study_tag.tag == tag)).select()
             if not rows:  #only need to add new tags
-                print 'inserting study tag %s to study %d' % (tag,id)
+                # print 'inserting study tag %s to study %d' % (tag,id)
                 db.study_tag.insert(study=id, tag=tag)
     elif table == 'tree':
         for tag in tags:
@@ -337,7 +328,7 @@ def update_tags(db, table, tags, id):
 
 
 def get_tag_table(table_name):
-    if table_name in ['study','stree']:
+    if table_name in ('study','stree'):
         return table_name+'_tag'
 
 
@@ -355,7 +346,7 @@ def encode_annotation(value):
     checksum = zlib.adler32(jsonStr) & 0xffffffff
     zjson = zlib.compress(jsonStr)
     b64zjson = base64.b64encode(zjson)
-    print "Recoded, length = %d" % len(b64zjson)
+    #print "Recoded, length = %d" % len(b64zjson)
     return (b64zjson, checksum)
 
 
@@ -365,7 +356,7 @@ def restore_otu_mapping(db, study_id):
     """
     otus_query = "SELECT id FROM otu WHERE study = %d" % study_id
     otus = db.executesql(otus_query)
-    print "retrieved %d otus" % len(otus)
+    # print "retrieved %d otus" % len(otus)
     for otu_result in otus:
         assert len(otu_result) == 1
         otu = otu_result[0]
@@ -373,14 +364,14 @@ def restore_otu_mapping(db, study_id):
         ot_name_results = db.executesql(otu_name_query)
         assert len(ot_name_results) == 1
         ot_name = ot_name_results[0][0]
-        print "otu: %s;  ot_name: %s" % (otu, ot_name)
+        # print "otu: %s;  ot_name: %s" % (otu, ot_name)
         if ot_name:
             accepted_uid_query = "SELECT accepted_uid FROM ottol_name WHERE id = %d" % ot_name
             accepted_uid_results = db.executesql(accepted_uid_query)
-            print "accepted_uid_results: %s" % accepted_uid_results
+            # print "accepted_uid_results: %s" % accepted_uid_results
             if len(accepted_uid_results) == 1:
                 accepted_uid = accepted_uid_results[0][0]
-                print "accepted uid: %s" % accepted_uid
+                # print "accepted uid: %s" % accepted_uid
                 if accepted_uid:
                     db.executesql("UPDATE otu SET ott_node = %d WHERE id = %d" % (accepted_uid, otu))
 
@@ -391,7 +382,7 @@ def finish_trees(db, study_id):
     the newick string for each tree in the study
     """
     trees = db.executesql("SELECT id FROM stree WHERE study = %d" % study_id)
-    print "tree set = %s" % str(trees)
+    # print "tree set = %s" % str(trees)
     for tree_result in trees:
         tree = tree_result[0]
         db.commit()  # make sure everything is in before tree update
@@ -406,6 +397,7 @@ def index_nodes(db, tree_id):
     Reconstructs the next, back, and isleaf fields for each snode in the
     tree specified by tree_id
     """
+    print "Indexing tree %s" % tree_id
     root_query = "SELECT id FROM snode WHERE (tree = %d) AND (parent IS NULL)"
     root_nodes = db.executesql(root_query % tree_id)
     assert len(root_nodes) == 1
@@ -437,7 +429,9 @@ def index_children(db, id, n):
     else:
         is_leaf = 'F'
     update = "UPDATE snode SET next=%d, back=%d, isleaf='%s' WHERE id = %d;"
-    db.executesql(update % (primary_next, primary_back, is_leaf, id))
+    stmt = update  % (primary_next, primary_back, is_leaf, id)
+    print stmt
+    db.executesql(stmt)
     return next_back
 
 

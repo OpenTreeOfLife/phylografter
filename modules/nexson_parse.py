@@ -45,10 +45,10 @@ def check_json_study(nexml_tree, db, study_id):
         rows = db(q).select()
         if len(rows) > 0:
             match = rows[0].id
-            print "matching on %s" % doi
+            # print "matching on %s" % doi
             if not (match == study_id) :
                 if worthless_study(nexml_tree):
-                    print "study is worthless"
+                    # print "study is worthless"
                     if len(db(db.study.id == study_id).select()) > 0:
                         return study_id
                     else:
@@ -65,11 +65,11 @@ def check_json_study(nexml_tree, db, study_id):
         rows = db(q).select()
         if len(rows) > 0:
             match = rows[0].id
-            print "matching on %s" % ref
-            print "match %d, study %d" % (match, study_id)
+            # print "matching on %s" % ref
+            # print "match %d, study %d" % (match, study_id)
             if not (match == study_id) :
                 if worthless_study(nexml_tree):
-                    print "study is worthless"
+                   # print "study is worthless"
                     if len(db(db.study.id == study_id).select()) > 0:
                         return study_id
                     else:
@@ -81,7 +81,7 @@ def check_json_study(nexml_tree, db, study_id):
         else:
             return False
     else:
-        print "No study identifier found"
+        # print "No study identifier found"
         return False
 
 def worthless_study(tree):
@@ -92,12 +92,12 @@ def worthless_study(tree):
     otu_ele = otus_ele[u'otu']
     if otu_ele is None or len(otu_ele) == 0:
         return True
-    print "otus is %s" % otu_ele 
+    # print "otus is %s" % otu_ele 
     trees_ele = contents[u'trees']
     tree_ele = trees_ele[u'tree']
     if tree_ele is None or len(tree_ele) == 0:
         return True
-    print "trees is %s" % tree_ele 
+    # print "trees is %s" % tree_ele 
     return False
 
 
@@ -133,7 +133,7 @@ def get_study_id(nexml_tree):
     if 'ot:studyId' in metafields:
         return int(metafields['ot:studyId'])
     else:
-        print "No study id found";
+        # print "No study id found";
         return None  #no id, nothing to do
 
 
@@ -162,7 +162,7 @@ def process_meta_element_sql(contents, results, db):
     if 'ot:studyId' in metafields:
         results.append(('study','nexson_id',metafields['ot:studyId']))
     else:
-        print "No study id found";
+        # print "No study id found";
         return None  #no id, nothing to do
     for mf in metafields:
         if mf == 'ot:annotation':  #note that annotations don't seem to have their own id
@@ -194,7 +194,7 @@ def parse_study_meta(metaEle):
             predicate = p[u'@property']
         elif u'@rel' in p:
             predicate = p[u'@rel']
-        if predicate in [u'ot:studyId',u'ot:studyYear',u'ot:focalClade']:
+        if predicate in [u'ot:studyYear',u'ot:focalClade']:
             result[predicate] = int(p[u'$'])
         elif predicate in [u'ot:studyPublication',u'ot:dataDeposit']:
             result[predicate] = encode(p[u'@href'])
@@ -202,6 +202,8 @@ def parse_study_meta(metaEle):
             result[predicate] = encode(p[u'$'])
         elif predicate in [u'ot:tag']:
             studytags.append(encode(p[u'$']))
+        elif predicate in [u'ot:studyId']:
+            result[predicate] = int(p['$'][3:])  # only good for py_ id
         else:
             result['other_metadata'].append(p)
     if len(studytags)>0:
@@ -210,9 +212,9 @@ def parse_study_meta(metaEle):
 
 def reserialize_json(p):
     import json
-    print "reserializing metadata %s " % str(p)
+    # print "reserializing metadata %s " % str(p)
     testString = json.dumps(p)
-    print "testString length = %d" % len(testString)
+    # print "testString length = %d" % len(testString)
     return p
 
 
