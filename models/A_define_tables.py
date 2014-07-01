@@ -29,7 +29,9 @@ def _study_rep(x):
         s = (" ".join(w[:n]))+"..."
     if x.year_published:
         s = s+"[%s]" % x.year_published
-    if x.focal_clade_ott:
+    if (x.focal_clade_ott and
+        db.ott_node[x.focal_clade_ott] and
+        x.focal_clade_ott.name):
         s = s+". %s" % x.focal_clade_ott.name
     if x.label:
         s = s+". %s" % x.label

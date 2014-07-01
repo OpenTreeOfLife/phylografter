@@ -174,7 +174,6 @@ def dtrecords():
                       (db.ott_node.name.like('%'+sterm+'%')))
             else:
                 q &= f.like('%'+sterm+'%')
-                
     rows = db(q).select(*filter(None,fields), groupby=t.id, left=left,
                         orderby=orderby, limitby=limitby)
 
@@ -185,9 +184,11 @@ def dtrecords():
             return A(str(n), _href=u).xml()
         else:
             return str(n)
-
+   
     data = [ (r.study.id,
-              (r.study.focal_clade_ott.name if r.study.focal_clade_ott else ''),
+              (r.study.focal_clade_ott.name
+               if (db.ott_node[r.study.focal_clade_ott] and db.study.focal_clade_ott.name)
+               else ''),
               r.study.study_url.xml(),
               r.study.year_published,
               otus(r),
@@ -196,8 +197,10 @@ def dtrecords():
               r.study.contributor)
              for r in rows ]
 
+    print "Checkpoint 3"
     totalrecs = db(q0).count()
     disprecs = db(q).count()
+    print "returning with data = %s" % str(data)
     return dict(aaData=data,
                 iTotalRecords=totalrecs,
                 iTotalDisplayRecords=disprecs,
@@ -1243,9 +1246,8 @@ def get_available_studies():
     """
     import requests
     r = requests.get(make_opentree_study_list_url())
-    #json_list = r.json()
-    #json_list.sort()
-    json_list = [u'ot_12', u'ot_13', u'ot_14',u'ot_16',u'ot_17',u'ot_18',u'ot_19',u'ot_20']
+    json_list = r.json()
+    json_list.sort()
     print json_list
     return json_list
 
@@ -1275,7 +1277,7 @@ def overwrite_study():
     if form.accepts(request.vars, session):
 	# Deletes the study from the database using the DAL. 
         del db.study[rec.id]
-        # Alerts the user the study gone; replacement about to loaded
+        # Alerts the user the study is gone; replacement about to loaded
         session.flash = "The Study will be overwritten"
         study_id = ingest_nexson(opentree_url, db, int(overwrite_id))
         redirect(URL(c="study", f="view", args=[rec.id]))
