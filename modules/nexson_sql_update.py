@@ -31,8 +31,16 @@ def sql_process(actions, db, recycle_id):
                 if sql_id is None:
                     assert current_table == 'annotation'
                     # hack to 'capture' study fields after an annotation
+                    print "about to finish study with sql_id = %d and study_id = %d" % (sql_id, study_id)
                     finish_row(db, 'study', study_id, current_row, new_tags)
+                elif current_table == 'study':
+                    finish_row(db,
+                               current_table,
+                               study_id,
+                               current_row,
+                               new_tags)
                 else:
+                    print "about to finish %s with sql_id = %d and study_id = %d" % (current_table, sql_id, study_id)
                     finish_row(db,
                                current_table,
                                sql_id,
@@ -259,6 +267,7 @@ FIELD_TO_TABLE = {("node","otu"): "otu",
 
 def update_inserted_row(db, table, sql_id, row_data):
     import json
+    print "Entering update inserted row with sql_id = %d" % sql_id
     for field in row_data:
         if field == 'nexson_id':
             pass
@@ -280,7 +289,7 @@ def update_inserted_row(db, table, sql_id, row_data):
                     # print "resolved data is basestring"
                     if resolved_data.find('"') == -1:
                         sqlstr = 'UPDATE %s SET %s = "%s" WHERE id = %d' % (NAMETABLEMAP[table],field,resolved_data,sql_id)
-                        # print sqlstr
+                        print "*** " + sqlstr
                         #"updating %s field in table %s with id %d" % (field,NAMETABLEMAP[table],sql_id)
                         db.executesql(sqlstr)
                     else:   # need to use slower DAL methods
@@ -289,7 +298,7 @@ def update_inserted_row(db, table, sql_id, row_data):
                         db(db[NAMETABLEMAP[table]]._id==sql_id).update(**{field:resolved_data}) 
                 else:
                     sqlstr = 'UPDATE %s SET %s = "%s" WHERE id = %d' % (NAMETABLEMAP[table],field,resolved_data,sql_id)
-                    print sqlstr
+                    print "** " + sqlstr
                     print "updating %s field in table %s with id %d" % (field,NAMETABLEMAP[table],sql_id)
                     db.executesql(sqlstr)
     return sql_id
