@@ -103,9 +103,9 @@ def index():
         response.files.append(URL('static',x))
 
     t = db.study
-    colnames = ["Id", "Focal clade", "Citation",
+    colnames = ["Id", "Nexson_id", "Focal clade", "Citation",
                 "Year", "OTUs", "Trees", "Uploaded", "By"]
-    widths = ["5%", "10%", "25%", "5%", "5%", "15%","10%","7%"]
+    widths = ["5%", "5%", "10%", "25%", "5%", "5%", "10%","10%","7%"]
     tid = "studies"
     table = TABLE(_id=tid, _class="display")
     table.append(THEAD(TR(*[ TH(f, _width=w)
@@ -147,7 +147,7 @@ def dtrecords():
     otu_count = db.otu.id.count()
     left = db.otu.on(db.otu.study==db.study.id)
 
-    fields = [ t.id, t.focal_clade_ott, t.citation, t.year_published,
+    fields = [ t.id, t.nexson_id, t.focal_clade_ott, t.citation, t.year_published,
                otu_count, None, t.uploaded, t.contributor ]
     orderby = []
     if request.vars.iSortCol_0:
@@ -165,7 +165,7 @@ def dtrecords():
     q = q0 = (t.id>0)
     
     for i, f in enumerate(
-        [ t.id, t.focal_clade_ott, t.citation,
+        [ t.id, t.nexson_id, t.focal_clade_ott, t.citation,
           t.year_published, t.uploaded, t.contributor ]):
         sterm = request.vars.get("sSearch_%s" % i)
         if sterm:
@@ -186,6 +186,7 @@ def dtrecords():
             return str(n)
    
     data = [ (r.study.id,
+              r.study.nexson_id,
               (r.study.focal_clade_ott.name
                if (db.ott_node[r.study.focal_clade_ott] and db.study.focal_clade_ott.name)
                else ''),
@@ -197,10 +198,8 @@ def dtrecords():
               r.study.contributor)
              for r in rows ]
 
-    print "Checkpoint 3"
     totalrecs = db(q0).count()
     disprecs = db(q).count()
-    print "returning with data = %s" % str(data)
     return dict(aaData=data,
                 iTotalRecords=totalrecs,
                 iTotalDisplayRecords=disprecs,
@@ -1207,8 +1206,6 @@ def load_NexSON_from_OpenTree():
         study_id = ingest_nexson(opentree_url, db, None)
         redirect(URL(c="study", f="view", args=[study_id]))
 
-repository_list = [10,11,12,13,17,24,25,28,36,37,38,39,40,42,43,44,45,46,47,48,49,50,438,460]
-
 
 def make_opentree_fetch_url(study_id):
     return "".join(("http://",
@@ -1216,6 +1213,7 @@ def make_opentree_fetch_url(study_id):
                    "/api/v1/study/",
                    str(study_id),
                    ".json?output_nexml2json=0.0.0"))
+
 
 def make_opentree_study_list_url():
     return "http://api.opentreeoflife.org/phylesystem/v1/study_list"
