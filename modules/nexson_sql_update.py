@@ -39,6 +39,14 @@ def sql_process(actions, db, recycle_id):
                                study_id,
                                current_row,
                                new_tags)
+                elif current_table == 'otu':
+                    print "Want to commit an otu"
+                    db.commit();   # slightly pathological
+                    finish_row(db,
+                               current_table,
+                               sql_id,
+                               current_row,
+                               new_tags)
                 else:
                     print "about to finish %s with sql_id = %d and study_id = %d" % (current_table, sql_id, study_id)
                     finish_row(db,
@@ -46,12 +54,14 @@ def sql_process(actions, db, recycle_id):
                                sql_id,
                                current_row,
                                new_tags)
-           # if (table == 'study' and recycle_id):
-                # id of study previously deleted
-           #     sql_id = recycle_id
             if (table == 'study'):
+                if recycle_id:
+                    sql_id = recycle_id
                 # print "Want to set sql_id to %s" % value
-                sql_id = int(value)
+                elif (value[2] == '_'):
+                    sql_id = int(value[3:])
+                else:
+                    sql_id = int(value)
             else:
                 sql_id = nexson_map[value]
                 if (table == "node"):
@@ -61,7 +71,7 @@ def sql_process(actions, db, recycle_id):
             current_table = table
             new_tags = set()
             if (current_table == 'study'):
-                study_id = int(nexson_map[sql_id])
+                study_id = sql_id
             elif (current_table == 'tree'):
                 tree_id = sql_id
         elif (field == 'tag'):
@@ -71,18 +81,18 @@ def sql_process(actions, db, recycle_id):
         elif (field == 'dataDeposit'):
             if (table == 'study'):
                 current_row['data_deposit'] = value
-            #print "Got to fall through"
         else:
-            #print "Got to fall through"
             current_row[field] = value
     # catch last record (probably node)
-    if (current_table == "node"):
-        print "Upstream check for caught recordfor node; id = %s" % (sql_id)
     finish_row(db,
                current_table,
                sql_id,
                current_row,
                new_tags)
+    return finish_study(db, study_id)
+
+
+def finish_study(db, study_id):
     restore_otu_mapping(db, study_id)
     return finish_trees(db, study_id)
 
@@ -162,9 +172,11 @@ def insert_new_rows(actions, db, recycle_id):
         table, field, value = action_gen.next()
         while True:
             if usable_id(table, field):
-                if ((table == 'study') and recycle_id):
+                if ((table == 'study') and field == 'nexson_id' and recycle_id):
                     pass
-                    # print "recycle_id detected: %d" % recycle_id
+                    print "recycle_id detected: %d" % recycle_id
+                    new_id = insert_new_study(db, value, recycle_id)
+                    nexson_map[value]=new_id 
                     # value = recycle_id  may put this back later
                 # print "table: %s, field %s, value %s" % (table, field, value)
                 update_table = table
@@ -217,7 +229,7 @@ def insert_new(db, table, nexson_id, nexson_map):
         return db.study_tag.insert()
     if table == 'study':
         # print "about to call insert new study: values = %s" % str(values)
-        new_id = insert_new_study(db, nexson_id)
+        new_id = insert_new_study(db, nexson_id, None)
     if table == 'otu':
         new_id = insert_new_otu(db, nexson_id)
     if table == 'tree':
@@ -231,11 +243,18 @@ def insert_new(db, table, nexson_id, nexson_map):
 
 
 
-def insert_new_study(db, nexson_id):
-    result = db.study.insert(nexson_id=nexson_id,
-                             doi='',
-                             citation='xxx',
-                             contributor="AAA")  
+def insert_new_study(db, nexson_id, recycle_id):
+    if recycle_id:
+        result = db.study.insert(id=recycle_id,
+                                 nexson_id=nexson_id,
+                                 doi='',
+                                 citation='xxx',
+                                 contributor="AAA")  
+    else:
+        result = db.study.insert(nexson_id=nexson_id,
+                                 doi='',
+                                 citation='xxx',
+                                 contributor="AAA")  
     db.commit()
     return result
 

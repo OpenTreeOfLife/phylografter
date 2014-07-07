@@ -131,7 +131,10 @@ def get_study_id(nexml_tree):
     metaEle = contents[u'meta']
     metafields = parse_study_meta(metaEle)
     if 'ot:studyId' in metafields:
-        return int(metafields['ot:studyId'])
+        if (metafields['ot:studyId'][2] == '_'):
+            return int(metafields['ot:studyId'][3:])
+        else:
+            return int(metafields['ot:studyId'])
     else:
         # print "No study id found";
         return None  #no id, nothing to do
@@ -203,7 +206,7 @@ def parse_study_meta(metaEle):
         elif predicate in [u'ot:tag']:
             studytags.append(encode(p[u'$']))
         elif predicate in [u'ot:studyId']:
-            result[predicate] = int(p['$'][3:])  # only good for py_ id
+            result[predicate] = encode(p[u'$'])
         else:
             result['other_metadata'].append(p)
     if len(studytags)>0:
