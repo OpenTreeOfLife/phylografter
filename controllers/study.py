@@ -1229,6 +1229,23 @@ def repositoryTest():
     # first delete everything (testing only)
     for study in db().select(db.study.ALL):
         del db.study[study.id]
+    # for testing - create a couple of empty studies with conflicting id's
+        result = db.study.insert(id=12,
+                                 nexson_id='dm_12',
+                                 doi='',
+                                 citation='xxx',
+                                 contributor="AAA")  
+        result = db.study.insert(id=13,
+                                 nexson_id=dm_13,
+                                 doi='',
+                                 citation='yyy',
+                                 contributor="BBB")  
+        result = db.study.insert(id=14,
+                                 nexson_id=dm_14,
+                                 doi='',
+                                 citation='zzz',
+                                 contributor="CCCc")  
+    
     for study_id in phylesystem_studies:
         fetch_url = make_opentree_fetch_url(study_id)
         print "Processing %s at %s" % (fetch_url, datetime.datetime.now())
