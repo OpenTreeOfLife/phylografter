@@ -1,36 +1,47 @@
-#coding: utf8
-from gluon import *
+# coding: utf8
+# try something like
 
-LASTUPDATE = None
+
+def index(): return dict(message="hello from phylesystem.py")
+
 
 def update():
-    """This will be the 'chron job' process"""
-    print "phylebox update running"
+    # repository_test()  # uncomment soon
+    pass
+
+def test():
+    repository_test()
 
 
-
-def load_NexSON_from_OpenTree():
+# @auth.requires_membership('contributor')
+def import_NexSON():
     """
+    Imports a Nexson (JSON Nexml) file, updating an existing study record or
+    creating a new one as needed
     """
-    from nexson_parse import check_nexson, ingest_nexson
-    opentree_id = request.args(0) or redirect(URL("create"))
-    opentree_url = make_opentree_fetch_url(opentree_id)
+    import datetime
+    import cStringIO
+    from nexson_parse import ingest_nexson,check_nexson
+    if not(request.post_vars):
+        raise HTTP(400)  # if no post, then it's a bad request
+    # Per Massimo Di Pierro's answer for google groups question about @request.restful
+    post_text = request.body.read()
+    print datetime.datetime.now()
     try:
-        #does this url refer to a study that matches something already loaded?
-        study_match_id = check_nexson(opentree_url,db)
+        study_exists = check_nexson(cStringIO.StringIO(post_text),db)
     except RuntimeError as e:
-        print "URL was %s" % opentree_url
-        print "Error was %s" % str(e)
-        session.flash = "URL was %s; Error was %s" % (opentree_url,str(e))
-        redirect(URL('study','index'))
-    print "match_id was %s" % str(study_match_id)
-    if study_match_id:
-        redirect(URL(c="study",f="overwrite_study",args=[study_match_id,opentree_id]))
-        overwrite_study(opentree_url,study_match_id)
-    else:
-        study_id = ingest_nexson(opentree_url, db, None)
-        redirect(URL(c="study", f="view", args=[study_id]))
+        print e
+        redirect(URL('study','default'))
+    if study_exists: # will contain study id; go delete it and replace
+        print "Study exists returns: " + str(study_exists)
+        redirect(URL('study','overwrite_from_opentree'))
+    study_id = ingest_nexson(cStringIO.StringIO(post_text),db)
+    print datetime.datetime.now()
+    return study_id
 
+def load_study_from_opentree():
+    form = FORM()
+    return {'form': form}
 
 def make_opentree_fetch_url(study_id):
     return "".join(("http://",
@@ -44,7 +55,7 @@ def make_opentree_study_list_url():
     return "http://api.opentreeoflife.org/phylesystem/v1/study_list"
 
 
-def repositoryTest():
+def repository_test():
     """
     just for testing
     """
@@ -61,12 +72,12 @@ def repositoryTest():
                                  citation='xxx',
                                  contributor="AAA")  
         result = db.study.insert(id=13,
-                                 nexson_id=dm_13,
+                                 nexson_id='dm_13',
                                  doi='',
                                  citation='yyy',
                                  contributor="BBB")  
         result = db.study.insert(id=14,
-                                 nexson_id=dm_14,
+                                 nexson_id='dm_14',
                                  doi='',
                                  citation='zzz',
                                  contributor="CCCc")  
@@ -124,17 +135,3 @@ def overwrite_study():
         session.flash = "The Study Has Been Deleted" #Alerts the user the study has been deleted.	
         redirect(URL('study', 'index'))
     return dict(form=form, rec = rec)
-
-
-
-def get_study():
-    """This is called to check if a study is upto date"""
-
-def push_study():
-    """Pushes a modified version of a study back to phylesystem on a branch"""
-
-def merge_study():
-    """Handles whatever portion of the merge process can be handled by phylografter"""
-
-
-

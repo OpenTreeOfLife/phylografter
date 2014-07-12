@@ -300,8 +300,8 @@ def update_inserted_row(db, table, sql_id, row_data):
                         db(db[NAMETABLEMAP[table]]._id==sql_id).update(**{field:resolved_data}) 
                 else:
                     sqlstr = 'UPDATE %s SET %s = "%s" WHERE id = %d' % (NAMETABLEMAP[table],field,resolved_data,sql_id)
-                    print "** " + sqlstr
-                    print "updating %s field in table %s with id %d" % (field,NAMETABLEMAP[table],sql_id)
+                    # print "** " + sqlstr
+                    # print "updating %s field in table %s with id %d" % (field,NAMETABLEMAP[table],sql_id)
                     db.executesql(sqlstr)
     return sql_id
 
