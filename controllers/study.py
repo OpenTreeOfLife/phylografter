@@ -1206,6 +1206,10 @@ def load_NexSON_from_OpenTree():
         study_id = ingest_nexson(opentree_url, db, None)
         redirect(URL(c="study", f="view", args=[study_id]))
 
+def reloadOpenTreeRepository():
+    import phylebox
+    phylebox.repositoryTest(db)
+    
 
 
 ### Function to allow the deletion of a study and all of its corresponding nodes, trees and otus

@@ -3,10 +3,10 @@ from gluon import *
 
 LASTUPDATE = None
 
-def update():
+def update(db):
     """This will be the 'chron job' process"""
     print "phylebox update running"
-
+    repositoryTest(db)
 
 
 def load_NexSON_from_OpenTree():
@@ -32,10 +32,12 @@ def load_NexSON_from_OpenTree():
         redirect(URL(c="study", f="view", args=[study_id]))
 
 
+test_server = "api.opentreeoflife.org"
+
 def make_opentree_fetch_url(study_id):
     return "".join(("http://",
                    test_server,
-                   "/api/v1/study/",
+                   "/phylesystem/v1/study/",
                    str(study_id),
                    ".json?output_nexml2json=0.0.0"))
 
@@ -44,33 +46,33 @@ def make_opentree_study_list_url():
     return "http://api.opentreeoflife.org/phylesystem/v1/study_list"
 
 
-def repositoryTest():
+def repositoryTest(db):
     """
     just for testing
     """
     import cProfile
     from nexson_parse import nexson_available, check_nexson, ingest_nexson
+    import datetime
     phylesystem_studies = get_available_studies()
     # first delete everything (testing only)
     for study in db().select(db.study.ALL):
         del db.study[study.id]
     # for testing - create a couple of empty studies with conflicting id's
-        result = db.study.insert(id=12,
-                                 nexson_id='dm_12',
-                                 doi='',
-                                 citation='xxx',
-                                 contributor="AAA")  
-        result = db.study.insert(id=13,
-                                 nexson_id=dm_13,
-                                 doi='',
-                                 citation='yyy',
-                                 contributor="BBB")  
-        result = db.study.insert(id=14,
-                                 nexson_id=dm_14,
-                                 doi='',
-                                 citation='zzz',
-                                 contributor="CCCc")  
-    
+    result = db.study.insert(id=12,
+                             nexson_id='dm_12',
+                             doi='',
+                             citation='xxx',
+                             contributor="AAA")  
+    result = db.study.insert(id=13,
+                             nexson_id='dm_13',
+                             doi='',
+                             citation='yyy',
+                             contributor="BBB")  
+    result = db.study.insert(id=14,
+                             nexson_id='dm_14',
+                             doi='',
+                             citation='zzz',
+                             contributor="CCCc")  
     for study_id in phylesystem_studies:
         fetch_url = make_opentree_fetch_url(study_id)
         print "Processing %s at %s" % (fetch_url, datetime.datetime.now())
