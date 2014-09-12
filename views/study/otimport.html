@@ -1,0 +1,18 @@
+{{extend 'layout.html'}}
+<h4>Enter an OpenTree study id</h4>
+
+{{=form}}
+
+
+{{if status:}}
+
+    <script type="text/javascript">
+ 
+        BioSync.Common.notify( {
+            text: '{{=status}}',
+            timeout: 4000,
+            x: $(document).width() / 2,
+            y: 100 } );       
+
+    </script>
+{{pass}}

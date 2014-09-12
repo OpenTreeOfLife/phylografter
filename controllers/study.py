@@ -935,103 +935,46 @@ def ref_from_doi():
         print resp.text
 
 
+
 @auth.requires_membership('contributor')
-def tolfetch():
+def otimport():
+    import phylebox, nexson_parse
     t = db.study
     key = "fetched_nexson_%s" % auth.user.id
     #contributor = "%s %s" % (auth.user.first_name, auth.user.last_name)
     status = None
-    tbid = request.args(0)
-    if tbid:
+    ot_id = request.args(0)
+    if ot_id:
+        redirect(URL(c="study", f="overwrite_study", args=[study_match_id, ot_id]))
+        ot_url = phylebox.make_opentree_fetch_url(ot_id)
         try:
-            e = treebase.fetch_study(tbid)
-            nexml = treebase.parse_nexml(e)
-        except:
-            nexml = { }
-            status = "Valid study id required"
-        if nexml:
-            nexml.meta['contributor'] = contributor
-            cache.ram.clear(key)
-            x = cache.ram(key, lambda:nexml, time_expire=10000)
-            redirect(URL('study','tolfetch2',args=tbid))
-    uploadfolder = request.folder+'uploads'
-    fields = [Field("study_id", "string", default=tbid),
-              Field("nexml_file", "upload", uploadfolder=uploadfolder)]
-    form = SQLFORM.factory(*fields)
-    if form.accepts(request.vars, session, dbio=False):
-        if form.vars.study_id:
-            try:
-                e = treebase.fetch_study(form.vars.study_id)
-                nexml = treebase.parse_nexml(e)
-            except:
-                nexml = { }
-                status = "Valid study id required"
-        elif form.vars.nexml_file:
-            ## print form.vars.nexml_file
-            path = os.path.join(uploadfolder,
-                                form.vars.nexml_file)
-                                ## form.vars.nexml_file_newfilename)
-            nexml = treebase.parse_nexml(path)
-            os.remove(path)
-        else:
-            nexml = {}
-            request.flash = "Valid study id or nexml file required"
-        if nexml:
-            nexml.meta['contributor'] = contributor
-            cache.ram.clear(key)
-            x = cache.ram(key, lambda:nexml, time_expire=10000)
-            redirect(URL('study','tolfetch2',args=tbid))
-    return dict(form=form, status=status )
-
-@auth.requires_membership('contributor')
-def tolfetch2():
-    tbid = request.args(0)
-    t = db.study
-    ## t.focal_clade.readable = t.focal_clade.writable = False
-    t.focal_clade_ottol.label = 'Focal clade'
-    t.focal_clade_ottol.widget = SQLFORM.widgets.autocomplete(
-        request, db.ottol_name.unique_name, id_field=db.ottol_name.id,
-        limitby=(0,20), orderby=db.ottol_name.unique_name)
-    t.uploaded.readable=False
-    key = "fetched_nexson_%s" % auth.user.id
-    nexson = cache.ram(key, lambda:None, time_expire=10000)
-    if not nexml:
-        session.flash = "Please fetch from the repository again"
-        redirect(URL('study','tolfetch'))
-    cache.ram(key, lambda:nexml, time_expire=10000)
-    ## assert nexml
-    ## cache.ram.clear(key)
-    get = lambda x: nexml.meta.get(x) or None
-    treebase_id = int(get('tb:identifier.study'))
-    rec = db(t.treebase_id==treebase_id).select().first()
-    year = int(get('prism:publicationDate') or 0)
-    d = dict(citation = get('dcterms:bibliographicCitation'),
-             year_published = year if year else None,
-             label = get('tb:title.study'),
-             treebase_id = treebase_id,
-             contributor = get('contributor'))
-
-    diffs = []
-    if rec: # edit an existing study record
-        if not tbid: response.flash = "Record exists: study id = %s" % rec.id
-        diffs = [ (k, v) for k, v in d.items()
-                  if rec[k] != v and k != 'contributor' ]
-        form = SQLFORM(t, rec, showid=False, submit_button="Update study")
-
+            overwrite_study(ot_url, study_match_id)
+            # here's where the work starts
+        except RuntimeError as e:
+            status = "URL was %s; Error was %s" % (ot_url, str(e))
+            redirect(URL('study','index'))
     else:
-        for k, v in d.items():
-            if v and k in t.fields: t[k].default = v
-        form = SQLFORM(t, submit_button="Insert study")
-    
-    ## form = crud.create(t, next="view/[id]")
-    if form.accepts(request.vars, session):
-        if rec: response.flash = "record updated"
-        else: response.flash = "record inserted"
-        ## t.update_record( last_modified = datetime.datetime.now() )
-        ## redirect(URL('study','view',args=form.vars.id))
+        fields = [Field("ot_id", "string", default=ot_id)]
+        form = SQLFORM.factory(*fields)
+        if form.accepts(request.vars, session, dbio=False):
+            if form.vars.ot_id:
+                try:
+                    ot_id = form.vars.ot_id
+                    print "ot_id is %s " % ot_id
+                    ot_url = phylebox.make_opentree_fetch_url(ot_id)
+                    print "ot_url is %s " % ot_url
+                    check_id = nexson_parse.check_nexson(ot_url, db, None)
+                    study_id = nexson_parse.ingest_nexson(ot_url, db, None)
+                except RuntimeError as e:
+                    print "URL was %s" % opentree_url
+                    print "Error was %s" % str(e)
+                    session.flash = "URL was %s; Error was %s" % (opentree_url,str(e))
+                    status = "Study failed to validate"
+            else:
+                nexml = {}
+                request.flash = "Valid open_tree study id"
+        return dict(form=form, status=status )
 
-    return dict(form=form, rec=rec, diffs=diffs)
-        
 
 @service.json
 def fetch_nexson(study_id):
