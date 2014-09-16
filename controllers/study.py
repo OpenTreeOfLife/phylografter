@@ -567,7 +567,6 @@ def strees():
 @auth.requires_membership('contributor')
 def tbimport():
     t = db.study
-    key = "uploaded_nexml_%s" % auth.user.id
     contributor = "%s %s" % (auth.user.first_name, auth.user.last_name)
     status = None
     tbid = request.args(0)
@@ -935,47 +934,6 @@ def ref_from_doi():
         print resp.text
 
 
-
-@auth.requires_membership('contributor')
-def otimport():
-    import phylebox, nexson_parse
-    t = db.study
-    key = "fetched_nexson_%s" % auth.user.id
-    #contributor = "%s %s" % (auth.user.first_name, auth.user.last_name)
-    status = None
-    ot_id = request.args(0)
-    if ot_id:
-        redirect(URL(c="study", f="overwrite_study", args=[study_match_id, ot_id]))
-        ot_url = phylebox.make_opentree_fetch_url(ot_id)
-        try:
-            overwrite_study(ot_url, study_match_id)
-            # here's where the work starts
-        except RuntimeError as e:
-            status = "URL was %s; Error was %s" % (ot_url, str(e))
-            redirect(URL('study','index'))
-    else:
-        fields = [Field("ot_id", "string", default=ot_id)]
-        form = SQLFORM.factory(*fields)
-        if form.accepts(request.vars, session, dbio=False):
-            if form.vars.ot_id:
-                try:
-                    ot_id = form.vars.ot_id
-                    print "ot_id is %s " % ot_id
-                    ot_url = phylebox.make_opentree_fetch_url(ot_id)
-                    print "ot_url is %s " % ot_url
-                    check_id = nexson_parse.check_nexson(ot_url, db, None)
-                    study_id = nexson_parse.ingest_nexson(ot_url, db, None)
-                except RuntimeError as e:
-                    print "URL was %s" % opentree_url
-                    print "Error was %s" % str(e)
-                    session.flash = "URL was %s; Error was %s" % (opentree_url,str(e))
-                    status = "Study failed to validate"
-            else:
-                nexml = {}
-                request.flash = "Valid open_tree study id"
-        return dict(form=form, status=status )
-
-
 @service.json
 def fetch_nexson(study_id):
     try: study_id = int(study_id)
@@ -1095,6 +1053,43 @@ def import_NexSON():
     print datetime.datetime.now()
     return study_id
 
+
+@auth.requires_membership('contributor')
+def otimport():
+    import phylebox, nexson_parse
+    t = db.study
+    key = "fetched_nexson_%s" % auth.user.id
+    status = None
+    ot_id = request.args(0)
+    if ot_id:
+        ot_url = phylebox.make_opentree_fetch_url(ot_id)
+        try:
+            phylebox.overwrite_study(ot_url, study_match_id)
+            redirect(URL('study','index'))
+        except RuntimeError as e:
+            status = "URL was %s; Error was %s" % (ot_url, str(e))
+            redirect(URL('study','index'))
+    else:
+        fields = [Field("ot_id", "string", default=ot_id)]
+        form = SQLFORM.factory(*fields)
+        if form.accepts(request.vars, session, dbio=False):
+            if form.vars.ot_id:
+                try:
+                    ot_id = form.vars.ot_id
+                    print "ot_id is %s " % ot_id
+                    ot_url = phylebox.make_opentree_fetch_url(ot_id)
+                    print "ot_url is %s " % ot_url
+                    check_id = nexson_parse.check_nexson(ot_url, db, None)
+                    study_id = nexson_parse.ingest_nexson(ot_url, db, None)
+                    redirect(URL('study','index'))
+                except RuntimeError as e:
+                    print "URL was %s" % opentree_url
+                    print "Error was %s" % str(e)
+                    session.flash = "URL was %s; Error was %s" % (opentree_url,str(e))
+                    status = "Study failed to validate"
+        return dict(form=form, status=status )
+
+
 # @auth.requires_membership('contributor')
 def import_NexSON():
     """
@@ -1121,33 +1116,6 @@ def import_NexSON():
     print datetime.datetime.now()
     return study_id
 
-def load_study_from_opentree():
-    form = FORM()
-    return {'form': form}
-
-
-
-def load_NexSON_from_OpenTree():
-    """
-    """
-    from nexson_parse import check_nexson, ingest_nexson
-    opentree_id = request.args(0) or redirect(URL("create"))
-    opentree_url = make_opentree_fetch_url(opentree_id)
-    try:
-        #does this url refer to a study that matches something already loaded?
-        study_match_id = check_nexson(opentree_url,db)
-    except RuntimeError as e:
-        print "URL was %s" % opentree_url
-        print "Error was %s" % str(e)
-        session.flash = "URL was %s; Error was %s" % (opentree_url,str(e))
-        redirect(URL('study','index'))
-    print "match_id was %s" % str(study_match_id)
-    if study_match_id:
-        redirect(URL(c="study",f="overwrite_study",args=[study_match_id,opentree_id]))
-        overwrite_study(opentree_url,study_match_id)
-    else:
-        study_id = ingest_nexson(opentree_url, db, None)
-        redirect(URL(c="study", f="view", args=[study_id]))
 
 def reloadOpenTreeRepository():
     import phylebox

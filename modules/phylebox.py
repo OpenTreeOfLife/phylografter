@@ -3,11 +3,6 @@ from gluon import *
 
 LASTUPDATE = None
 
-def update(db):
-    """This will be the 'chron job' process"""
-    print "phylebox update running"
-    repositoryTest(db)
-
 
 def load_NexSON_from_OpenTree():
     """
@@ -45,43 +40,6 @@ def make_opentree_fetch_url(study_id):
 def make_opentree_study_list_url():
     return "http://api.opentreeoflife.org/phylesystem/v1/study_list"
 
-
-def repositoryTest(db):
-    """
-    just for testing
-    """
-    import cProfile
-    from nexson_parse import nexson_available, check_nexson, ingest_nexson
-    import datetime
-    phylesystem_studies = get_available_studies()
-    # first delete everything (testing only)
-    for study in db().select(db.study.ALL):
-        del db.study[study.id]
-    # for testing - create a couple of empty studies with conflicting id's
-    result = db.study.insert(id=12,
-                             nexson_id='dm_12',
-                             doi='',
-                             citation='xxx',
-                             contributor="AAA")  
-    result = db.study.insert(id=13,
-                             nexson_id='dm_13',
-                             doi='',
-                             citation='yyy',
-                             contributor="BBB")  
-    result = db.study.insert(id=14,
-                             nexson_id='dm_14',
-                             doi='',
-                             citation='zzz',
-                             contributor="CCCc")  
-    for study_id in phylesystem_studies:
-        fetch_url = make_opentree_fetch_url(study_id)
-        print "Processing %s at %s" % (fetch_url, datetime.datetime.now())
-        study_exists = nexson_available(fetch_url)
-        if not study_exists:
-            print "study %s not found" % fetch_url
-        else:
-            study_id = ingest_nexson(fetch_url, db, None)
-            print "time %s, %s" % (datetime.datetime.now(), study_id)
 
 def get_available_studies():
     """
